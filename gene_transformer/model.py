@@ -30,7 +30,7 @@ class DNATransform(pl.LightningModule):
         x = batch
         outputs = self(x)
         loss = outputs.losses.mean()
-        # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
@@ -45,4 +45,4 @@ if __name__ == "__main__":
                          callbacks=[checkpoint_callback], max_epochs=5)
     trainer.fit(model)
     trainer.save_checkpoint("codon_transformer.ckpt")
-    
+
