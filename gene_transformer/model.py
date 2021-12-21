@@ -44,3 +44,5 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], max_epochs=5)
     trainer.fit(model)
+    trainer.save_checkpoint("codon_transformer.ckpt")
+    
