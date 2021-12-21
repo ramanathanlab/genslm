@@ -17,7 +17,8 @@ class DNATransform(pl.LightningModule):
         self.tokenizer = Tokenizer.from_file(tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         self.train_dataset = TokenDataset(train_file, tokenizer_file=tokenizer_file, block_size=512)
-        self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
+        model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
+        self.model = model
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size)
