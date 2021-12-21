@@ -6,7 +6,7 @@ from aitextgen.TokenDataset import TokenDataset
 from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-
+import torch
 from transformers import AdamW
 
 
@@ -44,5 +44,6 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], max_epochs=5)
     trainer.fit(model)
-    trainer.save_checkpoint("codon_transformer.ckpt")
+    torch.save(model.model.state_dict(), 'codon_transformerxl.pt')
+
 
