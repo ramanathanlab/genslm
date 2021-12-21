@@ -11,7 +11,7 @@ from transformers import AdamW
 
 
 class DNATransform(pl.LightningModule):
-    def __init__(self, tokenizer_file="dna_wordlevel_100vocab.json", train_file="mdh_codon_spaces_50.txt",
+    def __init__(self, tokenizer_file="codon_wordlevel_100vocab.json", train_file="mdh_codon_spaces_50.txt",
                  batch_size=4):
         super(DNATransform, self).__init__()
         self.batch_size = batch_size
