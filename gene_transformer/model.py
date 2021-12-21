@@ -13,6 +13,7 @@ from transformers import AdamW
 class DNATransform(pl.LightningModule):
     def __init__(self, tokenizer_file="dna_wordlevel_100vocab.json", train_file="mdh_codon_spaces_50.txt",
                  batch_size=4):
+        super(DNATransform, self).__init__()
         self.batch_size = batch_size
         self.tokenizer = Tokenizer.from_file(tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
