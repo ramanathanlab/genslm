@@ -9,9 +9,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from transformers import AdamW
 
+
 class DNATransform(pl.LightningModule):
     def __init__(self, tokenizer_file="dna_wordlevel_100vocab.json", train_file="mdh_codon_spaces_50.txt",
-                 batch_size = 4):
+                 batch_size=4):
         self.batch_size = batch_size
         self.tokenizer = Tokenizer.from_file(tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=tokenizer)
@@ -42,5 +43,3 @@ if __name__ == "__main__":
     trainer = pl.Trainer(logger=wandb_logger, gpus=-1, strategy="ddp", default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], epochs=5)
     trainer.fit(model)
-
-
