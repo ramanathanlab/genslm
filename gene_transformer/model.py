@@ -40,7 +40,7 @@ if __name__ == "__main__":
     wandb_logger = WandbLogger(project="dna_transformer")
     checkpoint_callback = ModelCheckpoint(monitor="train_loss")
     trainer = pl.Trainer(logger=wandb_logger, gpus=-1, strategy="ddp", default_root_dir="codon_transformer",
-                         callbacks=[checkpoint_callback])
+                         callbacks=[checkpoint_callback], epochs=5)
     trainer.fit(model)
 
 
