@@ -30,7 +30,7 @@ class DNATransform(pl.LightningModule):
         x = batch
         outputs = self(x)
         loss = outputs.losses.mean()
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
@@ -39,8 +39,8 @@ class DNATransform(pl.LightningModule):
 
 if __name__ == "__main__":
     model = DNATransform()
-    wandb_logger = WandbLogger(project="dna_transformer")
+    # wandb_logger = WandbLogger(project="dna_transformer")
     checkpoint_callback = ModelCheckpoint(monitor="train_loss")
-    trainer = pl.Trainer(logger=wandb_logger, gpus=-1, default_root_dir="codon_transformer",
+    trainer = pl.Trainer(gpus=-1, default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], max_epochs=5)
     trainer.fit(model)
