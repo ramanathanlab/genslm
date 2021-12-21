@@ -18,8 +18,7 @@ class DNATransform(pl.LightningModule):
         self.tokenizer = Tokenizer.from_file(tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         self.train_dataset = TokenDataset(train_file, tokenizer_file=tokenizer_file, block_size=512)
-        model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
-        self.model = model
+        self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size)
@@ -42,6 +41,6 @@ if __name__ == "__main__":
     model = DNATransform()
     wandb_logger = WandbLogger(project="dna_transformer")
     checkpoint_callback = ModelCheckpoint(monitor="train_loss")
-    trainer = pl.Trainer(logger=wandb_logger, gpus=-1, strategy="ddp", default_root_dir="codon_transformer",
+    trainer = pl.Trainer(logger=wandb_logger, gpus=-1, default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], epochs=5)
     trainer.fit(model)
