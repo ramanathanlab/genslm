@@ -10,6 +10,7 @@ import torch
 from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
+import pdb
 
 class DNATransform(pl.LightningModule):
     def __init__(self, config):
@@ -45,6 +46,7 @@ class DNATransform(pl.LightningModule):
         x = batch
         outputs = self(x)
         loss = outputs.losses.mean()
+        pdb.set_trace()
         score = outputs.prediction_scores.mean()
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train_prediction_score", score, on_step=True, on_epoch=True, logger=True)
