@@ -8,6 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 from transformers import AdamW
+from argparse import ArgumentParser
 
 MODEL_SAVE_PATH = "codon_transformerxl.pt"
 
@@ -39,6 +40,9 @@ class DNATransform(pl.LightningModule):
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--config", required=True)
+    
     model = DNATransform()
     # wandb_logger = WandbLogger(project="dna_transformer")
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=500)
