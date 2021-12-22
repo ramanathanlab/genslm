@@ -20,4 +20,4 @@ class ModelSettings(BaseSettings):
 
 if __name__ == "__main__":
     settings = ModelSettings()
-    settings.to_yaml("settings_template.yaml")
+    settings.yaml("settings_template.yaml")
