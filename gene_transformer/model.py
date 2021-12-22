@@ -12,7 +12,7 @@ from transformers import AdamW
 MODEL_SAVE_PATH = "codon_transformerxl.pt"
 
 class DNATransform(pl.LightningModule):
-    def __init__(self, tokenizer_file="codon_wordlevel_100vocab.json", train_file="mdh_codon_spaces_50.txt",
+    def __init__(self, tokenizer_file="codon_wordlevel_100vocab.json", train_file="mdh_codon_spaces_full.txt",
                  batch_size=4):
         super(DNATransform, self).__init__()
         self.batch_size = batch_size
