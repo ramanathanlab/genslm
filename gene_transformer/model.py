@@ -9,6 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 from transformers import AdamW
 
+MODEL_SAVE_PATH = "codon_transformerxl.pt"
 
 class DNATransform(pl.LightningModule):
     def __init__(self, tokenizer_file="codon_wordlevel_100vocab.json", train_file="mdh_codon_spaces_50.txt",
@@ -39,11 +40,13 @@ class DNATransform(pl.LightningModule):
 
 if __name__ == "__main__":
     model = DNATransform()
-    wandb_logger = WandbLogger(project="dna_transformer")
+    # wandb_logger = WandbLogger(project="dna_transformer")
     checkpoint_callback = ModelCheckpoint(monitor="train_loss")
-    trainer = pl.Trainer(logger=wandb_logger, gpus=-1, default_root_dir="codon_transformer",
+    trainer = pl.Trainer(gpus=-1, default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], max_epochs=5)
     trainer.fit(model)
-    torch.save(model.model.state_dict(), 'codon_transformerxl.pt')
+    print("Completed training.")
+    torch.save(model.model.state_dict(), MODEL_SAVE_PATH)
+    print("Save model state dict to {}.".format(MODEL_SAVE_PATH))
 
 
