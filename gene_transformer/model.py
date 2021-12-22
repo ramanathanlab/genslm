@@ -41,7 +41,7 @@ class DNATransform(pl.LightningModule):
 if __name__ == "__main__":
     model = DNATransform()
     # wandb_logger = WandbLogger(project="dna_transformer")
-    checkpoint_callback = ModelCheckpoint(monitor="train_loss")
+    checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=500)
     trainer = pl.Trainer(gpus=-1, default_root_dir="codon_transformer",
                          callbacks=[checkpoint_callback], max_epochs=5)
     trainer.fit(model)

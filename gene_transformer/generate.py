@@ -9,3 +9,4 @@ def generate_protein_seq(fast_tokenizer, model):
     seq = Seq(s)
     return seq.translate(to_stop=True)
 
+# add utility to generate a fasta file
