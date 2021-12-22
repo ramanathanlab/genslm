@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True)
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
-    model = DNATransform()
+    model = DNATransform(config)
     if config.wandb_active:
         wandb_logger = WandbLogger(project=config.wandb_project_name)
     else:
