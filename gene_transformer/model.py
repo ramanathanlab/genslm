@@ -85,7 +85,7 @@ if __name__ == "__main__":
     else:
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=config.checkpoint_interval)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, accelerator="ddp",
+    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp2",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs)
     trainer.fit(model)
     print("Completed training.")
