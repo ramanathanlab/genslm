@@ -12,6 +12,8 @@ from argparse import ArgumentParser
 from config import ModelSettings
 import pdb
 
+NUM_DATA_WORKERS = 4
+
 class DNATransform(pl.LightningModule):
     def __init__(self, config):
         super(DNATransform, self).__init__()
@@ -31,13 +33,16 @@ class DNATransform(pl.LightningModule):
             self.model = TransfoXLLMHeadModel()
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
+                                           pin_memory=True, persistent_workers=True, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
+                                           pin_memory=True, persistent_workers=True, shuffle=True)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
+                                           pin_memory=True, persistent_workers=True, shuffle=True)
 
     def forward(self, x):
         return self.model(x, labels=x)
@@ -68,6 +73,8 @@ class DNATransform(pl.LightningModule):
 
 
 if __name__ == "__main__":
+    torch.set_num_threads(NUM_DATA_WORKERS)
+    torch.manual_seed(0)
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
     args = parser.parse_args()
