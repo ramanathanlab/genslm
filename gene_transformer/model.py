@@ -27,7 +27,7 @@ class DNATransform(pl.LightningModule):
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                          block_size=config.block_size), np.arange(1000))
+                                          block_size=config.block_size), np.arange(10000))
         self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
                                           block_size=config.block_size), np.arange(100))
         self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
@@ -109,6 +109,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger)
     trainer.fit(model)
+    trainer.test(model)
     print("Completed training.")
     # torch.save(model.model.state_dict(), config.final_save_path)
     # print("Save model state dict to {}.".format(config.final_save_path))
