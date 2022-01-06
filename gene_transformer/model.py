@@ -56,7 +56,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        wandb.log({"train_loss": loss, 'random_value': 1})
+        # wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -65,7 +65,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        wandb.log({"val_loss": loss})
+        # wandb.log({"val_loss": loss})
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -74,7 +74,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        wandb.log({"test_loss": loss})
+        # wandb.log({"test_loss": loss})
         return loss
 
     def configure_optimizers(self):
@@ -92,14 +92,14 @@ if __name__ == "__main__":
     model = DNATransform(config)
     if config.wandb_active:
         print("Using Weights and Biases for logging...")
-        # wandb_logger = WandbLogger(project=config.wandb_project_name)
-        wandb_logger = None
-        wandb.init(project=config.wandb_project_name)
+        wandb_logger = WandbLogger(project=config.wandb_project_name)
+        # wandb_logger = None
+        # wandb.init(project=config.wandb_project_name)
         # wandb_logger.watch(model.model)
     else:
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=config.checkpoint_interval)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="dp",
+    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger)
     trainer.fit(model)
     print("Completed training.")
