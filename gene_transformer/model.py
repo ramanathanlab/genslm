@@ -108,7 +108,7 @@ if __name__ == "__main__":
                                           save_last=True, monitor="val/loss", mode="min",
                                           filename='codon-transformer-{step:02d}-{val/loss:.2f}', verbose=True)
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
-                         strategy=DDPStrategy(find_unused_parameters=False), profiler="advanced",
+                         strategy=torch.nn.parallel.DistributedDataParallel(find_unused_parameters=False), profiler="advanced",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
                          val_check_interval=50)
     trainer.fit(model)
