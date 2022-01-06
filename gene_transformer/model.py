@@ -27,7 +27,7 @@ class DNATransform(pl.LightningModule):
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                          block_size=config.block_size), np.arange(100))
+                                          block_size=config.block_size), np.arange(1000))
         self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
                                           block_size=config.block_size), np.arange(100))
         self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
