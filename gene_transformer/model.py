@@ -78,8 +78,8 @@ class DNATransform(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        # return AdamW(self.model.parameters(), lr=5e-5)
-        return FusedAdam(self.parameters())
+        return AdamW(self.model.parameters(), lr=5e-5)
+        # return FusedAdam(self.parameters())
 
 
 if __name__ == "__main__":
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     else:
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=config.checkpoint_interval)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="deepspeed_stage_3",
+    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp_spawn",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
                          precision=16)
     trainer.fit(model)
