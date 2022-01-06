@@ -56,7 +56,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        wandb.log({"train_loss": loss})
+        wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
     def validation_step(self, batch, batch_idx):
