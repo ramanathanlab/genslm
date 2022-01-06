@@ -84,7 +84,7 @@ class DNATransform(pl.LightningModule):
 
 if __name__ == "__main__":
     torch.set_num_threads(NUM_DATA_WORKERS)
-    torch.manual_seed(0)
+    pl.seed_everything(0)
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
     args = parser.parse_args()
