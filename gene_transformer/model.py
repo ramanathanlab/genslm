@@ -41,11 +41,11 @@ class DNATransform(pl.LightningModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
-                                           pin_memory=True, persistent_workers=True, shuffle=True)
+                                           pin_memory=True, persistent_workers=True, shuffle=False)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
-                                           pin_memory=True, persistent_workers=True, shuffle=True)
+                                           pin_memory=True, persistent_workers=True, shuffle=False)
 
     def forward(self, x):
         return self.model(x, labels=x)
