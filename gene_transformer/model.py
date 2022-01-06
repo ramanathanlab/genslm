@@ -107,7 +107,8 @@ if __name__ == "__main__":
                                           save_last=True, monitor="val/loss", mode="min",
                                           auto_insert_metric_name=True, verbose=True)
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
-                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger)
+                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
+                         val_check_interval=50)
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
