@@ -25,11 +25,11 @@ class DNATransform(pl.LightningModule):
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         self.train_dataset = TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                          block_size=config.block_size)
+                                          block_size=config.block_size)[:100]
         self.val_dataset = TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                          block_size=config.block_size)
+                                          block_size=config.block_size)[:100]
         self.test_dataset = TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                        block_size=config.block_size)
+                                        block_size=config.block_size)[:100]
         if config.use_pretrained:
             self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
         else:
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=config.checkpoint_interval)
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
-                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger, limit_train_batches=0.000002)
+                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger)
     trainer.fit(model)
     print("Completed training.")
     torch.save(model.model.state_dict(), config.final_save_path)
