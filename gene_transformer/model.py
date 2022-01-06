@@ -10,6 +10,7 @@ import torch
 from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
+import wandb
 import pdb
 
 NUM_DATA_WORKERS = 4
@@ -53,6 +54,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        wandb.log({"train/loss": loss})
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -61,6 +63,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        wandb.log({"train/loss": loss})
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -69,6 +72,7 @@ class DNATransform(pl.LightningModule):
         loss = outputs.losses.mean()
         # self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        wandb.log({"test/loss": loss})
         return loss
 
     def configure_optimizers(self):
