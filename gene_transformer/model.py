@@ -92,7 +92,8 @@ if __name__ == "__main__":
     model = DNATransform(config)
     if config.wandb_active:
         print("Using Weights and Biases for logging...")
-        wandb_logger = WandbLogger(project=config.wandb_project_name)
+        # wandb_logger = WandbLogger(project=config.wandb_project_name)
+        wandb_logger = None
         wandb.init(project=config.wandb_project_name)
         # wandb_logger.watch(model.model)
     else:
