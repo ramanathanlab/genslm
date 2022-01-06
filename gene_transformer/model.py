@@ -32,7 +32,7 @@ class DNATransform(pl.LightningModule):
                                           block_size=config.block_size), np.arange(100))
         self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
                                           block_size=config.block_size), np.arange(100))
-        pdb.set_trace()
+        # pdb.set_trace()
         if config.use_pretrained:
             self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
         else:
