@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
+import numpy as np
+from torch.utils.data import Subset
 from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
@@ -24,12 +26,12 @@ class DNATransform(pl.LightningModule):
         self.batch_size = config.batch_size
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
-        self.train_dataset = TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                          block_size=config.block_size)
-        self.val_dataset = TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                          block_size=config.block_size)
-        self.test_dataset = TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                        block_size=config.block_size)
+        self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
+                                          block_size=config.block_size), np.arange(100))
+        self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
+                                          block_size=config.block_size), np.arange(100))
+        self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
+                                          block_size=config.block_size), np.arange(100))
         pdb.set_trace()
         if config.use_pretrained:
             self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
