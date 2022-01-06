@@ -101,8 +101,7 @@ if __name__ == "__main__":
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=config.checkpoint_interval)
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
-                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
-                         val_check_interval=500, limit_train_batches=100)
+                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger, limit_train_batches=100)
     trainer.fit(model)
     print("Completed training.")
     torch.save(model.model.state_dict(), config.final_save_path)
