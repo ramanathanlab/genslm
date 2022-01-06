@@ -13,7 +13,7 @@ from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
 import wandb
-from pytorch_lightning.strategies import DDPStrategy
+# from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import FusedAdam
 import pdb
