@@ -18,7 +18,7 @@ from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import FusedAdam
 import pdb
 
-NUM_DATA_WORKERS = 32
+NUM_DATA_WORKERS = 4
 
 class DNATransform(pl.LightningModule):
     def __init__(self, config):
