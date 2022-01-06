@@ -110,7 +110,7 @@ if __name__ == "__main__":
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger)
     trainer.fit(model)
     print("Completed training.")
-    torch.save(model.model.state_dict(), config.final_save_path)
-    print("Save model state dict to {}.".format(config.final_save_path))
+    # torch.save(model.model.state_dict(), config.final_save_path)
+    # print("Save model state dict to {}.".format(config.final_save_path))
 
 
