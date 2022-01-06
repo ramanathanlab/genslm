@@ -93,7 +93,7 @@ if __name__ == "__main__":
     if config.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=config.wandb_project_name)
-        wandb_logger.watch(model.model)
+        # wandb_logger.watch(model.model)
     else:
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(monitor="train_loss", every_n_train_steps=config.checkpoint_interval)
