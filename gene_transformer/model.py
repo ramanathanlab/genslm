@@ -106,7 +106,7 @@ if __name__ == "__main__":
     checkpoint_callback = ModelCheckpoint(dirpath=config.checkpoint_dir,
                                           every_n_train_steps=config.checkpoint_interval,
                                           save_last=True, monitor="val/loss", mode="min",
-                                          filename='codon-transformer-{epoch:02d}-{val_loss:.2f}', verbose=True)
+                                          filename='codon-transformer-{step:02d}-{val/loss:.2f}', verbose=True)
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
                          strategy=DDPStrategy(find_unused_parameters=False), profiler="advanced",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
