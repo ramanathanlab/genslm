@@ -13,11 +13,12 @@ from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
 import wandb
+from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import FusedAdam
 import pdb
 
-NUM_DATA_WORKERS = 16
+NUM_DATA_WORKERS = 8
 
 class DNATransform(pl.LightningModule):
     def __init__(self, config):
@@ -106,7 +107,8 @@ if __name__ == "__main__":
                                           every_n_train_steps=config.checkpoint_interval,
                                           save_last=True, monitor="val/loss", mode="min",
                                           filename='codon-transformer-{epoch:02d}-{val_loss:.2f}', verbose=True)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
+    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
+                         strategy=DDPStrategy(find_unused_parameters=False), profiler="advanced",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
                          val_check_interval=50)
     trainer.fit(model)
