@@ -16,6 +16,7 @@ import wandb
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import FusedAdam
+import os
 import pdb
 
 NUM_DATA_WORKERS = 4
@@ -89,6 +90,7 @@ class DNATransform(pl.LightningModule):
 
 
 if __name__ == "__main__":
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
     torch.set_num_threads(NUM_DATA_WORKERS)
     pl.seed_everything(0)
     parser = ArgumentParser()
