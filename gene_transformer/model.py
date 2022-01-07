@@ -113,7 +113,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
                          strategy=DDPStrategy(find_unused_parameters=True),
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
-                         profiler="simple", val_check_interval=50, precision=16)
+                         profiler="simple", val_check_interval=50)
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
