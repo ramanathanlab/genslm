@@ -52,6 +52,7 @@ class DNATransform(pl.LightningModule):
                                            pin_memory=True, persistent_workers=True, shuffle=False)
 
     def forward(self, x):
+        x = x.half()
         return self.model(x, labels=x)
 
     def training_step(self, batch, batch_idx):
