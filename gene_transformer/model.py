@@ -13,7 +13,7 @@ from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
 import wandb
-from pytorch_lightning.strategies import DDPStrategy
+# from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import FusedAdam
 import os
@@ -110,7 +110,7 @@ if __name__ == "__main__":
                                           save_last=True, monitor="val/loss", mode="min",
                                           filename='codon-transformer-{step:02d}-{val/loss:.2f}', verbose=True)
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
-                         strategy=DDPStrategy(find_unused_parameters=True),
+                         strategy="ddp",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
                          profiler="simple", val_check_interval=50, accumulate_grad_batches=4)
     trainer.fit(model)
