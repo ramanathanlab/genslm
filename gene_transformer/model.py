@@ -32,16 +32,16 @@ class DNATransform(pl.LightningModule):
             self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
                                               block_size=config.block_size), np.arange(5000))
             self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                              block_size=config.block_size), np.arange(100))
+                                              block_size=config.block_size), np.arange(1000))
             self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                              block_size=config.block_size), np.arange(100))
+                                              block_size=config.block_size), np.arange(1000))
         else:
             self.train_dataset = TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
                                                      block_size=config.block_size)
-            self.val_dataset = TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                                   block_size=config.block_size)
-            self.test_dataset = TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                                    block_size=config.block_size)
+            self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
+                                                   block_size=config.block_size), np.arange(1000))
+            self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
+                                                    block_size=config.block_size), np.arange(1000))
         # pdb.set_trace()
         if config.use_pretrained:
             self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
                          strategy="ddp",
                          callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
-                         profiler="simple", val_check_interval=5000, accumulate_grad_batches=4)
+                         profiler="simple", val_check_interval=1000, accumulate_grad_batches=4)
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
