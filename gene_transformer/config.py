@@ -30,6 +30,7 @@ class ModelSettings(BaseSettings):
     val_file: str = "mdh_codon_spaces_full_val.txt"
     test_file: str = "mdh_codon_spaces_full_test.txt"
     small_subset: bool = False
+    blast_file = "blast_file.fasta"
 
     # model settings
     use_pretrained: bool = True
