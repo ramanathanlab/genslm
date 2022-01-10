@@ -1,4 +1,4 @@
-from transformers import TransfoXLLMHeadModel
+from transformers import TransfoXLLMHeadModel, TransfoXLConfig
 from tokenizers import Tokenizer
 import pytorch_lightning as pl
 from transformers import PreTrainedTokenizerFast
@@ -46,7 +46,8 @@ class DNATransform(pl.LightningModule):
         if config.use_pretrained:
             self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
         else:
-            self.model = TransfoXLLMHeadModel()
+            base_config = TransfoXLConfig()
+            self.model = TransfoXLLMHeadModel(base_config)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
