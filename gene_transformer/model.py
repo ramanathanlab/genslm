@@ -106,7 +106,7 @@ class DNATransform(pl.LightningModule):
             return
         # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
         # in order to monitor the similarity to training sequences
-        print("GLOBAL RANK": self.global_rank)
+        print("GLOBAL RANK: ", self.global_rank)
         generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
                                          biopy_seq=False)
         blast_scores = []
