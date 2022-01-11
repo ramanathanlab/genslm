@@ -134,6 +134,12 @@ class DNATransform(pl.LightningModule):
         self.log("val/mean_blast_score", mean_score, logger=True)
         self.log("val/max_blast_score", max_score, logger=True)
 
+    def test_epoch_end(self, test_outputs):
+        if self.config.generate_upon_completion:
+            save_path = Path(self.config.checkpoint_dir) / Path("generated_sequences.fasta")
+            generate_fasta_file(file_name=save_path, model=self.model, fast_tokenizer=self.fast_tokenizer,
+                                num_seqs=self.config.num_generated_seqs)
+
 
 if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -160,7 +166,3 @@ if __name__ == "__main__":
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
-    if config.generate_upon_completion:
-        save_path = Path(config.checkpoint_dir) / Path("generated_sequences.fasta")
-        generate_fasta_file(file_name=save_path, model=model.model, fast_tokenizer=model.fast_tokenizer,
-                            num_seqs=config.num_generated_seqs)
