@@ -39,8 +39,9 @@ class ModelSettings(BaseSettings):
     # model settings
     use_pretrained: bool = True
     batch_size: int = 4
-    epochs: int = 5
+    training_steps: int = 500
     block_size: int = 512
+    val_check_interval: int = 100
 
     # generation settings
     generate_upon_completion: bool = True

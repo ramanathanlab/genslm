@@ -18,8 +18,10 @@ from blast import BlastRun
 from tqdm import tqdm
 from pathlib import Path
 from Bio import SeqRecord
+import statistics
 
 NUM_DATA_WORKERS = 4
+
 
 class DNATransform(pl.LightningModule):
     def __init__(self, config):
@@ -30,14 +32,14 @@ class DNATransform(pl.LightningModule):
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         if config.small_subset:
             self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                              block_size=config.block_size), np.arange(5000))
+                                                     block_size=config.block_size), np.arange(5000))
             self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                              block_size=config.block_size), np.arange(1000))
+                                                   block_size=config.block_size), np.arange(1000))
             self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                              block_size=config.block_size), np.arange(1000))
+                                                    block_size=config.block_size), np.arange(1000))
         else:
             self.train_dataset = TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                                     block_size=config.block_size)
+                                              block_size=config.block_size)
             self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
                                                    block_size=config.block_size), np.arange(1000))
             self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
@@ -50,16 +52,18 @@ class DNATransform(pl.LightningModule):
             self.model = TransfoXLLMHeadModel(base_config)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
-                                           pin_memory=True, persistent_workers=True, shuffle=True)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS,
+                          prefetch_factor=4,
+                          pin_memory=True, persistent_workers=True, shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
-                                           pin_memory=True, persistent_workers=True, shuffle=False)
+                          pin_memory=True, persistent_workers=True, shuffle=False)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
-                                           pin_memory=True, persistent_workers=True, shuffle=False)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS,
+                          prefetch_factor=4,
+                          pin_memory=True, persistent_workers=True, shuffle=False)
 
     def forward(self, x):
         return self.model(x, labels=x)
@@ -106,21 +110,27 @@ class DNATransform(pl.LightningModule):
         blast_scores = []
         for n, sequence in tqdm(enumerate(generated)):
             run = BlastRun(
-                    sequence,
-                    self.config.blast_validation_file,
-                    temp_fasta_dir=Path(
-                        str(self.config.checkpoint_dir)
-                        + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
-                    ),
-                    temp_csv_dir=Path(
-                        str(self.config.checkpoint_dir)
-                        + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
-                    )
+                sequence,
+                self.config.blast_validation_file,
+                temp_fasta_dir=Path(
+                    str(self.config.checkpoint_dir)
+                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
+                ),
+                temp_csv_dir=Path(
+                    str(self.config.checkpoint_dir)
+                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
                 )
+            )
             run.run_blast()
             run.get_scores()
             score = run.get_mean_score()
             blast_scores.append(score)
+        # calculate mean and max score
+        mean_score = statistics.mean(blast_scores)
+        max_score = max(blast_scores)
+        self.log("val/mean_blast_score", mean_score, logger=True)
+        self.log("val/max_blast_score", max_score, logger=True)
+
 
 if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -140,10 +150,10 @@ if __name__ == "__main__":
                                           every_n_train_steps=config.checkpoint_interval,
                                           save_last=True, monitor="val/loss", mode="min",
                                           filename='codon-transformer-{step:02d}-{val/loss:.2f}', verbose=True)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir,
-                         strategy="ddp",
-                         callbacks=[checkpoint_callback], max_epochs=config.epochs, logger=wandb_logger,
-                         profiler="simple", val_check_interval=1000, accumulate_grad_batches=4)
+    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
+                         callbacks=[checkpoint_callback], max_steps=config.training_steps, logger=wandb_logger,
+                         profiler="simple", val_check_interval=config.val_check_interval,
+                         accumulate_grad_batches=config.accumulate_grad_batches)
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
@@ -151,7 +161,3 @@ if __name__ == "__main__":
         save_path = Path(config.checkpoint_dir) / Path("generated_sequences.fasta")
         generate_fasta_file(file_name=save_path, model=model.model, fast_tokenizer=model.fast_tokenizer,
                             num_seqs=config.num_generated_seqs)
-
-
-
-
