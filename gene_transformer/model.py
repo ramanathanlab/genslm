@@ -19,7 +19,6 @@ from tqdm import tqdm
 from pathlib import Path
 from Bio import SeqRecord
 import statistics
-import pdb
 
 NUM_DATA_WORKERS = 4
 
@@ -136,7 +135,6 @@ class DNATransform(pl.LightningModule):
         self.log("val/max_blast_score", max_score, logger=True)
 
     def test_epoch_end(self, outputs):
-        pdb.set_trace()
         if self.config.generate_upon_completion:
             save_path = Path(self.config.checkpoint_dir) / Path("generated_sequences.fasta")
             generate_fasta_file(file_name=save_path, model=self.model, fast_tokenizer=self.fast_tokenizer,
