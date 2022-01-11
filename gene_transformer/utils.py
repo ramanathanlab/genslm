@@ -20,7 +20,7 @@ def generate_dna_to_stop(model, fast_tokenizer, max_length=1024, top_k=50, top_p
         try:
             seq_strings.append("".join(to_stop))
         except NameError:
-            pass
+            seq_strings.append("".join(dna))
     if biopy_seq:
         seq_strings = [Seq(s) for s in seq_strings]
     return seq_strings
