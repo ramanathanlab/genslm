@@ -21,7 +21,6 @@ class ModelSettings(BaseSettings):
     # logging settings
     wandb_active: bool = True
     wandb_project_name: str = "codon_transformer"
-    checkpoint_interval: int = 500
     checkpoint_dir: str = "codon_transformer"
 
     # data settings
