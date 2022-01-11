@@ -105,6 +105,7 @@ class DNATransform(pl.LightningModule):
         if not self.config.enable_blast:
             return
         # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
+        # in order to monitor the similarity to training sequences
         if self.global_rank == 0:
             generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
                                              biopy_seq=False)
