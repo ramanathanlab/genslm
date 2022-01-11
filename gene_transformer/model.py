@@ -133,8 +133,10 @@ class DNATransform(pl.LightningModule):
             # calculate mean and max score
             mean_score = statistics.mean(blast_scores)
             max_score = max(blast_scores)
-            self.log("val/mean_blast_score", mean_score, logger=True)
-            self.log("val/max_blast_score", max_score, logger=True)
+            self.log("val/mean_blast_score", float(mean_score), logger=True)
+            self.log("val/max_blast_score", float(max_score), logger=True)
+        else:
+            pass
 
     def test_epoch_end(self, outputs):
         if self.config.generate_upon_completion and self.global_rank == 0:
