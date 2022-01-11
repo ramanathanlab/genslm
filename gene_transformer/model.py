@@ -12,12 +12,12 @@ from torch.utils.data import Subset
 from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
-import wandb
-# from pytorch_lightning.strategies import DDPStrategy
-from pytorch_lightning.plugins import DeepSpeedPlugin
-from deepspeed.ops.adam import FusedAdam
 import os
-import pdb
+from utils import generate_dna_to_stop
+from blast import BlastRun
+from tqdm import tqdm
+from pathlib import Path
+from Bio import SeqRecord
 
 NUM_DATA_WORKERS = 4
 
@@ -96,6 +96,31 @@ class DNATransform(pl.LightningModule):
         return AdamW(self.model.parameters(), lr=5e-5)
         # return FusedAdam(self.parameters())
 
+    def validation_epoch_end(self, val_step_outputs):
+        """NOTE: BLAST must be installed locally in order for this to work properly."""
+        if not self.config.enable_blast:
+            return
+        # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
+        generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
+                                         biopy_seq=False)
+        blast_scores = []
+        for n, sequence in tqdm(enumerate(generated)):
+            run = BlastRun(
+                    sequence,
+                    self.config.blast_validation_file,
+                    temp_fasta_dir=Path(
+                        str(self.config.checkpoint_dir)
+                        + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
+                    ),
+                    temp_csv_dir=Path(
+                        str(self.config.checkpoint_dir)
+                        + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
+                    )
+                )
+            run.run_blast()
+            run.get_scores()
+            score = run.get_mean_score()
+            blast_scores.append(score)
 
 if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -109,9 +134,6 @@ if __name__ == "__main__":
     if config.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=config.wandb_project_name)
-        # wandb_logger = None
-        # wandb.init(project=config.wandb_project_name)
-        # wandb_logger.watch(model.model)
     else:
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(dirpath=config.checkpoint_dir,
@@ -125,5 +147,17 @@ if __name__ == "__main__":
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
+    if config.generate_upon_completion:
+        generated = generate_dna_to_stop(model.model, model.fast_tokenizer, num_seqs=config.num_generated_seqs,
+                             biopy_seq=True)
+        records = []
+        for n, i in enumerate(generated):
+            record = SeqRecord(i,
+                               id="MDH_SyntheticSeq_{}".format(n),
+                               name="MDH_sequence",
+                               description="synthetic malate dehydrogenase",
+                               )
+            records.append(record)
+        
 
 

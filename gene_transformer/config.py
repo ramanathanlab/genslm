@@ -30,13 +30,21 @@ class ModelSettings(BaseSettings):
     val_file: str = "mdh_codon_spaces_full_val.txt"
     test_file: str = "mdh_codon_spaces_full_test.txt"
     small_subset: bool = False
-    blast_file = "blast_file.fasta"
+
+    # blast settings
+    enable_blast: bool = True
+    blast_validation_file: str = "blast_file.fasta"
+    num_blast_seqs: int = 5
 
     # model settings
     use_pretrained: bool = True
     batch_size: int = 4
     epochs: int = 5
     block_size: int = 512
+
+    # generation settings
+    generate_upon_completion: bool = True
+    num_generated_seqs: int = 15
 
 if __name__ == "__main__":
     settings = ModelSettings()
