@@ -150,14 +150,7 @@ if __name__ == "__main__":
     if config.generate_upon_completion:
         generated = generate_dna_to_stop(model.model, model.fast_tokenizer, num_seqs=config.num_generated_seqs,
                              biopy_seq=True)
-        records = []
-        for n, i in enumerate(generated):
-            record = SeqRecord(i,
-                               id="MDH_SyntheticSeq_{}".format(n),
-                               name="MDH_sequence",
-                               description="synthetic malate dehydrogenase",
-                               )
-            records.append(record)
-        
+
+
 
 
