@@ -112,7 +112,10 @@ class DNATransform(pl.LightningModule):
                     str(self.config.checkpoint_dir)
                     + "/blast_runs_globalstep{}/".format(self.global_step))
         temp_csv_dir = temp_fasta_dir
-        os.makedirs(temp_fasta_dir)
+        try:
+            os.makedirs(temp_fasta_dir)
+        except FileExistsError:
+            pass
 
         for n, sequence in tqdm(enumerate(generated)):
             run = BlastRun(
