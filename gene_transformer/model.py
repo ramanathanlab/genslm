@@ -100,6 +100,7 @@ class DNATransform(pl.LightningModule):
         return AdamW(self.model.parameters(), lr=5e-5)
         # return FusedAdam(self.parameters())
 
+    @rank_zero_only
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
         if not self.config.enable_blast:
@@ -136,6 +137,7 @@ class DNATransform(pl.LightningModule):
         self.log("val/mean_blast_score", float(mean_score), logger=True)
         self.log("val/max_blast_score", float(max_score), logger=True)
 
+    @rank_zero_only
     def test_epoch_end(self, outputs):
         print("GLOBAL RANK: ", self.global_rank)
         if self.config.generate_upon_completion:
