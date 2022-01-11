@@ -19,7 +19,6 @@ from tqdm import tqdm
 from pathlib import Path
 from Bio import SeqRecord
 import statistics
-import argcomplete
 
 NUM_DATA_WORKERS = 4
 
@@ -139,7 +138,6 @@ if __name__ == "__main__":
     pl.seed_everything(0)
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
-    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
     model = DNATransform(config)
