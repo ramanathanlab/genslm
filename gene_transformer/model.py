@@ -110,10 +110,10 @@ class DNATransform(pl.LightningModule):
         blast_scores = []
         temp_fasta_dir = Path(
                     str(self.config.checkpoint_dir)
-                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n))
-        temp_csv_dir= Path(
+                    + "/blast_runs_globalstep{}/".format(self.global_step))
+        temp_csv_dir = Path(
                     str(self.config.checkpoint_dir)
-                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n))
+                    + "/blast_runs_globalstep{}/".format(self.global_step))
         os.makedirs(temp_fasta_dir)
         os.makedirs(temp_csv_dir)
 
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
                          callbacks=[checkpoint_callback], max_steps=config.training_steps, logger=wandb_logger,
                          profiler="simple", val_check_interval=config.val_check_interval,
-                         accumulate_grad_batches=config.accumulate_grad_batches, num_sanity_val_steps=0)
+                         accumulate_grad_batches=config.accumulate_grad_batches, num_sanity_val_steps=2)
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
