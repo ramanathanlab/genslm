@@ -108,18 +108,21 @@ class DNATransform(pl.LightningModule):
         generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
                                          biopy_seq=False)
         blast_scores = []
+        temp_fasta_dir = Path(
+                    str(self.config.checkpoint_dir)
+                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n))
+        temp_csv_dir= Path(
+                    str(self.config.checkpoint_dir)
+                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n))
+        os.makedirs(temp_fasta_dir)
+        os.makedirs(temp_csv_dir)
+
         for n, sequence in tqdm(enumerate(generated)):
             run = BlastRun(
                 sequence,
                 self.config.blast_validation_file,
-                temp_fasta_dir=Path(
-                    str(self.config.checkpoint_dir)
-                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
-                ),
-                temp_csv_dir=Path(
-                    str(self.config.checkpoint_dir)
-                    + "/blast_runs_globalstep{}_seq{}/".format(self.global_step, n)
-                )
+                temp_fasta_dir=temp_fasta_dir,
+                temp_csv_dir=temp_csv_dir
             )
             run.run_blast()
             run.get_scores()
