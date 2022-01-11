@@ -1,5 +1,5 @@
 from Bio.Seq import Seq
-from Bio import SeqRecord
+from Bio.SeqRecord import SeqRecord
 
 # global variables
 stop_codons = ["TAA", "TAG", "TGA"]
