@@ -156,7 +156,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
                          callbacks=[checkpoint_callback], max_steps=config.training_steps, logger=wandb_logger,
                          profiler="simple", val_check_interval=config.val_check_interval,
-                         accumulate_grad_batches=config.accumulate_grad_batches)
+                         accumulate_grad_batches=config.accumulate_grad_batches, num_sanity_val_steps=0)
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
