@@ -105,37 +105,38 @@ class DNATransform(pl.LightningModule):
         if not self.config.enable_blast:
             return
         # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
-        generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
-                                         biopy_seq=False)
-        blast_scores = []
-        temp_fasta_dir = Path(
-                    str(self.config.checkpoint_dir)
-                    + "/blast_runs_globalstep{}/".format(self.global_step))
-        temp_csv_dir = temp_fasta_dir
-        try:
-            os.makedirs(temp_fasta_dir)
-        except FileExistsError:
-            pass
+        if self.global_rank == 0:
+            generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
+                                             biopy_seq=False)
+            blast_scores = []
+            temp_fasta_dir = Path(
+                str(self.config.checkpoint_dir)
+                + "/blast_runs_globalstep{}/".format(self.global_step))
+            temp_csv_dir = temp_fasta_dir
+            try:
+                os.makedirs(temp_fasta_dir)
+            except FileExistsError:
+                pass
 
-        for n, sequence in tqdm(enumerate(generated)):
-            run = BlastRun(
-                sequence,
-                self.config.blast_validation_file,
-                temp_fasta_dir=temp_fasta_dir,
-                temp_csv_dir=temp_csv_dir
-            )
-            run.run_blast()
-            run.get_scores()
-            score = run.get_mean_score()
-            blast_scores.append(score)
-        # calculate mean and max score
-        mean_score = statistics.mean(blast_scores)
-        max_score = max(blast_scores)
-        self.log("val/mean_blast_score", mean_score, logger=True)
-        self.log("val/max_blast_score", max_score, logger=True)
+            for n, sequence in tqdm(enumerate(generated)):
+                run = BlastRun(
+                    sequence,
+                    self.config.blast_validation_file,
+                    temp_fasta_dir=temp_fasta_dir,
+                    temp_csv_dir=temp_csv_dir
+                )
+                run.run_blast()
+                run.get_scores()
+                score = run.get_mean_score()
+                blast_scores.append(score)
+            # calculate mean and max score
+            mean_score = statistics.mean(blast_scores)
+            max_score = max(blast_scores)
+            self.log("val/mean_blast_score", mean_score, logger=True)
+            self.log("val/max_blast_score", max_score, logger=True)
 
     def test_epoch_end(self, outputs):
-        if self.config.generate_upon_completion:
+        if self.config.generate_upon_completion and self.global_rank == 0:
             save_path = Path(self.config.checkpoint_dir) / Path("generated_sequences.fasta")
             generate_fasta_file(file_name=save_path, model=self.model, fast_tokenizer=self.fast_tokenizer,
                                 num_seqs=self.config.num_generated_seqs)
