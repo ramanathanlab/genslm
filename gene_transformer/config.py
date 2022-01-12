@@ -33,7 +33,7 @@ class ModelSettings(BaseSettings):
     # blast settings
     enable_blast: bool = True
     blast_validation_file: str = "blast_file.fasta"
-    num_blast_seqs: int = 5
+    num_blast_seqs_per_gpu: int = 5
 
     # model settings
     use_pretrained: bool = True
@@ -45,7 +45,7 @@ class ModelSettings(BaseSettings):
 
     # generation settings
     generate_upon_completion: bool = True
-    num_generated_seqs: int = 15
+    num_generated_seqs_per_gpu: int = 15
 
 if __name__ == "__main__":
     settings = ModelSettings()

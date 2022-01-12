@@ -31,6 +31,7 @@ class DNATransform(pl.LightningModule):
         self.batch_size = config.batch_size
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
+        self.final_sequences = []
         if config.small_subset:
             self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
                                                      block_size=config.block_size), np.arange(5000))
@@ -101,15 +102,13 @@ class DNATransform(pl.LightningModule):
         return AdamW(self.model.parameters(), lr=5e-5)
         # return FusedAdam(self.parameters())
 
-    # @rank_zero_only
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
         if not self.config.enable_blast:
             return
         # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
         # in order to monitor the similarity to training sequences
-        print("GLOBAL RANK: ", self.global_rank)
-        generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs,
+        generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs_per_gpu,
                                          biopy_seq=False)
         blast_scores = []
         temp_fasta_dir = Path(
@@ -138,13 +137,15 @@ class DNATransform(pl.LightningModule):
         self.log("val/mean_blast_score", float(mean_score), logger=True)
         self.log("val/max_blast_score", float(max_score), logger=True)
 
-    # @rank_zero_only
     def test_epoch_end(self, outputs):
-        print("GLOBAL RANK: ", self.global_rank)
         if self.config.generate_upon_completion:
-            save_path = Path(self.config.checkpoint_dir) / Path("generated_sequences.fasta")
-            generate_fasta_file(file_name=save_path, model=self.model, fast_tokenizer=self.fast_tokenizer,
-                                num_seqs=self.config.num_generated_seqs)
+            generated = generate_dna_to_stop(self.model, self.fast_tokenizer,
+                                             num_seqs=self.config.num_blast_seqs_per_gpu,
+                                             biopy_seq=True)
+            self.final_sequences.extend(generated)
+            # save_path = Path(self.config.checkpoint_dir) / Path("generated_sequences.fasta")
+            # generate_fasta_file(file_name=save_path, model=self.model, fast_tokenizer=self.fast_tokenizer,
+            #                     num_seqs=self.config.num_generated_seqs_per_gpu)
 
 
 if __name__ == "__main__":
@@ -172,3 +173,6 @@ if __name__ == "__main__":
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
+    if config.generate_upon_completion:
+        seqs = model.final_sequences
+
