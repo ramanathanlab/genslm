@@ -27,6 +27,7 @@ def generate_dna_to_stop(model, fast_tokenizer, max_length=1024, top_k=50, top_p
         seq_strings = [Seq(s) for s in seq_strings]
     return seq_strings
 
+
 def seqs_to_fasta(seqs, file_name):
     records = []
     for n, i in enumerate(seqs):
@@ -40,6 +41,7 @@ def seqs_to_fasta(seqs, file_name):
     with open(file_name, "w") as output_handle:
         SeqIO.write(records, output_handle, "fasta")
 
+
 def generate_fasta_file(file_name, model, fast_tokenizer, max_length=1024, top_k=50, top_p=0.95, num_seqs=5,
                         translate_to_protein=False):
     # generate seq objects
@@ -49,4 +51,3 @@ def generate_fasta_file(file_name, model, fast_tokenizer, max_length=1024, top_k
         generated = [s.translate() for s in generated]
     # generate seq records
     seqs_to_fasta(generated, file_name)
-
