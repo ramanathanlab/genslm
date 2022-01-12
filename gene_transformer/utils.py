@@ -46,5 +46,5 @@ def generate_fasta_file(file_name, model, fast_tokenizer, max_length=1024, top_k
         records.append(record)
 
     with open(file_name, "w") as output_handle:
-        SeqIO.write(train_records, output_handle, "fasta")
+        SeqIO.write(records, output_handle, "fasta")
 
