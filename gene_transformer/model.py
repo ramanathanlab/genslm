@@ -13,7 +13,7 @@ from transformers import AdamW
 from argparse import ArgumentParser
 from config import ModelSettings
 import os
-from utils import generate_dna_to_stop, generate_fasta_file
+from utils import generate_dna_to_stop, generate_fasta_file, seqs_to_fasta
 from blast import BlastRun
 from tqdm import tqdm
 from pathlib import Path
@@ -174,5 +174,7 @@ if __name__ == "__main__":
     trainer.test(model)
     print("Completed training.")
     if config.generate_upon_completion:
+        save_path = Path(config.checkpoint_dir) / Path("generated_sequences.fasta")
         seqs = model.final_sequences
+        seqs_to_fasta(seqs, save_path)
 
