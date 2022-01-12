@@ -167,7 +167,7 @@ if __name__ == "__main__":
                                           every_n_train_steps=config.val_check_interval,
                                           save_last=True, monitor="val/loss", mode="min",
                                           filename='codon-transformer-{step:02d}-{val/loss:.2f}', verbose=True)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp",
+    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="horovod",
                          callbacks=[checkpoint_callback], max_steps=config.training_steps, logger=wandb_logger,
                          profiler="simple", val_check_interval=config.val_check_interval,
                          accumulate_grad_batches=config.accumulate_grad_batches, num_sanity_val_steps=2)
