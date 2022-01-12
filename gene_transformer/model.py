@@ -143,9 +143,6 @@ class DNATransform(pl.LightningModule):
                                              num_seqs=self.config.num_blast_seqs_per_gpu,
                                              biopy_seq=True)
             self.final_sequences.extend(generated)
-            # save_path = Path(self.config.checkpoint_dir) / Path("generated_sequences.fasta")
-            # generate_fasta_file(file_name=save_path, model=self.model, fast_tokenizer=self.fast_tokenizer,
-            #                     num_seqs=self.config.num_generated_seqs_per_gpu)
 
 
 if __name__ == "__main__":
@@ -174,7 +171,9 @@ if __name__ == "__main__":
     trainer.test(model)
     print("Completed training.")
     if config.generate_upon_completion:
-        save_path = Path(config.checkpoint_dir) / Path("generated_sequences.fasta")
+        save_path = Path(config.checkpoint_dir) / Path("final_generated_sequences.fasta")
         seqs = model.final_sequences
+        print("Length of final sequence list: ", len(seqs))
         seqs_to_fasta(seqs, save_path)
+        print("Saved final generated sequences to ", save_path)
 
