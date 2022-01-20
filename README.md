@@ -15,3 +15,14 @@ conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 pip install transformers[deepspeed]
 pip install -r requirements/requirements.txt
 ```
+
+## Development
+Locally:
+```
+python3 -m venv env
+source env/bin/activate
+pip3 install -U pip setuptools wheel
+pip3 install -r requirements/dev.txt
+pip3 install -r requirements/requirements.txt
+```
+To run dev tools (flake8, black, mypy): `make`
