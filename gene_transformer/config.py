@@ -1,10 +1,11 @@
-from pydantic import BaseSettings as _BaseSettings
-from pathlib import Path
-from typing import TypeVar, Type, Union, Optional, Dict, Any
-import yaml
 import json
+import yaml
+from pathlib import Path
+from typing import Type, TypeVar, Union
+from pydantic import BaseSettings as _BaseSettings
 
 _T = TypeVar("_T")
+
 
 class BaseSettings(_BaseSettings):
     def dump_yaml(self, cfg_path):
@@ -16,6 +17,7 @@ class BaseSettings(_BaseSettings):
         with open(filename) as fp:
             raw_data = yaml.safe_load(fp)
         return cls(**raw_data)
+
 
 class ModelSettings(BaseSettings):
     # logging settings
@@ -46,6 +48,7 @@ class ModelSettings(BaseSettings):
     # generation settings
     generate_upon_completion: bool = True
     num_generated_seqs_per_gpu: int = 15
+
 
 if __name__ == "__main__":
     settings = ModelSettings()

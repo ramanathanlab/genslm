@@ -1,14 +1,28 @@
+from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio import SeqIO
 
 # global variables
 stop_codons = ["TAA", "TAG", "TGA"]
 
 
-def generate_dna_to_stop(model, fast_tokenizer, max_length=1024, top_k=50, top_p=0.95, num_seqs=5, biopy_seq=False):
-    output = model.generate(fast_tokenizer.encode("ATG", return_tensors="pt").cuda(), max_length=max_length,
-                            do_sample=True, top_k=top_k, top_p=top_p, num_return_sequences=num_seqs)
+def generate_dna_to_stop(
+    model,
+    fast_tokenizer,
+    max_length=1024,
+    top_k=50,
+    top_p=0.95,
+    num_seqs=5,
+    biopy_seq=False,
+):
+    output = model.generate(
+        fast_tokenizer.encode("ATG", return_tensors="pt").cuda(),
+        max_length=max_length,
+        do_sample=True,
+        top_k=top_k,
+        top_p=top_p,
+        num_return_sequences=num_seqs,
+    )
     seqs = []
     for i in output:
         seqs.append(fast_tokenizer.decode(i))
@@ -17,7 +31,7 @@ def generate_dna_to_stop(model, fast_tokenizer, max_length=1024, top_k=50, top_p
         dna = s.split(" ")
         for n, i in enumerate(dna):
             if i in stop_codons:
-                to_stop = dna[:n + 1]
+                to_stop = dna[: n + 1]
                 break
         try:
             seq_strings.append("".join(to_stop))
@@ -31,22 +45,38 @@ def generate_dna_to_stop(model, fast_tokenizer, max_length=1024, top_k=50, top_p
 def seqs_to_fasta(seqs, file_name):
     records = []
     for n, i in enumerate(seqs):
-        record = SeqRecord(i,
-                           id="MDH_SyntheticSeq_{}".format(n),
-                           name="MDH_sequence",
-                           description="synthetic malate dehydrogenase",
-                           )
+        record = SeqRecord(
+            i,
+            id="MDH_SyntheticSeq_{}".format(n),
+            name="MDH_sequence",
+            description="synthetic malate dehydrogenase",
+        )
         records.append(record)
 
     with open(file_name, "w") as output_handle:
         SeqIO.write(records, output_handle, "fasta")
 
 
-def generate_fasta_file(file_name, model, fast_tokenizer, max_length=1024, top_k=50, top_p=0.95, num_seqs=5,
-                        translate_to_protein=False):
+def generate_fasta_file(
+    file_name,
+    model,
+    fast_tokenizer,
+    max_length=1024,
+    top_k=50,
+    top_p=0.95,
+    num_seqs=5,
+    translate_to_protein=False,
+):
     # generate seq objects
-    generated = generate_dna_to_stop(model, fast_tokenizer, max_length=max_length, top_k=top_k, top_p=top_p,
-                                     num_seqs=num_seqs, biopy_seq=True)
+    generated = generate_dna_to_stop(
+        model,
+        fast_tokenizer,
+        max_length=max_length,
+        top_k=top_k,
+        top_p=top_p,
+        num_seqs=num_seqs,
+        biopy_seq=True,
+    )
     if translate_to_protein:
         generated = [s.translate() for s in generated]
     # generate seq records

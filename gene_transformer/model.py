@@ -1,25 +1,28 @@
-from transformers import TransfoXLLMHeadModel, TransfoXLConfig
-from tokenizers import Tokenizer
-import pytorch_lightning as pl
-from transformers import PreTrainedTokenizerFast
-from aitextgen.TokenDataset import TokenDataset
-from torch.utils.data import DataLoader
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import ModelCheckpoint
-import torch
-import numpy as np
-from torch.utils.data import Subset
-from transformers import AdamW
-from argparse import ArgumentParser
-from config import ModelSettings
 import os
-from utils import generate_dna_to_stop, generate_fasta_file, seqs_to_fasta
-from blast import BlastRun
-from tqdm import tqdm
-from pathlib import Path
-from Bio import SeqRecord
 import statistics
-from pytorch_lightning.utilities import rank_zero_only
+from argparse import ArgumentParser
+from pathlib import Path
+
+import numpy as np
+import pytorch_lightning as pl
+import torch
+from aitextgen.TokenDataset import TokenDataset
+from blast import BlastRun
+from config import ModelSettings
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
+
+# from pytorch_lightning.utilities import rank_zero_only
+from tokenizers import Tokenizer
+from torch.utils.data import DataLoader, Subset
+from tqdm import tqdm
+from transformers import (
+    AdamW,
+    PreTrainedTokenizerFast,
+    TransfoXLConfig,
+    TransfoXLLMHeadModel,
+)
+from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 
 NUM_DATA_WORKERS = 4
 
@@ -33,39 +36,91 @@ class DNATransform(pl.LightningModule):
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
         self.final_sequences = []
         if config.small_subset:
-            self.train_dataset = Subset(TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                                     block_size=config.block_size), np.arange(5000))
-            self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                                   block_size=config.block_size), np.arange(1000))
-            self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                                    block_size=config.block_size), np.arange(1000))
+            self.train_dataset = Subset(
+                TokenDataset(
+                    config.train_file,
+                    tokenizer_file=config.tokenizer_file,
+                    block_size=config.block_size,
+                ),
+                np.arange(5000),
+            )
+            self.val_dataset = Subset(
+                TokenDataset(
+                    config.val_file,
+                    tokenizer_file=config.tokenizer_file,
+                    block_size=config.block_size,
+                ),
+                np.arange(1000),
+            )
+            self.test_dataset = Subset(
+                TokenDataset(
+                    config.test_file,
+                    tokenizer_file=config.tokenizer_file,
+                    block_size=config.block_size,
+                ),
+                np.arange(1000),
+            )
         else:
-            self.train_dataset = TokenDataset(config.train_file, tokenizer_file=config.tokenizer_file,
-                                              block_size=config.block_size)
-            self.val_dataset = Subset(TokenDataset(config.val_file, tokenizer_file=config.tokenizer_file,
-                                                   block_size=config.block_size), np.arange(1000))
-            self.test_dataset = Subset(TokenDataset(config.test_file, tokenizer_file=config.tokenizer_file,
-                                                    block_size=config.block_size), np.arange(1000))
+            self.train_dataset = TokenDataset(
+                config.train_file,
+                tokenizer_file=config.tokenizer_file,
+                block_size=config.block_size,
+            )
+            self.val_dataset = Subset(
+                TokenDataset(
+                    config.val_file,
+                    tokenizer_file=config.tokenizer_file,
+                    block_size=config.block_size,
+                ),
+                np.arange(1000),
+            )
+            self.test_dataset = Subset(
+                TokenDataset(
+                    config.test_file,
+                    tokenizer_file=config.tokenizer_file,
+                    block_size=config.block_size,
+                ),
+                np.arange(1000),
+            )
         # pdb.set_trace()
         if config.use_pretrained:
-            self.model = TransfoXLLMHeadModel.from_pretrained('transfo-xl-wt103')
+            self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
         else:
             base_config = TransfoXLConfig()
             self.model = TransfoXLLMHeadModel(base_config)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS,
-                          prefetch_factor=4,
-                          pin_memory=True, persistent_workers=True, shuffle=True)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=NUM_DATA_WORKERS,
+            prefetch_factor=4,
+            pin_memory=True,
+            persistent_workers=True,
+            shuffle=True,
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS, prefetch_factor=4,
-                          pin_memory=True, persistent_workers=True, shuffle=False)
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=NUM_DATA_WORKERS,
+            prefetch_factor=4,
+            pin_memory=True,
+            persistent_workers=True,
+            shuffle=False,
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=NUM_DATA_WORKERS,
-                          prefetch_factor=4,
-                          pin_memory=True, persistent_workers=True, shuffle=False)
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            num_workers=NUM_DATA_WORKERS,
+            prefetch_factor=4,
+            pin_memory=True,
+            persistent_workers=True,
+            shuffle=False,
+        )
 
     def forward(self, x):
         return self.model(x, labels=x)
@@ -85,7 +140,9 @@ class DNATransform(pl.LightningModule):
         outputs = self(x)
         loss = outputs.losses.mean()
         # self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+        )
         # wandb.log({"val_loss": loss})
         return loss
 
@@ -94,7 +151,9 @@ class DNATransform(pl.LightningModule):
         outputs = self(x)
         loss = outputs.losses.mean()
         # self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+        )
         # wandb.log({"test_loss": loss})
         return loss
 
@@ -108,12 +167,17 @@ class DNATransform(pl.LightningModule):
             return
         # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
         # in order to monitor the similarity to training sequences
-        generated = generate_dna_to_stop(self.model, self.fast_tokenizer, num_seqs=self.config.num_blast_seqs_per_gpu,
-                                         biopy_seq=False)
+        generated = generate_dna_to_stop(
+            self.model,
+            self.fast_tokenizer,
+            num_seqs=self.config.num_blast_seqs_per_gpu,
+            biopy_seq=False,
+        )
         blast_scores = []
         temp_fasta_dir = Path(
             str(self.config.checkpoint_dir)
-            + "/blast_runs_globalstep{}/".format(self.global_step))
+            + "/blast_runs_globalstep{}/".format(self.global_step)
+        )
         temp_csv_dir = temp_fasta_dir
         try:
             os.makedirs(temp_fasta_dir)
@@ -126,7 +190,7 @@ class DNATransform(pl.LightningModule):
                 sequence,
                 self.config.blast_validation_file,
                 temp_fasta_dir=temp_fasta_dir,
-                temp_csv_dir=temp_csv_dir
+                temp_csv_dir=temp_csv_dir,
             )
             run.run_blast()
             run.get_scores()
@@ -140,9 +204,12 @@ class DNATransform(pl.LightningModule):
 
     def test_epoch_end(self, outputs):
         if self.config.generate_upon_completion:
-            generated = generate_dna_to_stop(self.model, self.fast_tokenizer,
-                                             num_seqs=self.config.num_blast_seqs_per_gpu,
-                                             biopy_seq=True)
+            generated = generate_dna_to_stop(
+                self.model,
+                self.fast_tokenizer,
+                num_seqs=self.config.num_blast_seqs_per_gpu,
+                biopy_seq=True,
+            )
             self.final_sequences.extend(generated)
             # save_path = Path(self.config.checkpoint_dir) / Path("final_generated_sequences.fasta")
             # seqs_to_fasta(generated, save_path)
@@ -163,21 +230,35 @@ if __name__ == "__main__":
         wandb_logger = WandbLogger(project=config.wandb_project_name)
     else:
         wandb_logger = None
-    checkpoint_callback = ModelCheckpoint(dirpath=config.checkpoint_dir,
-                                          every_n_train_steps=config.val_check_interval,
-                                          save_last=True, monitor="val/loss", mode="min",
-                                          filename='codon-transformer-{step:02d}-{val/loss:.2f}', verbose=True)
-    trainer = pl.Trainer(gpus=-1, default_root_dir=config.checkpoint_dir, strategy="ddp_spawn",
-                         callbacks=[checkpoint_callback], max_steps=config.training_steps, logger=wandb_logger,
-                         profiler="simple", val_check_interval=config.val_check_interval,
-                         accumulate_grad_batches=config.accumulate_grad_batches, num_sanity_val_steps=2)
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=config.checkpoint_dir,
+        every_n_train_steps=config.val_check_interval,
+        save_last=True,
+        monitor="val/loss",
+        mode="min",
+        filename="codon-transformer-{step:02d}-{val/loss:.2f}",
+        verbose=True,
+    )
+    trainer = pl.Trainer(
+        gpus=-1,
+        default_root_dir=config.checkpoint_dir,
+        strategy="ddp_spawn",
+        callbacks=[checkpoint_callback],
+        max_steps=config.training_steps,
+        logger=wandb_logger,
+        profiler="simple",
+        val_check_interval=config.val_check_interval,
+        accumulate_grad_batches=config.accumulate_grad_batches,
+        num_sanity_val_steps=2,
+    )
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
     if config.generate_upon_completion:
-        save_path = Path(config.checkpoint_dir) / Path("final_generated_sequences.fasta")
+        save_path = Path(config.checkpoint_dir) / Path(
+            "final_generated_sequences.fasta"
+        )
         seqs = model.final_sequences
         print("Length of final sequence list: ", len(seqs))
         seqs_to_fasta(seqs, save_path)
         print("Saved final generated sequences to ", save_path)
-
