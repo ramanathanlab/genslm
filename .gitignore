@@ -2,6 +2,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/sublimetext,pycharm,visualstudiocode,macos,python,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=sublimetext,pycharm,visualstudiocode,macos,python,jupyternotebooks
 
+conda-env/
+
+
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
