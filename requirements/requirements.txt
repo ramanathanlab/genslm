@@ -3,3 +3,4 @@ wandb
 pydantic
 biopython
 pandas
+aitextgen
