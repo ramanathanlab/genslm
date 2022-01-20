@@ -11,7 +11,9 @@ Installation:
 . /software/anaconda3/bin/activate
 conda create -p ./conda-env python=3.7
 conda activate ./conda-env
+conda install -c bioconda blast
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+pip install setuptools==59.5.0 # For lightning compatibility
 pip install transformers[deepspeed]
 pip install -r requirements/requirements.txt
 ```
