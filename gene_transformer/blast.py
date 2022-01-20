@@ -1,9 +1,9 @@
 """Defining blast utilities to monitor training"""
 
-import subprocess
-import pandas as pd
 import statistics
+import subprocess
 from pathlib import Path
+import pandas as pd
 
 
 class BlastRun:

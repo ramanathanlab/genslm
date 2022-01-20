@@ -1,0 +1,6 @@
+pytorch-lightning
+wandb
+pydantic
+biopython
+pandas
+aitextgen
