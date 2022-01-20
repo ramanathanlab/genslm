@@ -6,14 +6,16 @@ from pydantic import BaseSettings as _BaseSettings
 
 _T = TypeVar("_T")
 
+PathLike = Union[str, Path]
+
 
 class BaseSettings(_BaseSettings):
-    def dump_yaml(self, cfg_path):
+    def dump_yaml(self, cfg_path: PathLike) -> None:
         with open(cfg_path, mode="w") as fp:
             yaml.dump(json.loads(self.json()), fp, indent=4, sort_keys=False)
 
     @classmethod
-    def from_yaml(cls: Type[_T], filename: Union[str, Path]) -> _T:
+    def from_yaml(cls: Type[_T], filename: PathLike) -> _T:
         with open(filename) as fp:
             raw_data = yaml.safe_load(fp)
         return cls(**raw_data)

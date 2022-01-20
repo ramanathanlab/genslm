@@ -1,4 +1,4 @@
-from Bio.Seq import Seq
+from Bio.Seq import Seq  # type: ignore[import]
 
 
 def generate_protein_seq(fast_tokenizer, model):

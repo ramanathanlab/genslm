@@ -1,6 +1,6 @@
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO  # type: ignore[import]
+from Bio.Seq import Seq  # type: ignore[import]
+from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 
 # global variables
 stop_codons = ["TAA", "TAG", "TGA"]
@@ -9,11 +9,11 @@ stop_codons = ["TAA", "TAG", "TGA"]
 def generate_dna_to_stop(
     model,
     fast_tokenizer,
-    max_length=1024,
-    top_k=50,
-    top_p=0.95,
-    num_seqs=5,
-    biopy_seq=False,
+    max_length: int = 1024,
+    top_k: int = 50,
+    top_p: float = 0.95,
+    num_seqs: int = 5,
+    biopy_seq: bool = False,
 ):
     output = model.generate(
         fast_tokenizer.encode("ATG", return_tensors="pt").cuda(),
@@ -61,11 +61,11 @@ def generate_fasta_file(
     file_name,
     model,
     fast_tokenizer,
-    max_length=1024,
-    top_k=50,
-    top_p=0.95,
-    num_seqs=5,
-    translate_to_protein=False,
+    max_length: int = 1024,
+    top_k: int = 50,
+    top_p: float = 0.95,
+    num_seqs: int = 5,
+    translate_to_protein: bool = False,
 ):
     # generate seq objects
     generated = generate_dna_to_stop(
