@@ -1,0 +1,16 @@
+# As well as these dev tools:
+mypy
+black
+flake8
+pytest
+isort
+
+# mypy type stubs:
+types-PyYAML
+types-aiofiles 
+types-orjson 
+types-python-dateutil 
+types-redis 
+types-requests 
+types-ujson
+types-jwt
