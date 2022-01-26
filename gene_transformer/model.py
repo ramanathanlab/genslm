@@ -268,8 +268,8 @@ if __name__ == "__main__":
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
             stage=3,
-            #offload_optimizer=True,
-            #offload_parameters=True,
+            offload_optimizer=True,
+            offload_parameters=True,
         ),
         callbacks=[checkpoint_callback],
         max_steps=config.training_steps,
@@ -278,6 +278,7 @@ if __name__ == "__main__":
         val_check_interval=config.val_check_interval,
         accumulate_grad_batches=config.accumulate_grad_batches,
         num_sanity_val_steps=2,
+        precision=16
     )
     trainer.fit(model)
     trainer.test(model)
