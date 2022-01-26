@@ -119,9 +119,9 @@ class DNATransform(pl.LightningModule):
             self.train_dataset,
             batch_size=self.batch_size,
             num_workers=NUM_DATA_WORKERS,
-            # prefetch_factor=4,
-            # pin_memory=True,
-            # persistent_workers=True,
+            prefetch_factor=4,
+            pin_memory=True,
+            persistent_workers=True,
             shuffle=True,
         )
 
@@ -130,9 +130,9 @@ class DNATransform(pl.LightningModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=NUM_DATA_WORKERS,
-            # prefetch_factor=4,
-            # pin_memory=True,
-            # persistent_workers=True,
+            prefetch_factor=4,
+            pin_memory=True,
+            persistent_workers=True,
             shuffle=False,
         )
 
@@ -141,9 +141,9 @@ class DNATransform(pl.LightningModule):
             self.test_dataset,
             batch_size=self.batch_size,
             num_workers=NUM_DATA_WORKERS,
-            # prefetch_factor=4,
-            # pin_memory=True,
-            # persistent_workers=True,
+            prefetch_factor=4,
+            pin_memory=True,
+            persistent_workers=True,
             shuffle=False,
         )
 
@@ -187,8 +187,8 @@ class DNATransform(pl.LightningModule):
 
     def configure_optimizers(self):
         # return AdamW(self.model.parameters(), lr=5e-5)
-        return FusedAdam(self.parameters(), lr=5e-5)
-        # return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        # return FusedAdam(self.parameters(), lr=5e-5)
+        return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
@@ -276,8 +276,8 @@ if __name__ == "__main__":
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
             stage=3,
-            # offload_optimizer=True,
-            # offload_parameters=True,
+            offload_optimizer=True,
+            offload_parameters=True,
         ),
         callbacks=[checkpoint_callback],
         max_steps=config.training_steps,
