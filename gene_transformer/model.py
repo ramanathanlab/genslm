@@ -110,7 +110,7 @@ class DNATransform(pl.LightningModule):
             # self.model = TransfoXLLMHeadModel(base_config)
             # base_config = GPTJConfig()
             # self.model = GPTJForCausalLM(base_config)
-             base_config = GPT2Config()
+            base_config = GPT2Config()
             self.model = GPT2LMHeadModel(base_config)
 
 
