@@ -187,8 +187,8 @@ class DNATransform(pl.LightningModule):
 
     def configure_optimizers(self):
         # return AdamW(self.model.parameters(), lr=5e-5)
-        # return FusedAdam(self.parameters(), lr=5e-5)
-        return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        return FusedAdam(self.parameters(), lr=5e-5)
+        # return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
@@ -276,7 +276,7 @@ if __name__ == "__main__":
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
             stage=3,
-            offload_optimizer=True,
+            # offload_optimizer=True,
             offload_parameters=True,
         ),
         callbacks=[checkpoint_callback],
