@@ -119,9 +119,9 @@ class DNATransform(pl.LightningModule):
             self.train_dataset,
             batch_size=self.batch_size,
             num_workers=NUM_DATA_WORKERS,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True,
+            # prefetch_factor=4,
+            # pin_memory=True,
+            # persistent_workers=True,
             shuffle=True,
         )
 
@@ -130,9 +130,9 @@ class DNATransform(pl.LightningModule):
             self.val_dataset,
             batch_size=self.batch_size,
             num_workers=NUM_DATA_WORKERS,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True,
+            # prefetch_factor=4,
+            # pin_memory=True,
+            # persistent_workers=True,
             shuffle=False,
         )
 
@@ -141,9 +141,9 @@ class DNATransform(pl.LightningModule):
             self.test_dataset,
             batch_size=self.batch_size,
             num_workers=NUM_DATA_WORKERS,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True,
+            # prefetch_factor=4,
+            # pin_memory=True,
+            # persistent_workers=True,
             shuffle=False,
         )
 
