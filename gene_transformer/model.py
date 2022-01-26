@@ -277,7 +277,7 @@ if __name__ == "__main__":
         strategy=DeepSpeedPlugin(
             stage=3,
             # offload_optimizer=True,
-            offload_parameters=True,
+            # offload_parameters=True,
         ),
         callbacks=[checkpoint_callback],
         max_steps=config.training_steps,
