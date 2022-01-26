@@ -101,7 +101,7 @@ class DNATransform(pl.LightningModule):
         # as soon as they are made.
         if self.config.use_pretrained:
             # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
-            self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B')
+            self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
         else:
             # base_config = TransfoXLConfig()
             # self.model = TransfoXLLMHeadModel(base_config)
