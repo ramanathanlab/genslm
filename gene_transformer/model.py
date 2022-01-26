@@ -21,6 +21,8 @@ from transformers import (
     PreTrainedTokenizerFast,
     TransfoXLConfig,
     TransfoXLLMHeadModel,
+    GPTJConfig,
+    GPTJForCausalLM
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 
@@ -98,10 +100,13 @@ class DNATransform(pl.LightningModule):
         # Created within sharded model context, modules are instantly sharded across processes
         # as soon as they are made.
         if self.config.use_pretrained:
-            self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
+            # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
+            self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B')
         else:
-            base_config = TransfoXLConfig()
-            self.model = TransfoXLLMHeadModel(base_config)
+            # base_config = TransfoXLConfig()
+            # self.model = TransfoXLLMHeadModel(base_config)
+            base_config = GPTJConfig()
+            self.model = GPTJForCausalLM(base_config)
 
 
     def train_dataloader(self):
