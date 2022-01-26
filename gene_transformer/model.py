@@ -23,8 +23,8 @@ from transformers import (
     TransfoXLLMHeadModel,
     GPTJConfig,
     GPTJForCausalLM,
-    GPT2Config,
-    GPT2LMHeadModel
+    GPTNeoConfig,
+    GPTNeoForCausalLM
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 
@@ -104,14 +104,14 @@ class DNATransform(pl.LightningModule):
         if self.config.use_pretrained:
             # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
             # self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
-            self.model = GPT2LMHeadModel.from_pretrained('gpt2')
+            self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
         else:
             # base_config = TransfoXLConfig()
             # self.model = TransfoXLLMHeadModel(base_config)
             # base_config = GPTJConfig()
             # self.model = GPTJForCausalLM(base_config)
-            base_config = GPT2Config()
-            self.model = GPT2LMHeadModel(base_config)
+            base_config = GPTNeoConfig()
+            self.model = GPTNeoForCausalLM(base_config)
 
 
     def train_dataloader(self):
