@@ -286,7 +286,8 @@ if __name__ == "__main__":
         val_check_interval=config.val_check_interval,
         accumulate_grad_batches=config.accumulate_grad_batches,
         num_sanity_val_steps=2,
-        precision=16
+        precision=16,
+        num_nodes=2
     )
     trainer.fit(model)
     trainer.test(model)
