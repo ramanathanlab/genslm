@@ -284,7 +284,7 @@ if __name__ == "__main__":
             nvme_path="$PSCRATCH",
         ),
         callbacks=[checkpoint_callback],
-        max_steps=config.training_steps,
+        # max_steps=config.training_steps,
         logger=wandb_logger,
         #profiler="simple",
         val_check_interval=config.val_check_interval,
