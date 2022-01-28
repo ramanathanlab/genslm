@@ -291,7 +291,7 @@ if __name__ == "__main__":
         accumulate_grad_batches=config.accumulate_grad_batches,
         num_sanity_val_steps=2,
         precision=16,
-        epochs=config.epochs,
+        max_epochs=config.epochs,
         num_nodes=config.num_nodes
     )
     trainer.fit(model)
