@@ -363,3 +363,4 @@ GitHub.sublime-settings
 # Support for Project snippet scope
 
 # End of https://www.toptal.com/developers/gitignore/api/sublimetext,pycharm,visualstudiocode,macos,python,jupyternotebooks
+.idea/inspectionProfiles/profiles_settings.xml
