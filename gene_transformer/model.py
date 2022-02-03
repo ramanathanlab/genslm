@@ -28,7 +28,7 @@ from transformers import (
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 
-from pytorch_lightning.strategies import DeepSpeedStrategy
+from pytorch_lightning.strategies.deepspeed import DeepSpeedStrategy
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.adam import FusedAdam
 
