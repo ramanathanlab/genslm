@@ -277,7 +277,7 @@ if __name__ == "__main__":
         strategy=DeepSpeedPlugin(
             stage=3,
             offload_optimizer=True,
-            offload_parameters=True,
+            offload_parameters=False,
             remote_device="nvme",
             offload_params_device="nvme",
             offload_optimizer_device="nvme",
