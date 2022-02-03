@@ -28,7 +28,7 @@ from transformers import (
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 
-from pytorch_lightning.strategies.deepspeed import DeepSpeedStrategy
+from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.adam import FusedAdam
 
@@ -274,7 +274,7 @@ if __name__ == "__main__":
         #strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
-        strategy=DeepSpeedStrategy(
+        strategy=DeepSpeedPlugin(
             save_full_weights=True,
             stage=3,
             offload_optimizer=True,
