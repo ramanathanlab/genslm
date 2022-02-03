@@ -31,7 +31,7 @@ from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.adam import FusedAdam
-
+import os
 
 NUM_DATA_WORKERS = 4
 
@@ -281,7 +281,7 @@ if __name__ == "__main__":
             remote_device="nvme",
             offload_params_device="nvme",
             offload_optimizer_device="nvme",
-            nvme_path="/tmp",
+            nvme_path=os.environ['$PSCRATCH']
         ),
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
