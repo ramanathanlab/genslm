@@ -281,7 +281,8 @@ if __name__ == "__main__":
             remote_device="nvme",
             # offload_params_device="nvme",
             offload_optimizer_device="nvme",
-            nvme_path=os.environ['PSCRATCH']
+            # nvme_path=os.environ['PSCRATCH']
+            nvme_path="/tmp"
         ),
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
