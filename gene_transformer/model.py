@@ -275,7 +275,6 @@ if __name__ == "__main__":
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
-            save_full_weights=True,
             stage=3,
             offload_optimizer=True,
             offload_parameters=True,
