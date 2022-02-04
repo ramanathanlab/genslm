@@ -274,7 +274,7 @@ if __name__ == "__main__":
         #strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
-        strategy=DeepSpeedPlugin(
+        strategy=DeepSpeedStrategy(
             stage=2,
             offload_optimizer=True,
             offload_parameters=False,
