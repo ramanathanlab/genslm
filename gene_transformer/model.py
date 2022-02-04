@@ -283,7 +283,6 @@ if __name__ == "__main__":
             offload_optimizer_device="nvme",
             # nvme_path=os.environ['PSCRATCH']
             nvme_path="/tmp",
-            save_full_weights=True
         ),
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
