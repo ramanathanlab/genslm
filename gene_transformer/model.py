@@ -92,11 +92,11 @@ class DNATransform(pl.LightningModule):
                 np.arange(1000),
             )
         # pdb.set_trace()
-        #if config.use_pretrained:
-        #    self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
-        #else:
-        #    base_config = TransfoXLConfig()
-        #    self.model = TransfoXLLMHeadModel(base_config)
+        if config.use_pretrained:
+            self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
+        else:
+            base_config = GPTNeoConfig()
+            self.model = GPTNeoForCausalLM(base_config)
 
     def configure_sharded_model(self):
         # Created within sharded model context, modules are instantly sharded across processes
