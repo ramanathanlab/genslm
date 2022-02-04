@@ -263,9 +263,9 @@ if __name__ == "__main__":
         dirpath=config.checkpoint_dir,
         every_n_train_steps=config.val_check_interval,
         save_last=True,
-        monitor="val/loss",
-        mode="min",
-        filename="codon-transformer-{step:02d}-{val/loss:.2f}",
+        # monitor="val/loss",
+        # mode="min",
+        # filename="codon-transformer-{step:02d}-{val/loss:.2f}",
         verbose=True,
     )
     trainer = pl.Trainer(
@@ -282,7 +282,8 @@ if __name__ == "__main__":
             # offload_params_device="nvme",
             offload_optimizer_device="nvme",
             # nvme_path=os.environ['PSCRATCH']
-            nvme_path="/tmp"
+            nvme_path="/tmp",
+            save_full_weights=True
         ),
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
