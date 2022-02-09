@@ -1,6 +1,10 @@
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
+from config import ModelSettings
+from model import DNATransform
+from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
+from pathlib import Path
 
 # global variables
 stop_codons = ["TAA", "TAG", "TGA"]
@@ -81,3 +85,14 @@ def generate_fasta_file(
         generated = [s.translate() for s in generated]
     # generate seq records
     seqs_to_fasta(generated, file_name)
+
+def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint: Path="last.ckpt",
+                        model_weights: Path="last.pt"):
+    # first convert the weights
+    save_path = checkpoint_dir / checkpoint
+    output_path = checkpoint_dir / model_weights
+    convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
+    config = ModelSettings.from_yaml(config_file_name)
+    model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
+    return model 
+
