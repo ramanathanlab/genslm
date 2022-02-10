@@ -1,8 +1,8 @@
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
-from config import ModelSettings
-from model import DNATransform
+# from config import ModelSettings
+# from model import DNATransform
 from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
 from pathlib import Path
 
