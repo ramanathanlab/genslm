@@ -47,6 +47,7 @@ class ModelSettings(BaseSettings):
     block_size: int = 512
     val_check_interval: int = 100
     accumulate_grad_batches: int = 4
+    load_from_checkpoint_dir: Path = None
 
     # generation settings
     generate_upon_completion: bool = True

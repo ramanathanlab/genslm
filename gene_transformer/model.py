@@ -119,7 +119,6 @@ class DNATransform(pl.LightningModule):
             base_config = GPT2Config()
             self.model = GPT2LMHeadModel(base_config)
 
-
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
@@ -251,8 +250,8 @@ class DNATransform(pl.LightningModule):
             # print("Saved final generated sequences to ", save_path)
 
 
-def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint: Path="last.ckpt",
-                        model_weights: Path="last.pt"):
+def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint: Path = "last.ckpt",
+                        model_weights: Path = "last.pt"):
     """Utility function for deepspeed conversion"""
     # first convert the weights
     save_path = checkpoint_dir / checkpoint
@@ -266,7 +265,6 @@ def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint
     return model
 
 
-
 if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     torch.set_num_threads(NUM_DATA_WORKERS)
@@ -275,7 +273,16 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True)
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
-    model = DNATransform(config)
+    # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!! 
+    if cfg.load_from_checkpoint_dir is not None:
+        try:
+            model = load_from_deepspeed(checkpoint_dir=cfg.load_from_checkpoint_dir, config_file_name=args.config)
+        except:
+            print("WARNING: unable to load from checkpoint {}... training from scratch".format(
+                cfg.load_from_checkpoint_dir))
+            model = DNATransform(config)
+    else:
+        model = DNATransform(config)
     if config.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=config.wandb_project_name)
@@ -293,7 +300,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=config.checkpoint_dir,
-        #strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
+        # strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
@@ -309,7 +316,7 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
         logger=wandb_logger,
-        #profiler="simple",
+        # profiler="simple",
         val_check_interval=config.val_check_interval,
         accumulate_grad_batches=config.accumulate_grad_batches,
         num_sanity_val_steps=2,
