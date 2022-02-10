@@ -27,7 +27,7 @@ from transformers import (
     GPTNeoForCausalLM
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
-
+from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.adam import FusedAdam
@@ -251,9 +251,12 @@ def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint
     # first convert the weights
     save_path = checkpoint_dir / checkpoint
     output_path = checkpoint_dir / model_weights
+    # perform the conversion
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     config = ModelSettings.from_yaml(config_file_name)
+    # load model
     model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
+    # return the model
     return model
 
 
