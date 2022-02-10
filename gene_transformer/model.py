@@ -273,10 +273,10 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True)
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
-    # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!! 
-    if cfg.load_from_checkpoint_dir is not None:
+    # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!!
+    if config.load_from_checkpoint_dir is not None:
         try:
-            model = load_from_deepspeed(checkpoint_dir=cfg.load_from_checkpoint_dir, config_file_name=args.config)
+            model = load_from_deepspeed(checkpoint_dir=config.load_from_checkpoint_dir, config_file_name=args.config)
         except:
             print("WARNING: unable to load from checkpoint {}... training from scratch".format(
                 cfg.load_from_checkpoint_dir))
