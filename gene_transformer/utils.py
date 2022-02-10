@@ -94,5 +94,5 @@ def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     config = ModelSettings.from_yaml(config_file_name)
     model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
-    return model 
+    return model
 
