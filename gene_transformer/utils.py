@@ -86,13 +86,4 @@ def generate_fasta_file(
     # generate seq records
     seqs_to_fasta(generated, file_name)
 
-def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint: Path="last.ckpt",
-                        model_weights: Path="last.pt"):
-    # first convert the weights
-    save_path = checkpoint_dir / checkpoint
-    output_path = checkpoint_dir / model_weights
-    convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
-    config = ModelSettings.from_yaml(config_file_name)
-    model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
-    return model
 

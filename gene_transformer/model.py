@@ -245,6 +245,19 @@ class DNATransform(pl.LightningModule):
             # print("Saved final generated sequences to ", save_path)
 
 
+def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint: Path="last.ckpt",
+                        model_weights: Path="last.pt"):
+    """Utility function for deepspeed conversion"""
+    # first convert the weights
+    save_path = checkpoint_dir / checkpoint
+    output_path = checkpoint_dir / model_weights
+    convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
+    config = ModelSettings.from_yaml(config_file_name)
+    model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
+    return model
+
+
+
 if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     torch.set_num_threads(NUM_DATA_WORKERS)
