@@ -102,22 +102,22 @@ class DNATransform(pl.LightningModule):
             base_config = GPT2Config()
             self.model = GPT2LMHeadModel(base_config)
 
-    def configure_sharded_model(self):
-        # Created within sharded model context, modules are instantly sharded across processes
-        # as soon as they are made.
-        if self.config.use_pretrained:
-            # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
-            # self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
-            self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
-        else:
-            # base_config = TransfoXLConfig()
-            # self.model = TransfoXLLMHeadModel(base_config)
-            # base_config = GPTJConfig()
-            # self.model = GPTJForCausalLM(base_config)
-            # base_config = GPTNeoConfig()
-            # self.model = GPTNeoForCausalLM(base_config)
-            base_config = GPT2Config()
-            self.model = GPT2LMHeadModel(base_config)
+    # def configure_sharded_model(self):
+    #     # Created within sharded model context, modules are instantly sharded across processes
+    #     # as soon as they are made.
+    #     if self.config.use_pretrained:
+    #         # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
+    #         # self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
+    #         self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
+    #     else:
+    #         # base_config = TransfoXLConfig()
+    #         # self.model = TransfoXLLMHeadModel(base_config)
+    #         # base_config = GPTJConfig()
+    #         # self.model = GPTJForCausalLM(base_config)
+    #         # base_config = GPTNeoConfig()
+    #         # self.model = GPTNeoForCausalLM(base_config)
+    #         base_config = GPT2Config()
+    #         self.model = GPT2LMHeadModel(base_config)
 
     def train_dataloader(self):
         return DataLoader(
