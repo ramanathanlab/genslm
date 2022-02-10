@@ -103,6 +103,7 @@ class DNATransform(pl.LightningModule):
             self.model = GPT2LMHeadModel(base_config)
 
     # def configure_sharded_model(self):
+    # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
     #     # Created within sharded model context, modules are instantly sharded across processes
     #     # as soon as they are made.
     #     if self.config.use_pretrained:
@@ -277,9 +278,10 @@ if __name__ == "__main__":
     if config.load_from_checkpoint_dir is not None:
         try:
             model = load_from_deepspeed(checkpoint_dir=config.load_from_checkpoint_dir, config_file_name=args.config)
+            print("NOTE: loaded from existing model at checkpoint {}....".format(config.load_from_checkpoint_dir))
         except:
             print("WARNING: unable to load from checkpoint {}... training from scratch".format(
-                cfg.load_from_checkpoint_dir))
+                config.load_from_checkpoint_dir))
             model = DNATransform(config)
     else:
         model = DNATransform(config)
