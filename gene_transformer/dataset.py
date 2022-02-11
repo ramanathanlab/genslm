@@ -10,10 +10,10 @@ def chunks(lst, n):
 
 class FASTADataset(Dataset):
 
-    def __init__(self, fasta_file, block_size, fast_tokenizer):
+    def __init__(self, fasta_file, block_size, tokenizer):
         self.fasta_file = fasta_file
         self.block_size = block_size
-        self.fast_tokenizer = fast_tokenizer
+        self.fast_tokenizer = tokenizer
 
         # read in the sequences
         self.records = list(SeqIO.parse(self.fasta_file, "fasta"))
