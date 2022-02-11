@@ -29,7 +29,7 @@ def generate_dna_to_stop(
     )
     seqs = []
     for i in output:
-        seqs.append(fast_tokenizer.decode(i))
+        seqs.append(fast_tokenizer.decode(i, skip_special_tokens=True))
     seq_strings = []
     for s in seqs:
         dna = s.split(" ")
