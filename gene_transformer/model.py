@@ -99,7 +99,7 @@ class DNATransform(pl.LightningModule):
         else:
             # base_config = GPTNeoConfig()
             # self.model = GPTNeoForCausalLM(base_config)
-            base_config = GPT2Config()
+            base_config = GPT2Config(vocab_size=self.fast_tokenizer.vocab_size)
             self.model = GPT2LMHeadModel(base_config)
 
     # def configure_sharded_model(self):
