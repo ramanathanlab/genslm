@@ -14,7 +14,6 @@ class FASTADataset(Dataset):
         self.fasta_file = fasta_file
         self.block_size = block_size
         self.fast_tokenizer = tokenizer
-        self.fast_tokenizer.pad_token = self.fast_tokenizer.eos_token
 
         # read in the sequences
         self.records = list(SeqIO.parse(self.fasta_file, "fasta"))

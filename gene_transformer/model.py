@@ -46,6 +46,7 @@ class DNATransform(pl.LightningModule):
         self.batch_size = config.batch_size
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
+        self.fast_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         self.final_sequences = []
         if config.small_subset:
             self.train_dataset = Subset(
