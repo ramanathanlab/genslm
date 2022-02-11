@@ -26,6 +26,7 @@ class ModelSettings(BaseSettings):
     wandb_active: bool = True
     wandb_project_name: str = "codon_transformer"
     checkpoint_dir: str = "codon_transformer"
+    num_nodes: int = 1
 
     # data settings
     tokenizer_file: str = "tokenizer_files/codon_wordlevel_100vocab.json"
@@ -42,10 +43,11 @@ class ModelSettings(BaseSettings):
     # model settings
     use_pretrained: bool = True
     batch_size: int = 4
-    training_steps: int = 500
+    epochs: int = 5
     block_size: int = 512
     val_check_interval: int = 100
     accumulate_grad_batches: int = 4
+    load_from_checkpoint_dir: Path = None
 
     # generation settings
     generate_upon_completion: bool = True
