@@ -26,10 +26,12 @@ from transformers import (
     GPTJConfig,
     GPTJForCausalLM,
     GPTNeoConfig,
-    GPTNeoForCausalLM
+    GPTNeoForCausalLM,
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
-from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.adam import FusedAdam
@@ -95,7 +97,7 @@ class DNATransform(pl.LightningModule):
             )
         # pdb.set_trace()
         if config.use_pretrained:
-            self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
+            self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
         else:
             # base_config = GPTNeoConfig()
             # self.model = GPTNeoForCausalLM(base_config)
@@ -251,8 +253,12 @@ class DNATransform(pl.LightningModule):
             # print("Saved final generated sequences to ", save_path)
 
 
-def load_from_deepspeed(checkpoint_dir: Path, config_file_name: Path, checkpoint: Path = "last.ckpt",
-                        model_weights: Path = "last.pt"):
+def load_from_deepspeed(
+    checkpoint_dir: Path,
+    config_file_name: Path,
+    checkpoint: Path = "last.ckpt",
+    model_weights: Path = "last.pt",
+):
     """Utility function for deepspeed conversion"""
     # first convert the weights
     save_path = checkpoint_dir / checkpoint
@@ -277,11 +283,21 @@ if __name__ == "__main__":
     # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!!
     if config.load_from_checkpoint_dir is not None:
         try:
-            model = load_from_deepspeed(checkpoint_dir=config.load_from_checkpoint_dir, config_file_name=args.config)
-            print("NOTE: loaded from existing model at checkpoint {}....".format(config.load_from_checkpoint_dir))
+            model = load_from_deepspeed(
+                checkpoint_dir=config.load_from_checkpoint_dir,
+                config_file_name=args.config,
+            )
+            print(
+                "NOTE: loaded from existing model at checkpoint {}....".format(
+                    config.load_from_checkpoint_dir
+                )
+            )
         except:
-            print("WARNING: unable to load from checkpoint {}... training from scratch".format(
-                config.load_from_checkpoint_dir))
+            print(
+                "WARNING: unable to load from checkpoint {}... training from scratch".format(
+                    config.load_from_checkpoint_dir
+                )
+            )
             model = DNATransform(config)
     else:
         model = DNATransform(config)
@@ -324,7 +340,7 @@ if __name__ == "__main__":
         num_sanity_val_steps=2,
         precision=16,
         max_epochs=config.epochs,
-        num_nodes=config.num_nodes
+        num_nodes=config.num_nodes,
     )
     trainer.fit(model)
     trainer.test(model)
