@@ -32,4 +32,4 @@ class FASTADataset(Dataset):
     def __getitem__(self, idx):
         record = self.records[idx]
         sequence_string = self.split_into_codons(record)
-        return self.fast_tokenizer.encode(sequence_string, return_tensors="pt")
+        return self.fast_tokenizer.encode(sequence_string, return_tensors="pt", max_length=512, padding=True)
