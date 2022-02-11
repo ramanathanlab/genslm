@@ -24,6 +24,11 @@ from transformers import (
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 
+from pytorch_lightning.plugins import DeepSpeedPlugin
+#from deepspeed.ops.adam import DeepSpeedCPUAdam
+from deepspeed.ops.adam import FusedAdam
+
+
 NUM_DATA_WORKERS = 4
 
 
@@ -83,11 +88,21 @@ class DNATransform(pl.LightningModule):
                 np.arange(1000),
             )
         # pdb.set_trace()
-        if config.use_pretrained:
+        #if config.use_pretrained:
+        #    self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
+        #else:
+        #    base_config = TransfoXLConfig()
+        #    self.model = TransfoXLLMHeadModel(base_config)
+
+    def configure_sharded_model(self):
+        # Created within sharded model context, modules are instantly sharded across processes
+        # as soon as they are made.
+        if self.config.use_pretrained:
             self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
         else:
             base_config = TransfoXLConfig()
             self.model = TransfoXLLMHeadModel(base_config)
+
 
     def train_dataloader(self):
         return DataLoader(
@@ -158,8 +173,9 @@ class DNATransform(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return AdamW(self.model.parameters(), lr=5e-5)
-        # return FusedAdam(self.parameters())
+        #return AdamW(self.model.parameters(), lr=5e-5)
+        return FusedAdam(self.parameters(), lr=5e-5)
+        #return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
@@ -242,11 +258,18 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=config.checkpoint_dir,
-        strategy="ddp_sharded",  # "ddp_spawn",
+        #strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
+        # Use NVMe offloading on other clusters see more here:
+        # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
+        strategy=DeepSpeedPlugin(
+            stage=3,
+            #offload_optimizer=True,
+            #offload_parameters=True,
+        ),
         callbacks=[checkpoint_callback],
         max_steps=config.training_steps,
         logger=wandb_logger,
-        profiler="simple",
+        #profiler="simple",
         val_check_interval=config.val_check_interval,
         accumulate_grad_batches=config.accumulate_grad_batches,
         num_sanity_val_steps=2,
