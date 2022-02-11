@@ -242,7 +242,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=config.checkpoint_dir,
-        strategy="ddp_spawn",
+        strategy="ddp_sharded",  # "ddp_spawn",
         callbacks=[checkpoint_callback],
         max_steps=config.training_steps,
         logger=wandb_logger,
