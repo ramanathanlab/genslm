@@ -21,8 +21,21 @@ from transformers import (
     PreTrainedTokenizerFast,
     TransfoXLConfig,
     TransfoXLLMHeadModel,
+    GPT2Config,
+    GPT2LMHeadModel,
+    GPTJConfig,
+    GPTJForCausalLM,
+    GPTNeoConfig,
+    GPTNeoForCausalLM,
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
+from pytorch_lightning.plugins import DeepSpeedPlugin
+from deepspeed.ops.adam import DeepSpeedCPUAdam
+from deepspeed.ops.adam import FusedAdam
+import os
 
 NUM_DATA_WORKERS = 4
 
@@ -84,10 +97,30 @@ class DNATransform(pl.LightningModule):
             )
         # pdb.set_trace()
         if config.use_pretrained:
-            self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
+            self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
         else:
-            base_config = TransfoXLConfig()
-            self.model = TransfoXLLMHeadModel(base_config)
+            # base_config = GPTNeoConfig()
+            # self.model = GPTNeoForCausalLM(base_config)
+            base_config = GPT2Config(vocab_size=self.fast_tokenizer.vocab_size)
+            self.model = GPT2LMHeadModel(base_config)
+
+    # def configure_sharded_model(self):
+    # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
+    #     # Created within sharded model context, modules are instantly sharded across processes
+    #     # as soon as they are made.
+    #     if self.config.use_pretrained:
+    #         # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
+    #         # self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
+    #         self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
+    #     else:
+    #         # base_config = TransfoXLConfig()
+    #         # self.model = TransfoXLLMHeadModel(base_config)
+    #         # base_config = GPTJConfig()
+    #         # self.model = GPTJForCausalLM(base_config)
+    #         # base_config = GPTNeoConfig()
+    #         # self.model = GPTNeoForCausalLM(base_config)
+    #         base_config = GPT2Config()
+    #         self.model = GPT2LMHeadModel(base_config)
 
     def train_dataloader(self):
         return DataLoader(
@@ -128,7 +161,8 @@ class DNATransform(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch
         outputs = self(x)
-        loss = outputs.losses.mean()
+        # loss = outputs.losses.mean()
+        loss = outputs.loss
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/loss", loss)
@@ -138,7 +172,8 @@ class DNATransform(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x = batch
         outputs = self(x)
-        loss = outputs.losses.mean()
+        # loss = outputs.losses.mean()
+        loss = outputs.loss
         # self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(
             "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
@@ -149,7 +184,8 @@ class DNATransform(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         x = batch
         outputs = self(x)
-        loss = outputs.losses.mean()
+        # loss = outputs.losses.mean()
+        loss = outputs.loss
         # self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(
             "test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
@@ -158,8 +194,9 @@ class DNATransform(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return AdamW(self.model.parameters(), lr=5e-5)
-        # return FusedAdam(self.parameters())
+        # return AdamW(self.model.parameters(), lr=5e-5)
+        # return FusedAdam(self.parameters(), lr=5e-5)
+        return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
@@ -216,6 +253,25 @@ class DNATransform(pl.LightningModule):
             # print("Saved final generated sequences to ", save_path)
 
 
+def load_from_deepspeed(
+    checkpoint_dir: Path,
+    config_file_name: Path,
+    checkpoint: Path = "last.ckpt",
+    model_weights: Path = "last.pt",
+):
+    """Utility function for deepspeed conversion"""
+    # first convert the weights
+    save_path = checkpoint_dir / checkpoint
+    output_path = checkpoint_dir / model_weights
+    # perform the conversion
+    convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
+    config = ModelSettings.from_yaml(config_file_name)
+    # load model
+    model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
+    # return the model
+    return model
+
+
 if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     torch.set_num_threads(NUM_DATA_WORKERS)
@@ -224,7 +280,27 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True)
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
-    model = DNATransform(config)
+    # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!!
+    if config.load_from_checkpoint_dir is not None:
+        try:
+            model = load_from_deepspeed(
+                checkpoint_dir=config.load_from_checkpoint_dir,
+                config_file_name=args.config,
+            )
+            print(
+                "NOTE: loaded from existing model at checkpoint {}....".format(
+                    config.load_from_checkpoint_dir
+                )
+            )
+        except:
+            print(
+                "WARNING: unable to load from checkpoint {}... training from scratch".format(
+                    config.load_from_checkpoint_dir
+                )
+            )
+            model = DNATransform(config)
+    else:
+        model = DNATransform(config)
     if config.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=config.wandb_project_name)
@@ -234,22 +310,37 @@ if __name__ == "__main__":
         dirpath=config.checkpoint_dir,
         every_n_train_steps=config.val_check_interval,
         save_last=True,
-        monitor="val/loss",
-        mode="min",
-        filename="codon-transformer-{step:02d}-{val/loss:.2f}",
+        # monitor="val/loss",
+        # mode="min",
+        # filename="codon-transformer-{step:02d}-{val/loss:.2f}",
         verbose=True,
     )
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=config.checkpoint_dir,
-        strategy="ddp_spawn",
+        # strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
+        # Use NVMe offloading on other clusters see more here:
+        # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
+        strategy=DeepSpeedPlugin(
+            stage=3,
+            offload_optimizer=True,
+            offload_parameters=True,
+            # remote_device="nvme",
+            # # offload_params_device="nvme",
+            # offload_optimizer_device="nvme",
+            # # nvme_path=os.environ['PSCRATCH']
+            # nvme_path="/tmp",
+        ),
         callbacks=[checkpoint_callback],
-        max_steps=config.training_steps,
+        # max_steps=config.training_steps,
         logger=wandb_logger,
-        profiler="simple",
+        # profiler="simple",
         val_check_interval=config.val_check_interval,
         accumulate_grad_batches=config.accumulate_grad_batches,
         num_sanity_val_steps=2,
+        precision=16,
+        max_epochs=config.epochs,
+        num_nodes=config.num_nodes,
     )
     trainer.fit(model)
     trainer.test(model)
