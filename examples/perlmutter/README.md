@@ -35,7 +35,7 @@ export PYTHONFAULTHANDLER=1
 
 module load pytorch/1.9 # load environment
 cd /global/cfs/cdirs/m3957/mzvyagin/gene_transformer/gene_transformer/ # cd to code location
-srun python model.py -c epoch.yaml # call training script
+srun python model.py -c config.yaml # call training script
 ```
 
 Then, from a login node, simply run 
