@@ -29,6 +29,7 @@ from transformers import (
     GPTNeoForCausalLM
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
+from dataset import FASTADataset
 from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
@@ -72,27 +73,33 @@ class DNATransform(pl.LightningModule):
                 np.arange(1000),
             )
         else:
-            self.train_dataset = TokenDataset(
-                config.train_file,
-                tokenizer_file=config.tokenizer_file,
-                block_size=config.block_size,
-            )
-            self.val_dataset = Subset(
-                TokenDataset(
-                    config.val_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(1000),
-            )
-            self.test_dataset = Subset(
-                TokenDataset(
-                    config.test_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(1000),
-            )
+            self.train_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
+                                              block_size=config.block_size)
+            self.val_dataset = FASTADataset(config.val_file, tokenizer=self.fast_tokenizer,
+                                            block_size=config.block_size)
+            self.test_dataset = FASTADataset(config.test_file, tokenizer=self.fast_tokenizer,
+                                            block_size=config.block_size)
+            # self.train_dataset = TokenDataset(
+            #     config.train_file,
+            #     tokenizer_file=config.tokenizer_file,
+            #     block_size=config.block_size,
+            # )
+            # self.val_dataset = Subset(
+            #     TokenDataset(
+            #         config.val_file,
+            #         tokenizer_file=config.tokenizer_file,
+            #         block_size=config.block_size,
+            #     ),
+            #     np.arange(1000),
+            # )
+            # self.test_dataset = Subset(
+            #     TokenDataset(
+            #         config.test_file,
+            #         tokenizer_file=config.tokenizer_file,
+            #         block_size=config.block_size,
+            #     ),
+            #     np.arange(1000),
+            # )
         # pdb.set_trace()
         if config.use_pretrained:
             self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
