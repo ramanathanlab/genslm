@@ -75,9 +75,9 @@ class DNATransform(pl.LightningModule):
         else:
             self.train_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
                                               block_size=config.block_size)
-            self.val_dataset = FASTADataset(config.val_file, tokenizer=self.fast_tokenizer,
+            self.val_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
                                             block_size=config.block_size)
-            self.test_dataset = FASTADataset(config.test_file, tokenizer=self.fast_tokenizer,
+            self.test_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
                                             block_size=config.block_size)
             # self.train_dataset = TokenDataset(
             #     config.train_file,
