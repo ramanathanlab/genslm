@@ -17,8 +17,16 @@ class FASTADataset(Dataset):
 
         # read in the sequences
         self.records = list(SeqIO.parse(self.fasta_file, "fasta"))
+        self.sequence_strings = [self.split_into_codons(s) for s in self.records]
+        self.sequence_tensors = [self.encode(s) for s in self.sequence_strings]
+
+    def encode(self, s):
+        """Given a string, return torch tensor"""
+        self.fast_tokenizer.encode(s, return_tensors="pt", max_length=self.block_size,
+                                   padding="max_length")
 
     def split_into_codons(self, s):
+        """Split Seq Record by codons, return as a string with whitespace"""
         sequence = str(s.seq)
         split_sequence = ""
         for c in chunks(sequence, 3):
@@ -30,6 +38,4 @@ class FASTADataset(Dataset):
         return len(self.records)
 
     def __getitem__(self, idx):
-        record = self.records[idx]
-        sequence_string = self.split_into_codons(record)
-        return self.fast_tokenizer.encode(sequence_string, return_tensors="pt", max_length=self.block_size, padding="max_length")
+        return self.sequence_tensors[idx]
