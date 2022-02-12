@@ -91,27 +91,7 @@ class DNATransform(pl.LightningModule):
                 tokenizer=self.fast_tokenizer,
                 block_size=config.block_size,
             )
-            # self.train_dataset = TokenDataset(
-            #     config.train_file,
-            #     tokenizer_file=config.tokenizer_file,
-            #     block_size=config.block_size,
-            # )
-            # self.val_dataset = Subset(
-            #     TokenDataset(
-            #         config.val_file,
-            #         tokenizer_file=config.tokenizer_file,
-            #         block_size=config.block_size,
-            #     ),
-            #     np.arange(1000),
-            # )
-            # self.test_dataset = Subset(
-            #     TokenDataset(
-            #         config.test_file,
-            #         tokenizer_file=config.tokenizer_file,
-            #         block_size=config.block_size,
-            #     ),
-            #     np.arange(1000),
-            # )
+
         # pdb.set_trace()
         if config.use_pretrained:
             self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
