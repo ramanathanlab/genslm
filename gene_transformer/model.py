@@ -30,7 +30,9 @@ from transformers import (
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
 from dataset import FASTADataset
-from pytorch_lightning.utilities.deepspeed import convert_zero_checkpoint_to_fp32_state_dict
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.adam import FusedAdam
@@ -46,7 +48,7 @@ class DNATransform(pl.LightningModule):
         self.batch_size = config.batch_size
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
-        self.fast_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
         if config.small_subset:
             self.train_dataset = Subset(
@@ -74,12 +76,21 @@ class DNATransform(pl.LightningModule):
                 np.arange(1000),
             )
         else:
-            self.train_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
-                                              block_size=config.block_size)
-            self.val_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
-                                            block_size=config.block_size)
-            self.test_dataset = FASTADataset(config.train_file, tokenizer=self.fast_tokenizer,
-                                            block_size=config.block_size)
+            self.train_dataset = FASTADataset(
+                config.train_file,
+                tokenizer=self.fast_tokenizer,
+                block_size=config.block_size,
+            )
+            self.val_dataset = FASTADataset(
+                config.train_file,
+                tokenizer=self.fast_tokenizer,
+                block_size=config.block_size,
+            )
+            self.test_dataset = FASTADataset(
+                config.train_file,
+                tokenizer=self.fast_tokenizer,
+                block_size=config.block_size,
+            )
             # self.train_dataset = TokenDataset(
             #     config.train_file,
             #     tokenizer_file=config.tokenizer_file,

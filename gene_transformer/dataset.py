@@ -1,41 +1,47 @@
+import torch
 from torch.utils.data import Dataset
 from Bio import SeqIO
-
-
-def chunks(lst, n):
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+from transformers import PreTrainedTokenizerFast
 
 
 class FASTADataset(Dataset):
+    def __init__(
+        self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
+    ) -> None:
+        """PyTorch Dataset that creates sequence training split by codon.
 
-    def __init__(self, fasta_file, block_size, tokenizer):
-        self.fasta_file = fasta_file
-        self.block_size = block_size
-        self.fast_tokenizer = tokenizer
+        Parameters
+        ----------
+        fasta_file : str
+            Path to fasta file to read sequence from.
+        block_size : int
+            max_length of :obj:`tokenizer` encoder.
+        tokenizer : PreTrainedTokenizerFast
+            Converts raw strings to tokenized tensors.
+        """
 
-        # read in the sequences
-        self.records = list(SeqIO.parse(self.fasta_file, "fasta"))
-        self.sequence_strings = [self.split_into_codons(s) for s in self.records]
-        self.sequence_tensors = [self.encode(s) for s in self.sequence_strings]
+        # Read in the sequences from the fasta file, convert to
+        # codon string, tokenize, and collect in tensor
+        self.sequences = torch.tensor(
+            [
+                tokenizer.encode(
+                    self.group_by_codon(seq),
+                    return_tensors="pt",
+                    max_length=block_size,
+                    padding="max_length",
+                )
+                for seq in SeqIO.parse(fasta_file, "fasta")
+            ]
+        )
 
-    def encode(self, s):
-        """Given a string, return torch tensor"""
-        self.fast_tokenizer.encode(s, return_tensors="pt", max_length=self.block_size,
-                                   padding="max_length")
+    def group_by_codon(self, s: SeqIO.SeqRecord) -> str:
+        """Split SeqRecord by codons, return as a string with whitespace.
+        eg. 'AAACCC' -> 'AAA CCC'"""
+        seq = str(s.seq)
+        return " ".join(seq[i : i + 3] for i in range(0, len(seq), 3))
 
-    def split_into_codons(self, s):
-        """Split Seq Record by codons, return as a string with whitespace"""
-        sequence = str(s.seq)
-        split_sequence = ""
-        for c in chunks(sequence, 3):
-            split_sequence += c
-            split_sequence += " "
-        return split_sequence
+    def __len__(self) -> int:
+        return len(self.sequences)
 
-    def __len__(self):
-        return len(self.records)
-
-    def __getitem__(self, idx):
-        return self.sequence_tensors[idx]
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        return self.sequences[idx]
