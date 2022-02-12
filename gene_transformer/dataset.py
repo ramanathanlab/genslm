@@ -8,7 +8,7 @@ class FASTADataset(Dataset):
     def __init__(
         self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
     ) -> None:
-        """PyTorch Dataset that creates sequence training split by codon.
+        """PyTorch Dataset that tokenizes sequences by codon.
 
         Parameters
         ----------
