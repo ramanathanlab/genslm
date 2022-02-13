@@ -25,7 +25,7 @@ module load pytorch/1.10
 conda activate conda-env/
 ```
 Navigate to your run directory which contains the configuration file
-and then create a SBATCH script:
+and then create an SBATCH script:
 
 #### Example SBATCH script - submit.sh:
 ```commandline
