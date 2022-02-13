@@ -4,14 +4,29 @@
 salloc --nodes 1 --qos interactive --time 01:00:00 --constraint gpu --gpus 4 --account=m3957_g
 ```
 
-To setup your environment once you're on the node, run 
+To setup your environment once you're on the node, from the repository root, run: 
 ```commandline
-module load pytorch/1.9
+module load python/3.9-anaconda-2021.11
+module load pytorch/1.10
+conda create -p ./conda-env --clone /global/common/software/nersc/shasta2105/pytorch/1.10.0
+conda activate conda-env/
+pip install --upgrade pip setuptools wheel
+pip install -r requirements/requirements.txt
 ```
 The other packages that the code depends on are easily installed using a user pip install. 
 
 ### Instructions for Batch Job
-This is how to run a distributed job at scale. 
+This is how to run a distributed job at scale.
+
+First load the environment:
+```commandline
+module load python/3.9-anaconda-2021.11
+module load pytorch/1.10
+conda activate conda-env/
+```
+Navigate to your run directory which contains the configuration file
+and then create a SBATCH script:
+
 #### Example SBATCH script - submit.sh:
 ```commandline
 #!/bin/bash
@@ -43,4 +58,6 @@ Then, from a login node, simply run
 sbatch submit.sh
 ```
 and it'll be added to the queue. 
-You can monitor job status using `sqs`. 
+You can monitor job status using `sqs`.
+
+Note: All config paths should be absolute paths or relative paths to the running directory.
