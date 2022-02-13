@@ -22,7 +22,7 @@ class FASTADataset(Dataset):
 
         # Read in the sequences from the fasta file, convert to
         # codon string, tokenize, and collect in tensor
-        self.sequences = torch.tensor(
+        self.sequences = torch.cat(
             [
                 tokenizer.encode(
                     self.group_by_codon(seq),
@@ -32,7 +32,6 @@ class FASTADataset(Dataset):
                 )
                 for seq in SeqIO.parse(fasta_file, "fasta")
             ]
-        )
 
     def group_by_codon(self, s: SeqIO.SeqRecord) -> str:
         """Split SeqRecord by codons, return as a string with whitespace.

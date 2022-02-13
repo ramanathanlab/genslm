@@ -327,6 +327,7 @@ if __name__ == "__main__":
             # offload_optimizer_device="nvme",
             # # nvme_path=os.environ['PSCRATCH']
             # nvme_path="/tmp",
+            logging_batch_size_per_gpu=config.batch_size,
         ),
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
