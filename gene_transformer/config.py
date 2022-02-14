@@ -33,7 +33,6 @@ class ModelSettings(BaseSettings):
     train_file: str = "mdh_codon_spaces_full_train.txt"
     val_file: str = "mdh_codon_spaces_full_val.txt"
     test_file: str = "mdh_codon_spaces_full_test.txt"
-    small_subset: bool = False
 
     # blast settings
     enable_blast: bool = True

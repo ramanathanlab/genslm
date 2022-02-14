@@ -51,47 +51,22 @@ class DNATransform(pl.LightningModule):
         )
         self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
-        if config.small_subset:
-            self.train_dataset = Subset(
-                TokenDataset(
-                    config.train_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(5000),
-            )
-            self.val_dataset = Subset(
-                TokenDataset(
-                    config.val_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(1000),
-            )
-            self.test_dataset = Subset(
-                TokenDataset(
-                    config.test_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(1000),
-            )
-        else:
-            self.train_dataset = FASTADataset(
-                config.train_file,
-                tokenizer=self.fast_tokenizer,
-                block_size=config.block_size,
-            )
-            self.val_dataset = FASTADataset(
-                config.val_file,
-                tokenizer=self.fast_tokenizer,
-                block_size=config.block_size,
-            )
-            self.test_dataset = FASTADataset(
-                config.test_file,
-                tokenizer=self.fast_tokenizer,
-                block_size=config.block_size,
-            )
+
+        self.train_dataset = FASTADataset(
+            config.train_file,
+            tokenizer=self.fast_tokenizer,
+            block_size=config.block_size,
+        )
+        self.val_dataset = FASTADataset(
+            config.val_file,
+            tokenizer=self.fast_tokenizer,
+            block_size=config.block_size,
+        )
+        self.test_dataset = FASTADataset(
+            config.test_file,
+            tokenizer=self.fast_tokenizer,
+            block_size=config.block_size,
+        )
 
         # pdb.set_trace()
         if config.use_pretrained:
