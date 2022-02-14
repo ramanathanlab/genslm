@@ -336,6 +336,8 @@ def inference(config: ModelSettings, config_file_name: str, dataset: str):
     elif dataset == "test":
         loader = model.test_dataloader()
 
+    print(f"Running inference with dataset length {len(loader)}")
+
     embeddings = []
     for batch in loader:
         batch = batch.cuda()
@@ -344,6 +346,10 @@ def inference(config: ModelSettings, config_file_name: str, dataset: str):
         embeddings.append(outputs.hidden_states.detach().cpu().numpy())
 
     embeddings = np.concatenate(embeddings)
+
+    print(f"Embeddings shape: {embeddings.shape}")
+    np.save("inference-train-embeddings.npy", embeddings)
+
     return embeddings
 
 
