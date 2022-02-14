@@ -1,7 +1,7 @@
 import json
 import yaml
 from pathlib import Path
-from typing import Type, TypeVar, Union
+from typing import Type, TypeVar, Union, Optional
 from pydantic import BaseSettings as _BaseSettings
 
 _T = TypeVar("_T")
@@ -47,7 +47,7 @@ class ModelSettings(BaseSettings):
     block_size: int = 512
     val_check_interval: int = 100
     accumulate_grad_batches: int = 4
-    load_from_checkpoint_dir: Path = None
+    load_from_checkpoint_dir: Optional[Path] = None
 
     # generation settings
     generate_upon_completion: bool = True

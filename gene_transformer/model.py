@@ -29,6 +29,7 @@ from transformers import (
     GPTNeoForCausalLM,
 )
 from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
+from dataset import FASTADataset
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
@@ -47,6 +48,7 @@ class DNATransform(pl.LightningModule):
         self.batch_size = config.batch_size
         self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
         self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
+        self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
         if config.small_subset:
             self.train_dataset = Subset(
@@ -74,27 +76,22 @@ class DNATransform(pl.LightningModule):
                 np.arange(1000),
             )
         else:
-            self.train_dataset = TokenDataset(
+            self.train_dataset = FASTADataset(
                 config.train_file,
-                tokenizer_file=config.tokenizer_file,
+                tokenizer=self.fast_tokenizer,
                 block_size=config.block_size,
             )
-            self.val_dataset = Subset(
-                TokenDataset(
-                    config.val_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(1000),
+            self.val_dataset = FASTADataset(
+                config.train_file,
+                tokenizer=self.fast_tokenizer,
+                block_size=config.block_size,
             )
-            self.test_dataset = Subset(
-                TokenDataset(
-                    config.test_file,
-                    tokenizer_file=config.tokenizer_file,
-                    block_size=config.block_size,
-                ),
-                np.arange(1000),
+            self.test_dataset = FASTADataset(
+                config.train_file,
+                tokenizer=self.fast_tokenizer,
+                block_size=config.block_size,
             )
+
         # pdb.set_trace()
         if config.use_pretrained:
             self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
@@ -330,6 +327,7 @@ if __name__ == "__main__":
             # offload_optimizer_device="nvme",
             # # nvme_path=os.environ['PSCRATCH']
             # nvme_path="/tmp",
+            logging_batch_size_per_gpu=config.batch_size,
         ),
         callbacks=[checkpoint_callback],
         # max_steps=config.training_steps,
