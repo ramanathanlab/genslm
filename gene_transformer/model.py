@@ -42,12 +42,13 @@ NUM_DATA_WORKERS = 4
 
 
 class DNATransform(pl.LightningModule):
-    def __init__(self, config):
+    def __init__(self, config: ModelSettings):
         super(DNATransform, self).__init__()
         self.config = config
         self.batch_size = config.batch_size
-        self.tokenizer = Tokenizer.from_file(config.tokenizer_file)
-        self.fast_tokenizer = PreTrainedTokenizerFast(tokenizer_object=self.tokenizer)
+        self.fast_tokenizer = PreTrainedTokenizerFast(
+            tokenizer_object=Tokenizer.from_file(config.tokenizer_file)
+        )
         self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
         if config.small_subset:
@@ -82,12 +83,12 @@ class DNATransform(pl.LightningModule):
                 block_size=config.block_size,
             )
             self.val_dataset = FASTADataset(
-                config.train_file,
+                config.val_file,
                 tokenizer=self.fast_tokenizer,
                 block_size=config.block_size,
             )
             self.test_dataset = FASTADataset(
-                config.train_file,
+                config.test_file,
                 tokenizer=self.fast_tokenizer,
                 block_size=config.block_size,
             )
@@ -128,6 +129,7 @@ class DNATransform(pl.LightningModule):
             pin_memory=True,
             persistent_workers=True,
             shuffle=True,
+            drop_last=True,
         )
 
     def val_dataloader(self):
@@ -139,6 +141,7 @@ class DNATransform(pl.LightningModule):
             pin_memory=True,
             persistent_workers=True,
             shuffle=False,
+            drop_last=True,
         )
 
     def test_dataloader(self):
@@ -150,10 +153,11 @@ class DNATransform(pl.LightningModule):
             pin_memory=True,
             persistent_workers=True,
             shuffle=False,
+            drop_last=True,
         )
 
-    def forward(self, x):
-        return self.model(x, labels=x)
+    def forward(self, x, **kwargs):
+        return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch, batch_idx):
         x = batch
@@ -171,11 +175,9 @@ class DNATransform(pl.LightningModule):
         outputs = self(x)
         # loss = outputs.losses.mean()
         loss = outputs.loss
-        # self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(
             "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
         )
-        # wandb.log({"val_loss": loss})
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -183,11 +185,9 @@ class DNATransform(pl.LightningModule):
         outputs = self(x)
         # loss = outputs.losses.mean()
         loss = outputs.loss
-        # self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log(
             "test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
         )
-        # wandb.log({"test_loss": loss})
         return loss
 
     def configure_optimizers(self):
@@ -269,14 +269,8 @@ def load_from_deepspeed(
     return model
 
 
-if __name__ == "__main__":
-    os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    torch.set_num_threads(NUM_DATA_WORKERS)
-    pl.seed_everything(0)
-    parser = ArgumentParser()
-    parser.add_argument("-c", "--config", required=True)
-    args = parser.parse_args()
-    config = ModelSettings.from_yaml(args.config)
+def train(config: ModelSettings, args):
+
     # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!!
     if config.load_from_checkpoint_dir is not None:
         try:
@@ -351,3 +345,48 @@ if __name__ == "__main__":
         print("Length of final sequence list: ", len(seqs))
         seqs_to_fasta(seqs, save_path)
         print("Saved final generated sequences to ", save_path)
+
+
+def inference(config: ModelSettings, config_file_name: str, dataset: str):
+
+    model = load_from_deepspeed(
+        checkpoint_dir=config.load_from_checkpoint_dir,
+        config_file_name=config_file_name,
+    ).cuda()
+
+    if dataset == "train":
+        loader = model.train_dataloader()
+    elif dataset == "val":
+        loader = model.val_dataloader()
+    elif dataset == "test":
+        loader = model.test_dataloader()
+
+    embeddings = []
+    for batch in loader:
+        batch = batch.cuda()
+        outputs = model(batch, output_hidden_states=True)
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        embeddings.append(outputs.hidden_states.detach().cpu().numpy())
+
+    embeddings = np.concatenate(embeddings)
+    return embeddings
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--config", required=True)
+    parser.add_argument("--mode", default="train")
+    parser.add_argument("--inference_dataset", default="train")
+    args = parser.parse_args()
+    config = ModelSettings.from_yaml(args.config)
+
+    # Setup torch environment
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
+    torch.set_num_threads(NUM_DATA_WORKERS)
+    pl.seed_everything(0)
+
+    # TODO: Should not pass args to these functions
+    if args.mode == "train":
+        train(config, args)
+    if args.mode == "inference":
+        inference(config, args, args.inference_dataset)
