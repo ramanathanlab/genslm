@@ -43,23 +43,23 @@ class DNATransform(pl.LightningModule):
         self.final_sequences = []
 
         self.train_dataset = FASTADataset(
-            cfg.train_file,
+            self.cfg.train_file,
             tokenizer=self.fast_tokenizer,
             block_size=cfg.block_size,
         )
         self.val_dataset = FASTADataset(
-            cfg.val_file,
+            self.cfg.val_file,
             tokenizer=self.fast_tokenizer,
-            block_size=cfg.block_size,
+            block_size=self.cfg.block_size,
         )
         self.test_dataset = FASTADataset(
-            cfg.test_file,
+            self.cfg.test_file,
             tokenizer=self.fast_tokenizer,
-            block_size=cfg.block_size,
+            block_size=self.cfg.block_size,
         )
 
         # pdb.set_trace()
-        if cfg.use_pretrained:
+        if self.cfg.use_pretrained:
             self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
         else:
             # base_config = GPTNeoConfig()
