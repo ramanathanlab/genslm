@@ -1,42 +1,34 @@
 import os
 import statistics
-from argparse import ArgumentParser
-from pathlib import Path
-
 import numpy as np
-import pytorch_lightning as pl
-import torch
-from aitextgen.TokenDataset import TokenDataset
+from tqdm import tqdm
+from pathlib import Path
+from argparse import ArgumentParser
 from blast import BlastRun
-from config import ModelSettings
+
+import torch
+from torch.utils.data import DataLoader
+from tokenizers import Tokenizer
+
+import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-
-# from pytorch_lightning.utilities import rank_zero_only
-from tokenizers import Tokenizer
-from torch.utils.data import DataLoader, Subset
-from tqdm import tqdm
-from transformers import (
-    AdamW,
-    PreTrainedTokenizerFast,
-    TransfoXLConfig,
-    TransfoXLLMHeadModel,
-    GPT2Config,
-    GPT2LMHeadModel,
-    GPTJConfig,
-    GPTJForCausalLM,
-    GPTNeoConfig,
-    GPTNeoForCausalLM,
-)
-from utils import generate_dna_to_stop, seqs_to_fasta  # generate_fasta_file
-from dataset import FASTADataset
+from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from pytorch_lightning.plugins import DeepSpeedPlugin
 from deepspeed.ops.adam import DeepSpeedCPUAdam
-from deepspeed.ops.adam import FusedAdam
-import os
+
+from transformers import (
+    PreTrainedTokenizerFast,
+    GPT2Config,
+    GPT2LMHeadModel,
+    GPTNeoForCausalLM,
+)
+
+from config import ModelSettings
+from utils import generate_dna_to_stop, seqs_to_fasta
+from dataset import FASTADataset
 
 NUM_DATA_WORKERS = 4
 
@@ -166,8 +158,6 @@ class DNATransform(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        # return AdamW(self.model.parameters(), lr=5e-5)
-        # return FusedAdam(self.parameters(), lr=5e-5)
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
     def validation_epoch_end(self, val_step_outputs):
