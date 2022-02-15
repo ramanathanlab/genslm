@@ -213,8 +213,8 @@ class DNATransform(pl.LightningModule):
 
 
 def load_from_deepspeed(
+    cfg: ModelSettings,
     checkpoint_dir: Path,
-    cfg_file: Path,
     checkpoint: Path = "last.ckpt",
     model_weights: Path = "last.pt",
 ):
@@ -224,7 +224,6 @@ def load_from_deepspeed(
     output_path = checkpoint_dir / model_weights
     # perform the conversion
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
-    cfg = ModelSettings.from_yaml(cfg_file)
     # load model
     model = DNATransform.load_from_checkpoint(output_path, strict=False, cfg=cfg)
     # return the model
@@ -237,19 +236,14 @@ def train(cfg: ModelSettings, args):
     if cfg.load_from_checkpoint_dir is not None:
         try:
             model = load_from_deepspeed(
-                checkpoint_dir=cfg.load_from_checkpoint_dir,
-                cfg_file_name=args.cfg,
+                cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir
             )
             print(
-                "NOTE: loaded from existing model at checkpoint {}....".format(
-                    cfg.load_from_checkpoint_dir
-                )
+                f"NOTE: loaded from existing model at checkpoint {cfg.load_from_checkpoint_dir}...."
             )
         except:
             print(
-                "WARNING: unable to load from checkpoint {}... training from scratch".format(
-                    cfg.load_from_checkpoint_dir
-                )
+                f"WARNING: unable to load from checkpoint {cfg.load_from_checkpoint_dir}... training from scratch"
             )
             model = DNATransform(cfg)
     else:
@@ -309,10 +303,8 @@ def train(cfg: ModelSettings, args):
 
 def inference(cfg: ModelSettings, cfg_file_name: str, dataset: str):
 
-    model = load_from_deepspeed(
-        checkpoint_dir=cfg.load_from_checkpoint_dir,
-        cfg_file_name=cfg_file_name,
-    ).cuda()
+    model = load_from_deepspeed(cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir)
+    model.cuda()
 
     if dataset == "train":
         loader = model.train_dataloader()
