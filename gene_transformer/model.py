@@ -224,33 +224,28 @@ def load_from_deepspeed(
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     # load model
     model = DNATransform.load_from_checkpoint(output_path, strict=False, cfg=cfg)
-    # return the model
-    print(
-        f"NOTE: loaded from existing model at checkpoint {cfg.load_from_checkpoint_dir}...."
-    )
     return model
 
 
-def train(cfg: ModelSettings, args):
+def train(cfg: ModelSettings):
 
-    # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!!
+    # Check if loading from checkpoint - this assumes that you're
+    # loading from a sharded DeepSpeed checkpoint!!!
     if cfg.load_from_checkpoint_dir is not None:
-        try:
-            model = load_from_deepspeed(
-                cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir
-            )
-        except:
-            print(
-                f"WARNING: unable to load from checkpoint {cfg.load_from_checkpoint_dir}... training from scratch"
-            )
-            model = DNATransform(cfg)
+        model = load_from_deepspeed(
+            cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir
+        )
+        print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
     else:
         model = DNATransform(cfg)
+
+    # Setup wandb
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
     else:
         wandb_logger = None
+
     checkpoint_callback = ModelCheckpoint(
         dirpath=cfg.checkpoint_dir,
         every_n_train_steps=cfg.val_check_interval,
@@ -297,7 +292,7 @@ def train(cfg: ModelSettings, args):
         print("Saved final generated sequences to ", save_path)
 
 
-def inference(cfg: ModelSettings, cfg_file_name: str, dataset: str):
+def inference(cfg: ModelSettings, dataset: str):
 
     model = load_from_deepspeed(cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir)
     model.cuda()
@@ -339,8 +334,7 @@ if __name__ == "__main__":
     torch.set_num_threads(config.num_data_workers)
     pl.seed_everything(0)
 
-    # TODO: Should not pass args to these functions
     if args.mode == "train":
-        train(config, args)
+        train(config)
     if args.mode == "inference":
-        inference(config, args, args.inference_dataset)
+        inference(config, args.inference_dataset)
