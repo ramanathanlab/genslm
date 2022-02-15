@@ -4,7 +4,6 @@ import numpy as np
 from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
 from argparse import ArgumentParser
-from blast import BlastRun
 
 import torch
 from torch.utils.data import DataLoader
@@ -29,6 +28,7 @@ from transformers import (
 from .config import ModelSettings
 from .utils import generate_dna_to_stop, seqs_to_fasta
 from .dataset import FASTADataset
+from .blast import BlastRun
 
 
 class DNATransform(pl.LightningModule):
