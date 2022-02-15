@@ -35,9 +35,8 @@ NUM_DATA_WORKERS = 4
 
 class DNATransform(pl.LightningModule):
     def __init__(self, config: ModelSettings):
-        super(DNATransform, self).__init__()
+        super().__init__()
         self.config = config
-        self.batch_size = config.batch_size
         self.fast_tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(config.tokenizer_file)
         )
@@ -90,7 +89,7 @@ class DNATransform(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.config.batch_size,
             num_workers=NUM_DATA_WORKERS,
             prefetch_factor=4,
             pin_memory=True,
@@ -102,7 +101,7 @@ class DNATransform(pl.LightningModule):
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.config.batch_size,
             num_workers=NUM_DATA_WORKERS,
             prefetch_factor=4,
             pin_memory=True,
@@ -114,7 +113,7 @@ class DNATransform(pl.LightningModule):
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
-            batch_size=self.batch_size,
+            batch_size=self.config.batch_size,
             num_workers=NUM_DATA_WORKERS,
             prefetch_factor=4,
             pin_memory=True,
