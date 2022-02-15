@@ -52,6 +52,12 @@ class ModelSettings(BaseSettings):
     generate_upon_completion: bool = True
     num_generated_seqs_per_gpu: int = 15
 
+    # training ops
+    num_data_workers: int = 4
+    prefetch_factor: int = 4
+    pin_memory: bool = True
+    persistent_workers: bool = True
+
 
 if __name__ == "__main__":
     settings = ModelSettings()

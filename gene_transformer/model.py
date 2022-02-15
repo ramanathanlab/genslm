@@ -30,8 +30,6 @@ from config import ModelSettings
 from utils import generate_dna_to_stop, seqs_to_fasta
 from dataset import FASTADataset
 
-NUM_DATA_WORKERS = 4
-
 
 class DNATransform(pl.LightningModule):
     def __init__(self, cfg: ModelSettings):
@@ -90,37 +88,37 @@ class DNATransform(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
-            batch_size=self.cfg.batch_size,
-            num_workers=NUM_DATA_WORKERS,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True,
             shuffle=True,
             drop_last=True,
+            batch_size=self.cfg.batch_size,
+            num_data_workers=self.cfg.num_data_workers,
+            prefetch_factor=self.cfg.prefetch_factor,
+            pin_memory=self.cfg.pin_memory,
+            persistent_workers=self.cfg.persistent_workers,
         )
 
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,
-            batch_size=self.cfg.batch_size,
-            num_workers=NUM_DATA_WORKERS,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True,
             shuffle=False,
             drop_last=True,
+            batch_size=self.cfg.batch_size,
+            num_data_workers=self.cfg.num_data_workers,
+            prefetch_factor=self.cfg.prefetch_factor,
+            pin_memory=self.cfg.pin_memory,
+            persistent_workers=self.cfg.persistent_workers,
         )
 
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
-            batch_size=self.cfg.batch_size,
-            num_workers=NUM_DATA_WORKERS,
-            prefetch_factor=4,
-            pin_memory=True,
-            persistent_workers=True,
             shuffle=False,
             drop_last=True,
+            batch_size=self.cfg.batch_size,
+            num_data_workers=self.cfg.num_data_workers,
+            prefetch_factor=self.cfg.prefetch_factor,
+            pin_memory=self.cfg.pin_memory,
+            persistent_workers=self.cfg.persistent_workers,
         )
 
     def forward(self, x, **kwargs):
@@ -227,6 +225,9 @@ def load_from_deepspeed(
     # load model
     model = DNATransform.load_from_checkpoint(output_path, strict=False, cfg=cfg)
     # return the model
+    print(
+        f"NOTE: loaded from existing model at checkpoint {cfg.load_from_checkpoint_dir}...."
+    )
     return model
 
 
@@ -237,9 +238,6 @@ def train(cfg: ModelSettings, args):
         try:
             model = load_from_deepspeed(
                 cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir
-            )
-            print(
-                f"NOTE: loaded from existing model at checkpoint {cfg.load_from_checkpoint_dir}...."
             )
         except:
             print(
@@ -265,7 +263,6 @@ def train(cfg: ModelSettings, args):
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=cfg.checkpoint_dir,
-        # strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
@@ -275,7 +272,6 @@ def train(cfg: ModelSettings, args):
             # remote_device="nvme",
             # # offload_params_device="nvme",
             # offload_optimizer_device="nvme",
-            # # nvme_path=os.environ['PSCRATCH']
             # nvme_path="/tmp",
             logging_batch_size_per_gpu=cfg.batch_size,
         ),
@@ -340,7 +336,7 @@ if __name__ == "__main__":
 
     # Setup torch environment
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    torch.set_num_threads(NUM_DATA_WORKERS)
+    torch.set_num_threads(config.num_data_workers)
     pl.seed_everything(0)
 
     # TODO: Should not pass args to these functions
