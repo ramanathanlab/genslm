@@ -34,33 +34,34 @@ NUM_DATA_WORKERS = 4
 
 
 class DNATransform(pl.LightningModule):
-    def __init__(self, config: ModelSettings):
+    def __init__(self, cfg: ModelSettings):
         super().__init__()
-        self.config = config
+        self.save_hyperparameters(cfg.dict())
+        self.cfg = cfg
         self.fast_tokenizer = PreTrainedTokenizerFast(
-            tokenizer_object=Tokenizer.from_file(config.tokenizer_file)
+            tokenizer_object=Tokenizer.from_file(cfg.tokenizer_file)
         )
         self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
 
         self.train_dataset = FASTADataset(
-            config.train_file,
+            cfg.train_file,
             tokenizer=self.fast_tokenizer,
-            block_size=config.block_size,
+            block_size=cfg.block_size,
         )
         self.val_dataset = FASTADataset(
-            config.val_file,
+            cfg.val_file,
             tokenizer=self.fast_tokenizer,
-            block_size=config.block_size,
+            block_size=cfg.block_size,
         )
         self.test_dataset = FASTADataset(
-            config.test_file,
+            cfg.test_file,
             tokenizer=self.fast_tokenizer,
-            block_size=config.block_size,
+            block_size=cfg.block_size,
         )
 
         # pdb.set_trace()
-        if config.use_pretrained:
+        if cfg.use_pretrained:
             self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
         else:
             # base_config = GPTNeoConfig()
@@ -72,7 +73,7 @@ class DNATransform(pl.LightningModule):
     # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
     #     # Created within sharded model context, modules are instantly sharded across processes
     #     # as soon as they are made.
-    #     if self.config.use_pretrained:
+    #     if self.cfg.use_pretrained:
     #         # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
     #         # self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
     #         self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
@@ -89,7 +90,7 @@ class DNATransform(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
-            batch_size=self.config.batch_size,
+            batch_size=self.cfg.batch_size,
             num_workers=NUM_DATA_WORKERS,
             prefetch_factor=4,
             pin_memory=True,
@@ -101,7 +102,7 @@ class DNATransform(pl.LightningModule):
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,
-            batch_size=self.config.batch_size,
+            batch_size=self.cfg.batch_size,
             num_workers=NUM_DATA_WORKERS,
             prefetch_factor=4,
             pin_memory=True,
@@ -113,7 +114,7 @@ class DNATransform(pl.LightningModule):
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
-            batch_size=self.config.batch_size,
+            batch_size=self.cfg.batch_size,
             num_workers=NUM_DATA_WORKERS,
             prefetch_factor=4,
             pin_memory=True,
@@ -158,19 +159,19 @@ class DNATransform(pl.LightningModule):
 
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
-        if not self.config.enable_blast:
+        if not self.cfg.enable_blast:
             return
         # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
         # in order to monitor the similarity to training sequences
         generated = generate_dna_to_stop(
             self.model,
             self.fast_tokenizer,
-            num_seqs=self.config.num_blast_seqs_per_gpu,
+            num_seqs=self.cfg.num_blast_seqs_per_gpu,
             biopy_seq=False,
         )
         blast_scores = []
         temp_fasta_dir = Path(
-            str(self.config.checkpoint_dir)
+            str(self.cfg.checkpoint_dir)
             + "/blast_runs_globalstep{}/".format(self.global_step)
         )
         temp_csv_dir = temp_fasta_dir
@@ -183,7 +184,7 @@ class DNATransform(pl.LightningModule):
             print("Blasting sequence {}...".format(sequence))
             run = BlastRun(
                 sequence,
-                self.config.blast_validation_file,
+                self.cfg.blast_validation_file,
                 temp_fasta_dir=temp_fasta_dir,
                 temp_csv_dir=temp_csv_dir,
             )
@@ -198,22 +199,22 @@ class DNATransform(pl.LightningModule):
         self.log("val/max_blast_score", float(max_score), logger=True)
 
     def test_epoch_end(self, outputs):
-        if self.config.generate_upon_completion:
+        if self.cfg.generate_upon_completion:
             generated = generate_dna_to_stop(
                 self.model,
                 self.fast_tokenizer,
-                num_seqs=self.config.num_blast_seqs_per_gpu,
+                num_seqs=self.cfg.num_blast_seqs_per_gpu,
                 biopy_seq=True,
             )
             self.final_sequences.extend(generated)
-            # save_path = Path(self.config.checkpoint_dir) / Path("final_generated_sequences.fasta")
+            # save_path = Path(self.cfg.checkpoint_dir) / Path("final_generated_sequences.fasta")
             # seqs_to_fasta(generated, save_path)
             # print("Saved final generated sequences to ", save_path)
 
 
 def load_from_deepspeed(
     checkpoint_dir: Path,
-    config_file_name: Path,
+    cfg_file: Path,
     checkpoint: Path = "last.ckpt",
     model_weights: Path = "last.pt",
 ):
@@ -223,44 +224,44 @@ def load_from_deepspeed(
     output_path = checkpoint_dir / model_weights
     # perform the conversion
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
-    config = ModelSettings.from_yaml(config_file_name)
+    cfg = ModelSettings.from_yaml(cfg_file)
     # load model
-    model = DNATransform.load_from_checkpoint(output_path, strict=False, config=config)
+    model = DNATransform.load_from_checkpoint(output_path, strict=False, cfg=cfg)
     # return the model
     return model
 
 
-def train(config: ModelSettings, args):
+def train(cfg: ModelSettings, args):
 
     # check if loading from checkpoint - this assumes that you're loading from a sharded DeepSpeed checkpoint!!!
-    if config.load_from_checkpoint_dir is not None:
+    if cfg.load_from_checkpoint_dir is not None:
         try:
             model = load_from_deepspeed(
-                checkpoint_dir=config.load_from_checkpoint_dir,
-                config_file_name=args.config,
+                checkpoint_dir=cfg.load_from_checkpoint_dir,
+                cfg_file_name=args.cfg,
             )
             print(
                 "NOTE: loaded from existing model at checkpoint {}....".format(
-                    config.load_from_checkpoint_dir
+                    cfg.load_from_checkpoint_dir
                 )
             )
         except:
             print(
                 "WARNING: unable to load from checkpoint {}... training from scratch".format(
-                    config.load_from_checkpoint_dir
+                    cfg.load_from_checkpoint_dir
                 )
             )
-            model = DNATransform(config)
+            model = DNATransform(cfg)
     else:
-        model = DNATransform(config)
-    if config.wandb_active:
+        model = DNATransform(cfg)
+    if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
-        wandb_logger = WandbLogger(project=config.wandb_project_name)
+        wandb_logger = WandbLogger(project=cfg.wandb_project_name)
     else:
         wandb_logger = None
     checkpoint_callback = ModelCheckpoint(
-        dirpath=config.checkpoint_dir,
-        every_n_train_steps=config.val_check_interval,
+        dirpath=cfg.checkpoint_dir,
+        every_n_train_steps=cfg.val_check_interval,
         save_last=True,
         # monitor="val/loss",
         # mode="min",
@@ -269,7 +270,7 @@ def train(config: ModelSettings, args):
     )
     trainer = pl.Trainer(
         gpus=-1,
-        default_root_dir=config.checkpoint_dir,
+        default_root_dir=cfg.checkpoint_dir,
         # strategy="deepspeed_stage_3",#"ddp_sharded",#"ddp_spawn",
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
@@ -282,37 +283,35 @@ def train(config: ModelSettings, args):
             # offload_optimizer_device="nvme",
             # # nvme_path=os.environ['PSCRATCH']
             # nvme_path="/tmp",
-            logging_batch_size_per_gpu=config.batch_size,
+            logging_batch_size_per_gpu=cfg.batch_size,
         ),
         callbacks=[checkpoint_callback],
-        # max_steps=config.training_steps,
+        # max_steps=cfg.training_steps,
         logger=wandb_logger,
         # profiler="simple",
-        val_check_interval=config.val_check_interval,
-        accumulate_grad_batches=config.accumulate_grad_batches,
+        val_check_interval=cfg.val_check_interval,
+        accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
         precision=16,
-        max_epochs=config.epochs,
-        num_nodes=config.num_nodes,
+        max_epochs=cfg.epochs,
+        num_nodes=cfg.num_nodes,
     )
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
-    if config.generate_upon_completion:
-        save_path = Path(config.checkpoint_dir) / Path(
-            "final_generated_sequences.fasta"
-        )
+    if cfg.generate_upon_completion:
+        save_path = Path(cfg.checkpoint_dir) / Path("final_generated_sequences.fasta")
         seqs = model.final_sequences
         print("Length of final sequence list: ", len(seqs))
         seqs_to_fasta(seqs, save_path)
         print("Saved final generated sequences to ", save_path)
 
 
-def inference(config: ModelSettings, config_file_name: str, dataset: str):
+def inference(cfg: ModelSettings, cfg_file_name: str, dataset: str):
 
     model = load_from_deepspeed(
-        checkpoint_dir=config.load_from_checkpoint_dir,
-        config_file_name=config_file_name,
+        checkpoint_dir=cfg.load_from_checkpoint_dir,
+        cfg_file_name=cfg_file_name,
     ).cuda()
 
     if dataset == "train":
