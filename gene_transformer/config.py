@@ -25,7 +25,7 @@ class ModelSettings(BaseSettings):
     # logging settings
     wandb_active: bool = True
     wandb_project_name: str = "codon_transformer"
-    checkpoint_dir: str = "codon_transformer"
+    checkpoint_dir: Path = Path("codon_transformer")
     num_nodes: int = 1
 
     # data settings

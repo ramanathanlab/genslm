@@ -1,14 +1,14 @@
 import os
 import statistics
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
 from argparse import ArgumentParser
 from blast import BlastRun
 
 import torch
 from torch.utils.data import DataLoader
-from tokenizers import Tokenizer
+from tokenizers import Tokenizer  # type: ignore[import]
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -17,7 +17,7 @@ from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from deepspeed.ops.adam import DeepSpeedCPUAdam
+from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
 
 from transformers import (
     PreTrainedTokenizerFast,
@@ -26,9 +26,9 @@ from transformers import (
     GPTNeoForCausalLM,
 )
 
-from config import ModelSettings
-from utils import generate_dna_to_stop, seqs_to_fasta
-from dataset import FASTADataset
+from .config import ModelSettings
+from .utils import generate_dna_to_stop, seqs_to_fasta
+from .dataset import FASTADataset
 
 
 class DNATransform(pl.LightningModule):
@@ -168,23 +168,19 @@ class DNATransform(pl.LightningModule):
             biopy_seq=False,
         )
         blast_scores = []
-        temp_fasta_dir = Path(
-            str(self.cfg.checkpoint_dir)
-            + "/blast_runs_globalstep{}/".format(self.global_step)
+        temp_fasta_dir = (
+            self.cfg.checkpoint_dir / f"blast_runs_globalstep{self.global_step}"
         )
-        temp_csv_dir = temp_fasta_dir
-        try:
-            os.makedirs(temp_fasta_dir)
-        except FileExistsError:
-            pass
 
-        for n, sequence in tqdm(enumerate(generated)):
-            print("Blasting sequence {}...".format(sequence))
+        temp_fasta_dir.mkdir(exist_ok=True)
+
+        for sequence in tqdm(generated):
+            print(f"Blasting sequence {sequence}...")
             run = BlastRun(
                 sequence,
                 self.cfg.blast_validation_file,
                 temp_fasta_dir=temp_fasta_dir,
-                temp_csv_dir=temp_csv_dir,
+                temp_csv_dir=temp_fasta_dir,
             )
             run.run_blast()
             run.get_scores()
@@ -205,7 +201,7 @@ class DNATransform(pl.LightningModule):
                 biopy_seq=True,
             )
             self.final_sequences.extend(generated)
-            # save_path = Path(self.cfg.checkpoint_dir) / Path("final_generated_sequences.fasta")
+            # save_path = self.cfg.checkpoint_dir / "final_generated_sequences.fasta"
             # seqs_to_fasta(generated, save_path)
             # print("Saved final generated sequences to ", save_path)
 
@@ -257,7 +253,7 @@ def train(cfg: ModelSettings):
     )
     trainer = pl.Trainer(
         gpus=-1,
-        default_root_dir=cfg.checkpoint_dir,
+        default_root_dir=str(cfg.checkpoint_dir),
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
@@ -285,7 +281,7 @@ def train(cfg: ModelSettings):
     trainer.test(model)
     print("Completed training.")
     if cfg.generate_upon_completion:
-        save_path = Path(cfg.checkpoint_dir) / Path("final_generated_sequences.fasta")
+        save_path = cfg.checkpoint_dir / "final_generated_sequences.fasta"
         seqs = model.final_sequences
         print("Length of final sequence list: ", len(seqs))
         seqs_to_fasta(seqs, save_path)

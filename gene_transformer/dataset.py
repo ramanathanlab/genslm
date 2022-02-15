@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from Bio import SeqIO
+from Bio import SeqIO  # type: ignore[import]
 from transformers import PreTrainedTokenizerFast
 
 
