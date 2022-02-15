@@ -128,7 +128,6 @@ class DNATransform(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch
         outputs = self(x)
-        # loss = outputs.losses.mean()
         loss = outputs.loss
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -139,7 +138,6 @@ class DNATransform(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x = batch
         outputs = self(x)
-        # loss = outputs.losses.mean()
         loss = outputs.loss
         self.log(
             "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
@@ -149,7 +147,6 @@ class DNATransform(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         x = batch
         outputs = self(x)
-        # loss = outputs.losses.mean()
         loss = outputs.loss
         self.log(
             "test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
