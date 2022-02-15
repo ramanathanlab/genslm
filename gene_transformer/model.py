@@ -37,7 +37,7 @@ class DNATransform(pl.LightningModule):
         self.save_hyperparameters(cfg.dict())
         self.cfg = cfg
         self.fast_tokenizer = PreTrainedTokenizerFast(
-            tokenizer_object=Tokenizer.from_file(cfg.tokenizer_file)
+            tokenizer_object=Tokenizer.from_file(self.cfg.tokenizer_file)
         )
         self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
@@ -45,7 +45,7 @@ class DNATransform(pl.LightningModule):
         self.train_dataset = FASTADataset(
             self.cfg.train_file,
             tokenizer=self.fast_tokenizer,
-            block_size=cfg.block_size,
+            block_size=self.cfg.block_size,
         )
         self.val_dataset = FASTADataset(
             self.cfg.val_file,
