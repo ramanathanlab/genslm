@@ -81,6 +81,8 @@ def chunks(lst: str, n: int) -> List[str]:
 
 def make_fasta_from_seq(sequence: str, filename: Path) -> None:
     """Generate temporary fasta file for blast search from str sequence"""
+    # TODO: Remove this function and chunks in favor of seqs_to_fasta in utils
+    #       to use biopython for writing fasta files.
     with open(filename, "w") as f:
         f.write(">Test sequence\n")
         # TODO why are we writing it by chunks of 100?
