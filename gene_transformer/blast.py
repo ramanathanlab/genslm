@@ -31,6 +31,9 @@ class BlastRun:
         # TODO: Is this the correct type?
         self.scores: List[float] = []
 
+        # TODO: Instead of printing a warning message and retuning None
+        #       just call the run_blast() and get_scores() functions as needed
+
     def _warning_message(self) -> None:
         print(
             "Scores have not yet been defined. Make sure"
@@ -60,7 +63,7 @@ class BlastRun:
             return None
 
     def get_top_score(self) -> Optional[float]:
-        if self.scores:
+        if not self.scores:
             return self.scores[0]
 
         self._warning_message()
