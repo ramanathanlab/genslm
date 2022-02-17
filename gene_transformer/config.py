@@ -25,7 +25,7 @@ class ModelSettings(BaseSettings):
     # logging settings
     wandb_active: bool = True
     wandb_project_name: str = "codon_transformer"
-    checkpoint_dir: str = "codon_transformer"
+    checkpoint_dir: Path = Path("codon_transformer")
     num_nodes: int = 1
 
     # data settings
@@ -51,6 +51,12 @@ class ModelSettings(BaseSettings):
     # generation settings
     generate_upon_completion: bool = True
     num_generated_seqs_per_gpu: int = 15
+
+    # training ops
+    num_data_workers: int = 4
+    prefetch_factor: int = 4
+    pin_memory: bool = True
+    persistent_workers: bool = True
 
 
 if __name__ == "__main__":
