@@ -25,10 +25,10 @@ from transformers import (
     GPTNeoForCausalLM,
 )
 
-from .config import ModelSettings
-from .utils import generate_dna_to_stop, seqs_to_fasta
-from .dataset import FASTADataset
-from .blast import BlastRun
+from config import ModelSettings
+from utils import generate_dna_to_stop, seqs_to_fasta
+from dataset import FASTADataset
+from blast import BlastRun
 
 
 class DNATransform(pl.LightningModule):
@@ -91,7 +91,7 @@ class DNATransform(pl.LightningModule):
             shuffle=True,
             drop_last=True,
             batch_size=self.cfg.batch_size,
-            num_data_workers=self.cfg.num_data_workers,
+            num_workers=self.cfg.num_data_workers,
             prefetch_factor=self.cfg.prefetch_factor,
             pin_memory=self.cfg.pin_memory,
             persistent_workers=self.cfg.persistent_workers,
@@ -103,7 +103,7 @@ class DNATransform(pl.LightningModule):
             shuffle=False,
             drop_last=True,
             batch_size=self.cfg.batch_size,
-            num_data_workers=self.cfg.num_data_workers,
+            num_workers=self.cfg.num_data_workers,
             prefetch_factor=self.cfg.prefetch_factor,
             pin_memory=self.cfg.pin_memory,
             persistent_workers=self.cfg.persistent_workers,
@@ -115,7 +115,7 @@ class DNATransform(pl.LightningModule):
             shuffle=False,
             drop_last=True,
             batch_size=self.cfg.batch_size,
-            num_data_workers=self.cfg.num_data_workers,
+            num_workers=self.cfg.num_data_workers,
             prefetch_factor=self.cfg.prefetch_factor,
             pin_memory=self.cfg.pin_memory,
             persistent_workers=self.cfg.persistent_workers,
@@ -244,7 +244,6 @@ def train(cfg: ModelSettings):
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=cfg.checkpoint_dir,
-        every_n_train_steps=cfg.val_check_interval,
         save_last=True,
         # monitor="val/loss",
         # mode="min",
@@ -270,7 +269,6 @@ def train(cfg: ModelSettings):
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
         # profiler="simple",
-        val_check_interval=cfg.val_check_interval,
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
         precision=16,

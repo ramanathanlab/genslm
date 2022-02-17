@@ -17,5 +17,6 @@ echo "MASTER_ADDR="$MASTER_ADDR
 export NCCL_DEBUG=INFO
 export PYTHONFAULTHANDLER=1
 
+module load pytorch/1.10
 srun ../../conda-env/bin/python ../../gene_transformer/model.py -c config.yaml # call training script
 
