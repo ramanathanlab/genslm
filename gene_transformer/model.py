@@ -339,11 +339,11 @@ def inference(config: ModelSettings, config_file_name: str, dataset: str):
     print(f"Running inference with dataset length {len(loader)}")
 
     embeddings = []
-    for batch in loader:
+    for batch in tqdm(loader):
         batch = batch.cuda()
         outputs = model(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        embeddings.append(outputs.hidden_states.detach().cpu().numpy())
+        embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
 
     embeddings = np.concatenate(embeddings)
 
@@ -370,4 +370,4 @@ if __name__ == "__main__":
     if args.mode == "train":
         train(config, args)
     if args.mode == "inference":
-        inference(config, args, args.inference_dataset)
+        inference(config, args.config, args.inference_dataset)

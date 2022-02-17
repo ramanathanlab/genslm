@@ -1,6 +1,7 @@
 wandb_active: false
 wandb_project_name: codon_transformer
 checkpoint_dir: gptneo_128nodes_5epoch
+load_from_checkpoint_dir: null #gptneo_128nodes_5epoch
 num_nodes: 1
 tokenizer_file: /global/cfs/cdirs/m3957/abrace/src/gene_transformer/gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json
 train_file: data/full_mdh_codon/train_seqs.fasta

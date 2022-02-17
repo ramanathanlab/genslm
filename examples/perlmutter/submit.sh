@@ -17,4 +17,5 @@ echo "MASTER_ADDR="$MASTER_ADDR
 export NCCL_DEBUG=INFO
 export PYTHONFAULTHANDLER=1
 
-srun python ../../gene_transformer/model.py -c config.yaml # call training script
+srun ../../conda-env/bin/python ../../gene_transformer/model.py -c config.yaml # call training script
+
