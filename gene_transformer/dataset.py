@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from Bio import SeqIO
+from Bio import SeqIO  # type: ignore[import]
 from transformers import PreTrainedTokenizerFast
 
 
@@ -32,6 +32,7 @@ class FASTADataset(Dataset):
                 )
                 for seq in SeqIO.parse(fasta_file, "fasta")
             ]
+        )
 
     def group_by_codon(self, s: SeqIO.SeqRecord) -> str:
         """Split SeqRecord by codons, return as a string with whitespace.
