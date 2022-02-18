@@ -30,18 +30,19 @@ class ModelSettings(BaseSettings):
 
     # data settings
     tokenizer_file: str = "tokenizer_files/codon_wordlevel_100vocab.json"
-    train_file: str = "mdh_codon_spaces_full_train.txt"
-    val_file: str = "mdh_codon_spaces_full_val.txt"
-    test_file: str = "mdh_codon_spaces_full_test.txt"
+    train_file: str = "data/full_mdh_fasta/train.fasta"
+    val_file: str = "data/full_mdh_fasta/val.fasta"
+    test_file: str = "data/full_mdh_fasta/test.fasta"
 
     # blast settings
     enable_blast: bool = True
     blast_validation_file: str = "blast_file.fasta"
     num_blast_seqs_per_gpu: int = 5
+    blast_executable_path: Path = Path("/global/cfs/cdirs/m3957/mzvyagin/conda/envs/gpt/bin/blastn")
 
     # model settings
     use_pretrained: bool = True
-    batch_size: int = 4
+    batch_size: int = 8
     epochs: int = 5
     block_size: int = 512
     val_check_interval: int = 100

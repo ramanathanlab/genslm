@@ -21,9 +21,10 @@ class BlastRun:
         database_file: str,
         temp_fasta_dir: Path,
         temp_csv_dir: Path,
+        blast_executable_path: Path
     ) -> None:
         self.database_file = database_file
-
+        self.blast_executable_path = blast_executable_path
         self.temp_fasta = temp_fasta_dir / f"test_seq{hash(sequence)}.fasta"
         # Need to save sequence as fasta file in order to run Blast
         make_fasta_from_seq(sequence, self.temp_fasta)
@@ -47,8 +48,8 @@ class BlastRun:
 
     def run_blast(self) -> None:
         # run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
-        command = "blastn -query {} -subject {} -out {} -outfmt 10".format(
-            self.temp_fasta, self.database_file, self.temp_csv
+        command = "{} -query {} -subject {} -out {} -outfmt 10".format(
+            self.blast_executable_path, self.temp_fasta, self.database_file, self.temp_csv
         )
         subprocess.run(command, shell=True)
         self.ran_blast = True
