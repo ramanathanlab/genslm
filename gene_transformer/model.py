@@ -180,7 +180,7 @@ class DNATransform(pl.LightningModule):
             self.cfg.checkpoint_dir / f"blast_runs_globalstep{self.global_step}"
         )
 
-        temp_fasta_dir.mkdir(exist_ok=True)
+        temp_fasta_dir.mkdir(exist_ok=True, parents=True)
 
         # TODO: run blast in parallel over each sequence.
         #       num_workers = min(10, len(generated))
