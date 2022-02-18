@@ -193,7 +193,7 @@ class DNATransform(pl.LightningModule):
                 self.cfg.blast_validation_file,
                 temp_fasta_dir=temp_fasta_dir,
                 temp_csv_dir=temp_fasta_dir,
-                blast_executable_path=cfg.blast_executable_path,
+                blast_executable_path=self.cfg.blast_executable_path,
             )
             run.run_blast()
             run.get_scores()
