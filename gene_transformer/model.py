@@ -173,6 +173,7 @@ class DNATransform(pl.LightningModule):
             self.model,
             self.fast_tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
+            max_length=self.cfg.block_size,
             biopy_seq=False,
         )
         blast_scores = []
@@ -215,6 +216,7 @@ class DNATransform(pl.LightningModule):
             self.model,
             self.fast_tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
+            max_length=self.cfg.block_size,
         )
 
         prefix = f"globalstep{self.global_step}"
