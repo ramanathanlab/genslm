@@ -15,7 +15,7 @@ stop_codons = ["TAA", "TAG", "TGA"]
 def generate_dna_to_stop(
     model: torch.nn.Module,
     fast_tokenizer: PreTrainedTokenizerFast,
-    max_length: int = 1024,
+    max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
@@ -65,7 +65,7 @@ def generate_fasta_file(
     file_name,
     model,
     fast_tokenizer,
-    max_length: int = 1024,
+    max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
