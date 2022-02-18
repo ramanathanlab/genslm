@@ -3,8 +3,13 @@
 import statistics
 import subprocess
 from pathlib import Path
+import numpy as np
 import pandas as pd  # type: ignore[import]
-from typing import Optional, List
+from typing import Optional, List, Tuple
+from Bio import SeqIO  # type: ignore[import]
+from Bio.Seq import Seq  # type: ignore[import]
+from Bio.SeqRecord import SeqRecord  # type: ignore[import]
+from concurrent.futures import ThreadPoolExecutor
 
 
 class BlastRun:
@@ -75,6 +80,68 @@ class BlastRun:
 
         self._warning_message()
         return None
+
+
+class BLAST:
+    """Class to handle blasting a group of sequences against training sequence database"""
+
+    def __init__(
+        self,
+        database_file: str,
+        blast_dir: Path,
+        num_workers: int = 1,
+    ) -> None:
+        self.database_file = database_file
+        self.blast_dir = blast_dir
+
+        self.blast_dir.mkdir(exist_ok=True, parents=True)
+
+        self._executor = ThreadPoolExecutor(max_workers=num_workers)
+
+    def _blast(self, sequence: str, prefix: str) -> Tuple[float, float]:
+
+        # Write a temporary fasta file
+        seq_hash = hash(sequence)
+        temp_fasta = self.blast_dir / f"{prefix}-seq-{seq_hash}.fasta"
+        temp_csv = self.blast_dir / f"{prefix}-blast-{seq_hash}.csv"
+        SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
+
+        # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
+        command = "blastn -query {} -subject {} -out {} -outfmt 10".format(
+            temp_fasta, self.database_file, temp_csv
+        )
+        subprocess.run(command, shell=True)
+
+        try:
+            # Read in csv where blast results were stored and take
+            # column which specifies the scores
+            scores = pd.read_csv(temp_csv, header=None)[11].values
+        except pd.errors.EmptyDataError:
+            print(f"WARNING: blast did not find a match {temp_csv}")
+            return -1.0, -1.0
+
+        top_score: float = scores[0]
+        mean_score: float = np.mean(scores)
+        return top_score, mean_score
+
+    def run(self, sequences: List[str], prefix: str) -> Tuple[List[float], List[float]]:
+        top_scores, mean_scores = [], []
+        for seq in sequences:
+            top_score, mean_score = self._blast(seq, prefix)
+            top_scores.append(top_score)
+            mean_scores.append(mean_score)
+        return top_scores, mean_scores
+
+    def parallel_run(
+        self, sequences: List[str], prefix: str
+    ) -> Tuple[List[float], List[float]]:
+        top_scores, mean_scores = [], []
+        futures = [self._executor.submit(self._blast, seq, prefix) for seq in sequences]
+        for fut in futures:
+            top_score, mean_score = fut.result()
+            top_scores.append(top_score)
+            mean_scores.append(mean_score)
+        return top_scores, mean_scores
 
 
 def chunks(lst: str, n: int) -> List[str]:

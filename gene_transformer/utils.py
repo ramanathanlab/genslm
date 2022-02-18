@@ -3,6 +3,7 @@ from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 import torch
 from transformers import PreTrainedTokenizerFast
+from typing import List
 
 # from config import ModelSettings
 # from model import DNATransform
@@ -46,19 +47,18 @@ def generate_dna_to_stop(
     return seq_strings
 
 
-def seqs_to_fasta(seqs, file_name):
+def seqs_to_fasta(seqs: List[Seq], file_name: str):
     records = [
         SeqRecord(
-            i,
-            id="MDH_SyntheticSeq_{}".format(seq),
+            seq,
+            id="MDH_SyntheticSeq_{}".format(i),
             name="MDH_sequence",
             description="synthetic malate dehydrogenase",
         )
-        for seq, i in enumerate(seqs)
+        for i, seq in enumerate(seqs)
     ]
 
-    with open(file_name, "w") as output_handle:
-        SeqIO.write(records, output_handle, "fasta")
+    SeqIO.write(records, file_name, "fasta")
 
 
 def generate_fasta_file(

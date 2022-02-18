@@ -1,5 +1,4 @@
 import os
-import statistics
 import numpy as np
 from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
@@ -28,7 +27,7 @@ from transformers import (
 from config import ModelSettings
 from utils import generate_dna_to_stop, seqs_to_fasta
 from dataset import FASTADataset
-from blast import BlastRun
+from blast import BlastRun, BLAST
 
 
 class DNATransform(pl.LightningModule):
@@ -66,6 +65,14 @@ class DNATransform(pl.LightningModule):
             # self.model = GPTNeoForCausalLM(base_config)
             base_config = GPT2Config(vocab_size=self.fast_tokenizer.vocab_size)
             self.model = GPT2LMHeadModel(base_config)
+
+        # To validate generated sequences
+        # TODO: make sure temp files are outputting to node local
+        self.blast = BLAST(
+            database_file=self.cfg.blast_validation_file,
+            blast_dir=self.cfg.checkpoint_dir / "blast",
+            num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
+        )
 
     # def configure_sharded_model(self):
     # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
@@ -155,7 +162,7 @@ class DNATransform(pl.LightningModule):
     def configure_optimizers(self):
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
-    def validation_epoch_end(self, val_step_outputs):
+    def __validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
         if not self.cfg.enable_blast:
             return
@@ -174,6 +181,10 @@ class DNATransform(pl.LightningModule):
 
         temp_fasta_dir.mkdir(exist_ok=True)
 
+        # TODO: run blast in parallel over each sequence.
+        #       num_workers = min(10, len(generated))
+        #       make sure temp files are outputting to node local
+        #       Put all this in a helper function
         for sequence in tqdm(generated):
             print(f"Blasting sequence {sequence}...")
             run = BlastRun(
@@ -187,10 +198,27 @@ class DNATransform(pl.LightningModule):
             score = run.get_mean_score()
             blast_scores.append(score)
         # calculate mean and max score
-        mean_score = statistics.mean(blast_scores)
-        max_score = max(blast_scores)
+        mean_score = np.mean(blast_scores)
+        max_score = np.max(blast_scores)
         self.log("val/mean_blast_score", float(mean_score), logger=True)
         self.log("val/max_blast_score", float(max_score), logger=True)
+
+    def validation_epoch_end(self, val_step_outputs):
+        """NOTE: BLAST must be installed locally in order for this to work properly."""
+        if not self.cfg.enable_blast:
+            return
+        # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
+        # in order to monitor the similarity to training sequences
+        generated = generate_dna_to_stop(
+            self.model,
+            self.fast_tokenizer,
+            num_seqs=self.cfg.num_blast_seqs_per_gpu,
+        )
+
+        prefix = f"globalstep{self.global_step}"
+        top_scores, mean_scores = self.blast.run(generated, prefix)
+        self.log("val/mean_blast_score", np.mean(mean_scores), logger=True)
+        self.log("val/max_blast_score", np.max(top_scores), logger=True)
 
     def test_epoch_end(self, outputs):
         if self.cfg.generate_upon_completion:
@@ -288,6 +316,9 @@ def train(cfg: ModelSettings):
 
 def inference(cfg: ModelSettings, dataset: str):
 
+    if cfg.load_from_checkpoint_dir is None:
+        raise ValueError("load_from_checkpoint_dir must be set in the config file")
+
     model = load_from_deepspeed(cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir)
     model.cuda()
 
@@ -332,4 +363,3 @@ if __name__ == "__main__":
         train(config)
     if args.mode == "inference":
         inference(config, args.config, args.inference_dataset)
-
