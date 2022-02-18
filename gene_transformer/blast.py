@@ -99,6 +99,21 @@ class BLAST:
         self._executor = ThreadPoolExecutor(max_workers=num_workers)
 
     def _blast(self, sequence: str, prefix: str) -> Tuple[float, float]:
+        """Blast :obj:`sequence` agaisnt :obj:`database_file` using
+        the blastn executable in a subprocess call.
+
+        Parameters
+        ----------
+        sequence : str
+            Sequence to blast.
+        prefix : str
+            Filename prefix for fasta file and blast csv file.
+
+        Returns
+        -------
+        Tuple[float, float]
+            Top score, mean score
+        """
 
         # Write a temporary fasta file
         seq_hash = hash(sequence)
