@@ -172,10 +172,10 @@ class DNATransform(pl.LightningModule):
             self.cfg.checkpoint_dir / f"blast_runs_globalstep{self.global_step}"
         )
 
-        temp_fasta_dir.mkdir(exist_ok=True)
+        temp_fasta_dir.mkdir(exist_ok=True, parents=True)
 
         for sequence in tqdm(generated):
-            print(f"Blasting sequence {sequence}...")
+            # print(f"Blasting sequence {sequence}...")
             run = BlastRun(
                 sequence,
                 self.cfg.blast_validation_file,
