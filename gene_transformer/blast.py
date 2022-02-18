@@ -21,7 +21,7 @@ class BlastRun:
         database_file: str,
         temp_fasta_dir: Path,
         temp_csv_dir: Path,
-        blast_executable_path: Path
+        blast_executable_path: Path,
     ) -> None:
         self.database_file = database_file
         self.blast_executable_path = blast_executable_path
@@ -49,7 +49,10 @@ class BlastRun:
     def run_blast(self) -> None:
         # run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
         command = "{} -query {} -subject {} -out {} -outfmt 10".format(
-            self.blast_executable_path, self.temp_fasta, self.database_file, self.temp_csv
+            self.blast_executable_path,
+            self.temp_fasta,
+            self.database_file,
+            self.temp_csv,
         )
         subprocess.run(command, shell=True)
         self.ran_blast = True
@@ -90,10 +93,12 @@ class BLAST:
         self,
         database_file: str,
         blast_dir: Path,
+        blast_exe_path: Path = Path("blastn"),
         num_workers: int = 1,
     ) -> None:
         self.database_file = database_file
         self.blast_dir = blast_dir
+        self.blast_exe_path = blast_exe_path
 
         self.blast_dir.mkdir(exist_ok=True, parents=True)
 
@@ -123,8 +128,8 @@ class BLAST:
         SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
 
         # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
-        command = "blastn -query {} -subject {} -out {} -outfmt 10".format(
-            temp_fasta, self.database_file, temp_csv
+        command = "{} -query {} -subject {} -out {} -outfmt 10".format(
+            self.blast_exe_path, temp_fasta, self.database_file, temp_csv
         )
         subprocess.run(command, shell=True)
 
