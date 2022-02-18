@@ -38,6 +38,7 @@ class ModelSettings(BaseSettings):
     enable_blast: bool = True
     blast_validation_file: str = "blast_file.fasta"
     num_blast_seqs_per_gpu: int = 5
+    blast_executable_path: Path = "path/to/blastn"
 
     # model settings
     use_pretrained: bool = True
