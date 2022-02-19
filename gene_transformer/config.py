@@ -51,7 +51,6 @@ class ModelSettings(BaseSettings):
 
     # generation settings
     generate_upon_completion: bool = True
-    num_generated_seqs_per_gpu: int = 15
 
     # training ops
     num_data_workers: int = 4

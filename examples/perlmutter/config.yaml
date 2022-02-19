@@ -18,4 +18,3 @@ block_size: 512
 val_check_interval: 100
 accumulate_grad_batches: 4
 generate_upon_completion: true
-num_generated_seqs_per_gpu: 2
