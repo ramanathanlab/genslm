@@ -27,7 +27,7 @@ from transformers import (
 from config import ModelSettings
 from utils import generate_dna_to_stop, seqs_to_fasta
 from dataset import FASTADataset
-from blast import BlastRun, BLAST
+from blast import ParallelBLAST
 
 
 class DNATransform(pl.LightningModule):
@@ -68,7 +68,7 @@ class DNATransform(pl.LightningModule):
 
         # To validate generated sequences
         # TODO: make sure temp files are outputting to node local
-        self.blast = BLAST(
+        self.blast = ParallelBLAST(
             database_file=self.cfg.blast_validation_file,
             blast_dir=self.cfg.checkpoint_dir / "blast",
             blast_exe_path=self.cfg.blast_exe_path,
@@ -162,49 +162,6 @@ class DNATransform(pl.LightningModule):
 
     def configure_optimizers(self):
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
-
-    def __validation_epoch_end(self, val_step_outputs):
-        """NOTE: BLAST must be installed locally in order for this to work properly."""
-        if not self.cfg.enable_blast:
-            return
-        # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
-        # in order to monitor the similarity to training sequences
-        generated = generate_dna_to_stop(
-            self.model,
-            self.tokenizer,
-            num_seqs=self.cfg.num_blast_seqs_per_gpu,
-            max_length=self.cfg.block_size,
-            biopy_seq=False,
-        )
-        blast_scores = []
-        temp_fasta_dir = (
-            self.cfg.checkpoint_dir / f"blast_runs_globalstep{self.global_step}"
-        )
-
-        temp_fasta_dir.mkdir(exist_ok=True, parents=True)
-
-        # TODO: run blast in parallel over each sequence.
-        #       num_workers = min(10, len(generated))
-        #       make sure temp files are outputting to node local
-        #       Put all this in a helper function
-        for sequence in tqdm(generated):
-            print(f"Blasting sequence {sequence}...")
-            run = BlastRun(
-                sequence,
-                self.cfg.blast_validation_file,
-                temp_fasta_dir=temp_fasta_dir,
-                temp_csv_dir=temp_fasta_dir,
-                blast_executable_path=self.cfg.blast_executable_path,
-            )
-            run.run_blast()
-            run.get_scores()
-            score = run.get_mean_score()
-            blast_scores.append(score)
-        # calculate mean and max score
-        mean_score = np.mean(blast_scores)
-        max_score = np.max(blast_scores)
-        self.log("val/mean_blast_score", float(mean_score), logger=True)
-        self.log("val/max_blast_score", float(max_score), logger=True)
 
     def validation_epoch_end(self, val_step_outputs):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
