@@ -4,9 +4,9 @@ checkpoint_dir: gptneo_128nodes_5epoch
 load_from_checkpoint_dir: null #gptneo_128nodes_5epoch
 num_nodes: 1
 tokenizer_file: ../../gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json
-train_file: data/full_mdh_codon/train_seqs.fasta
-val_file: data/full_mdh_codon/train_seqs.fasta
-test_file: data/full_mdh_codon/train_seqs.fasta
+train_file: data/full_mdh_fasta/train.fasta
+val_file: data/full_mdh_fasta/val.fasta
+test_file: data/full_mdh_fasta/test.fasta
 enable_blast: true
 blast_validation_file: data/full_mdh_codon/train_seqs.fasta
 blast_exe_path: ../../conda-env/bin/blastn
