@@ -9,8 +9,7 @@ from transformers import PreTrainedTokenizerFast
 
 
 # global variables
-stop_codons = ["TAA", "TAG", "TGA"]
-
+stop_codons = set("TAA", "TAG", "TGA")
 
 def generate_dna_to_stop(
     model: torch.nn.Module,
@@ -21,6 +20,7 @@ def generate_dna_to_stop(
     num_seqs: int = 5,
     biopy_seq: bool = False,
 ):
+    # generate the tokenized output
     output = model.generate(
         fast_tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
@@ -29,18 +29,21 @@ def generate_dna_to_stop(
         top_p=top_p,
         num_return_sequences=num_seqs,
     )
+    # convert from tokens to string
     seqs = [fast_tokenizer.decode(i, skip_special_tokens=True) for i in output]
     seq_strings = []
     for s in seqs:
+        # break into codons
         dna = s.split(" ")
+        # iterate through until you reach a stop codon
         for n, i in enumerate(dna):
             if i in stop_codons:
-                to_stop = dna[: n + 1]
                 break
-        try:
-            seq_strings.append("".join(to_stop))
-        except NameError:
-            seq_strings.append("".join(dna))
+        # get the open reading frame
+        to_stop = dna[:n+1]
+        # create the string and append to list
+        seq_strings.append("".join(to_stop))
+    # convert to biopython objects if requested
     if biopy_seq:
         seq_strings = [Seq(s) for s in seq_strings]
     return seq_strings
