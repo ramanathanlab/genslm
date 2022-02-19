@@ -39,7 +39,7 @@ class FoundStopCodonCriteria(StoppingCriteria):
 def generate_dna_to_stop(
     model: torch.nn.Module,
     tokenizer: PreTrainedTokenizerFast,
-    max_length: int = 1024,
+    max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
@@ -49,6 +49,7 @@ def generate_dna_to_stop(
     import time
 
     start = time.time()
+    # generate the tokenized output
     output = model.generate(
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
@@ -58,7 +59,8 @@ def generate_dna_to_stop(
         num_return_sequences=num_seqs,
         stopping_criteria=FoundStopCodonCriteria(tokenizer),
     )
-    print("StoppingCriteria time:", time.time() - start)
+    print(f"StoppingCriteria time: {time.time() - start}")
+    start = time.time()
     output = model.generate(
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
@@ -67,22 +69,25 @@ def generate_dna_to_stop(
         top_p=top_p,
         num_return_sequences=num_seqs,
     )
-    print()
+    print(f"NoneStoppingCriteria time: {time.time() - start}")
 
     # Decode tokens to codon strings
     seqs = tokenizer.batch_decode(output, skip_special_tokens=True)
     # seqs = [tokenizer.decode(i, skip_special_tokens=True) for i in output]
+    # convert from tokens to string
     seq_strings = []
     for s in seqs:
+        # break into codons
         dna = s.split(" ")
+        # iterate through until you reach a stop codon
         for n, i in enumerate(dna):
             if i in stop_codons:
-                to_stop = dna[: n + 1]
                 break
-        try:
-            seq_strings.append("".join(to_stop))
-        except NameError:
-            seq_strings.append("".join(dna))
+        # get the open reading frame
+        to_stop = dna[: n + 1]
+        # create the string and append to list
+        seq_strings.append("".join(to_stop))
+    # convert to biopython objects if requested
     if biopy_seq:
         seq_strings = [Seq(s) for s in seq_strings]
     return seq_strings
@@ -106,7 +111,7 @@ def generate_fasta_file(
     file_name,
     model,
     tokenizer,
-    max_length: int = 1024,
+    max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,

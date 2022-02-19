@@ -35,25 +35,25 @@ class DNATransform(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(cfg.dict())
         self.cfg = cfg
-        self.fast_tokenizer = PreTrainedTokenizerFast(
+        self.tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(self.cfg.tokenizer_file)
         )
-        self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
 
         self.train_dataset = FASTADataset(
             self.cfg.train_file,
-            tokenizer=self.fast_tokenizer,
+            tokenizer=self.tokenizer,
             block_size=self.cfg.block_size,
         )
         self.val_dataset = FASTADataset(
             self.cfg.val_file,
-            tokenizer=self.fast_tokenizer,
+            tokenizer=self.tokenizer,
             block_size=self.cfg.block_size,
         )
         self.test_dataset = FASTADataset(
             self.cfg.test_file,
-            tokenizer=self.fast_tokenizer,
+            tokenizer=self.tokenizer,
             block_size=self.cfg.block_size,
         )
 
@@ -63,7 +63,7 @@ class DNATransform(pl.LightningModule):
         else:
             # base_config = GPTNeoConfig()
             # self.model = GPTNeoForCausalLM(base_config)
-            base_config = GPT2Config(vocab_size=self.fast_tokenizer.vocab_size)
+            base_config = GPT2Config(vocab_size=self.tokenizer.vocab_size)
             self.model = GPT2LMHeadModel(base_config)
 
         # To validate generated sequences
@@ -171,7 +171,7 @@ class DNATransform(pl.LightningModule):
         # in order to monitor the similarity to training sequences
         generated = generate_dna_to_stop(
             self.model,
-            self.fast_tokenizer,
+            self.tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
             max_length=self.cfg.block_size,
             biopy_seq=False,
@@ -214,7 +214,7 @@ class DNATransform(pl.LightningModule):
         # in order to monitor the similarity to training sequences
         generated = generate_dna_to_stop(
             self.model,
-            self.fast_tokenizer,
+            self.tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
             max_length=self.cfg.block_size,
         )
@@ -228,7 +228,7 @@ class DNATransform(pl.LightningModule):
         if self.cfg.generate_upon_completion:
             generated = generate_dna_to_stop(
                 self.model,
-                self.fast_tokenizer,
+                self.tokenizer,
                 num_seqs=self.cfg.num_blast_seqs_per_gpu,
                 biopy_seq=True,
             )
