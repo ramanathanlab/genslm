@@ -229,7 +229,7 @@ class DNATransform(pl.LightningModule):
             generated = generate_dna_to_stop(
                 self.model,
                 self.tokenizer,
-                num_seqs=self.cfg.num_blast_seqs_per_gpu,
+                num_seqs=self.cfg.num_seqs_test,
                 biopy_seq=True,
             )
             self.final_sequences.extend(generated)

@@ -51,6 +51,7 @@ class ModelSettings(BaseSettings):
 
     # generation settings
     generate_upon_completion: bool = True
+    num_seqs_test: int = 8
 
     # training ops
     num_data_workers: int = 4
