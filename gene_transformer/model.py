@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
 from argparse import ArgumentParser
+from typing import Any
 
 import torch
 from torch.utils.data import DataLoader
@@ -23,6 +24,7 @@ from transformers import (
     GPT2LMHeadModel,
     GPTNeoForCausalLM,
 )
+from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from config import ModelSettings
 from utils import generate_dna_to_stop, seqs_to_fasta
@@ -109,10 +111,10 @@ class DNATransformer(pl.LightningModule):
     #         base_config = GPT2Config()
     #         self.model = GPT2LMHeadModel(base_config)
 
-    def forward(self, x, **kwargs):
+    def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:
         return self.model(x, labels=x, **kwargs)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -122,7 +124,7 @@ class DNATransformer(pl.LightningModule):
         # wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -131,7 +133,7 @@ class DNATransformer(pl.LightningModule):
         )
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -140,10 +142,10 @@ class DNATransformer(pl.LightningModule):
         )
         return loss
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> torch.optim.Optimizer:
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
-    def validation_epoch_end(self, val_step_outputs):
+    def validation_epoch_end(self, val_step_outputs) -> None:
         """NOTE: BLAST must be installed locally in order for this to work properly."""
         if not self.cfg.enable_blast:
             return
@@ -171,7 +173,7 @@ class DNATransformer(pl.LightningModule):
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
 
-    def test_epoch_end(self, outputs):
+    def test_epoch_end(self, outputs) -> None:
         if self.trainer.is_global_zero and self.cfg.generate_upon_completion:
             generated = generate_dna_to_stop(
                 self.model,
@@ -186,9 +188,9 @@ class DNATransformer(pl.LightningModule):
 def load_from_deepspeed(
     cfg: ModelSettings,
     checkpoint_dir: Path,
-    checkpoint: Path = "last.ckpt",
-    model_weights: Path = "last.pt",
-):
+    checkpoint: str = "last.ckpt",
+    model_weights: str = "last.pt",
+) -> DNATransformer:
     """Utility function for deepspeed conversion"""
     # first convert the weights
     save_path = checkpoint_dir / checkpoint
@@ -200,7 +202,7 @@ def load_from_deepspeed(
     return model
 
 
-def train(cfg: ModelSettings):
+def train(cfg: ModelSettings) -> None:
 
     # Check if loading from checkpoint - this assumes that you're
     # loading from a sharded DeepSpeed checkpoint!!!
@@ -263,7 +265,7 @@ def train(cfg: ModelSettings):
         print("Saved final generated sequences to ", save_path)
 
 
-def inference(cfg: ModelSettings, dataset: str):
+def inference(cfg: ModelSettings, dataset: str) -> None:
 
     if cfg.load_from_checkpoint_dir is None:
         raise ValueError("load_from_checkpoint_dir must be set in the config file")
@@ -294,8 +296,6 @@ def inference(cfg: ModelSettings, dataset: str):
     print(f"Embeddings shape: {embeddings.shape}")
     np.save("inference-train-embeddings.npy", embeddings)
 
-    return embeddings
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -313,4 +313,4 @@ if __name__ == "__main__":
     if args.mode == "train":
         train(config)
     if args.mode == "inference":
-        inference(config, args.config, args.inference_dataset)
+        inference(config, args.inference_dataset)

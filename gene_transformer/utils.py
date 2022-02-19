@@ -2,11 +2,13 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 import torch
-from transformers import PreTrainedTokenizerFast, StoppingCriteria, StoppingCriteriaList
+from transformers import (
+    PreTrainedTokenizerFast,
+    StoppingCriteria,
+)  # , StoppingCriteriaList
 from typing import List
 
 
-# global variables
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
@@ -41,7 +43,7 @@ def generate_dna_to_stop(
     biopy_seq: bool = False,
 ):
     # List of generated tokenized sequences.
-    stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
+    # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
     output = model.generate(
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
@@ -73,7 +75,7 @@ def generate_dna_to_stop(
     return seq_strings
 
 
-def seqs_to_fasta(seqs: List[Seq], file_name: str):
+def seqs_to_fasta(seqs: List[Seq], file_name: str) -> None:
     records = [
         SeqRecord(
             seq,
@@ -88,15 +90,15 @@ def seqs_to_fasta(seqs: List[Seq], file_name: str):
 
 
 def generate_fasta_file(
-    file_name,
-    model,
-    tokenizer,
+    file_name: str,
+    model: torch.nn.Module,
+    tokenizer: PreTrainedTokenizerFast,
     max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
     translate_to_protein: bool = False,
-):
+) -> None:
     # generate seq objects
     generated = generate_dna_to_stop(
         model,
