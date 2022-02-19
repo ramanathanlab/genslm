@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
 from argparse import ArgumentParser
-from typing import Any
+from typing import Any, List
 
 import torch
 from torch.utils.data import DataLoader
@@ -26,14 +26,14 @@ from transformers import (
 )
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
-from config import ModelSettings
-from utils import generate_dna_to_stop, seqs_to_fasta
-from dataset import FASTADataset
-from blast import ParallelBLAST
+from gene_transformer.config import ModelSettings
+from gene_transformer.dataset import FASTADataset
+from gene_transformer.blast import ParallelBLAST
+from gene_transformer.utils import generate_dna_to_stop, seqs_to_fasta
 
 
 class DNATransformer(pl.LightningModule):
-    def __init__(self, cfg: ModelSettings):
+    def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
         self.save_hyperparameters(cfg.dict())
         self.cfg = cfg
@@ -145,8 +145,8 @@ class DNATransformer(pl.LightningModule):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
-    def validation_epoch_end(self, val_step_outputs) -> None:
-        """NOTE: BLAST must be installed locally in order for this to work properly."""
+    def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:
+        # NOTE: BLAST must be installed locally in order for this to work properly.
         if not self.cfg.enable_blast:
             return
 
@@ -173,7 +173,7 @@ class DNATransformer(pl.LightningModule):
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
 
-    def test_epoch_end(self, outputs) -> None:
+    def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:
         if self.trainer.is_global_zero and self.cfg.generate_upon_completion:
             generated = generate_dna_to_stop(
                 self.model,
@@ -193,8 +193,8 @@ def load_from_deepspeed(
 ) -> DNATransformer:
     """Utility function for deepspeed conversion"""
     # first convert the weights
-    save_path = checkpoint_dir / checkpoint
-    output_path = checkpoint_dir / model_weights
+    save_path = str(checkpoint_dir / checkpoint)
+    output_path = str(checkpoint_dir / model_weights)
     # perform the conversion
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     # load model

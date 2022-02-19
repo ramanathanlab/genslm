@@ -15,5 +15,6 @@ source env/bin/activate
 pip3 install -U pip setuptools wheel
 pip3 install -r requirements/dev.txt
 pip3 install -r requirements/requirements.txt
+pip3 install -e .
 ```
 To run dev tools (flake8, black, mypy): `make`

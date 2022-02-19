@@ -12,6 +12,7 @@ conda create -p ./conda-env --clone /global/common/software/nersc/shasta2105/pyt
 conda activate conda-env/
 pip install --upgrade pip setuptools wheel
 pip install -r requirements/requirements.txt
+pip3 install -e .
 ```
 The other packages that the code depends on are easily installed using a user pip install. 
 

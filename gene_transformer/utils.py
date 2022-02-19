@@ -1,3 +1,5 @@
+from pathlib import Path
+from typing import List, Set
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
@@ -6,7 +8,6 @@ from transformers import (
     PreTrainedTokenizerFast,
     StoppingCriteria,
 )  # , StoppingCriteriaList
-from typing import List
 
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
@@ -15,7 +16,12 @@ STOP_CODONS = {"TAA", "TAG", "TGA"}
 class FoundStopCodonCriteria(StoppingCriteria):
     def __init__(self, tokenizer: PreTrainedTokenizerFast) -> None:
         self.tokenizer = tokenizer
-        self.stop_set = set()
+        self.stop_set: Set[int] = set()
+
+        # TODO: If we can get this class working correctly,
+        #       we could store the indicies of the first stop
+        #       codon in each batch. That way we can avoid a loop
+        #       of post processing.
 
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
@@ -75,7 +81,7 @@ def generate_dna_to_stop(
     return seq_strings
 
 
-def seqs_to_fasta(seqs: List[Seq], file_name: str) -> None:
+def seqs_to_fasta(seqs: List[Seq], file_name: Path) -> None:
     records = [
         SeqRecord(
             seq,
@@ -89,8 +95,9 @@ def seqs_to_fasta(seqs: List[Seq], file_name: str) -> None:
     SeqIO.write(records, file_name, "fasta")
 
 
+# TODO: This function is never used, remove?
 def generate_fasta_file(
-    file_name: str,
+    file_name: Path,
     model: torch.nn.Module,
     tokenizer: PreTrainedTokenizerFast,
     max_length: int = 512,
