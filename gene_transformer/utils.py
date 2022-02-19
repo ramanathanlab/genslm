@@ -5,9 +5,6 @@ import torch
 from transformers import PreTrainedTokenizerFast, StoppingCriteria, StoppingCriteriaList
 from typing import List
 
-# from config import ModelSettings
-# from model import DNATransform
-
 
 # global variables
 stop_codons = {"TAA", "TAG", "TGA"}

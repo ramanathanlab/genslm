@@ -30,7 +30,7 @@ from dataset import FASTADataset
 from blast import ParallelBLAST
 
 
-class DNATransform(pl.LightningModule):
+class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: ModelSettings):
         super().__init__()
         self.save_hyperparameters(cfg.dict())
@@ -64,11 +64,13 @@ class DNATransform(pl.LightningModule):
         )
 
     def _get_dataset(self, file: str) -> FASTADataset:
+        """Helper function to generate dataset."""
         return FASTADataset(
             file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
+        """Helper function to generate dataloader."""
         return DataLoader(
             dataset,
             shuffle=shuffle,
@@ -145,8 +147,13 @@ class DNATransform(pl.LightningModule):
         """NOTE: BLAST must be installed locally in order for this to work properly."""
         if not self.cfg.enable_blast:
             return
-        # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
-        # in order to monitor the similarity to training sequences
+
+        # Generate sequences and run blast across all ranks,
+        # then gather mean, max for logging on rank 0.
+
+        # Don't do anything to the validation step outputs, we're using this
+        # space to generate sequences and run blast in order to monitor the
+        # similarity to training sequences
         generated = generate_dna_to_stop(
             self.model,
             self.tokenizer,
@@ -155,22 +162,25 @@ class DNATransform(pl.LightningModule):
         )
 
         prefix = f"globalstep{self.global_step}"
-        top_scores, mean_scores = self.blast.run(generated, prefix)
-        self.log("val/mean_blast_score", np.mean(mean_scores), logger=True)
-        self.log("val/max_blast_score", np.max(top_scores), logger=True)
+        max_scores, mean_scores = self.blast.run(generated, prefix)
+        metrics = np.mean(mean_scores), np.max(max_scores)
+        metrics = self.all_gather(metrics)
+        metrics = {
+            "val/mean_blast_score": np.mean(metrics[0]),
+            "val/max_blast_score": np.max(metrics[1]),
+        }
+        self.log(metrics, logger=True, prog_bar=True)
 
     def test_epoch_end(self, outputs):
-        if self.cfg.generate_upon_completion:
+        if self.trainer.is_global_zero and self.cfg.generate_upon_completion:
             generated = generate_dna_to_stop(
                 self.model,
                 self.tokenizer,
                 num_seqs=self.cfg.num_seqs_test,
+                max_length=self.cfg.block_size,
                 biopy_seq=True,
             )
             self.final_sequences.extend(generated)
-            # save_path = self.cfg.checkpoint_dir / "final_generated_sequences.fasta"
-            # seqs_to_fasta(generated, save_path)
-            # print("Saved final generated sequences to ", save_path)
 
 
 def load_from_deepspeed(
@@ -186,7 +196,7 @@ def load_from_deepspeed(
     # perform the conversion
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     # load model
-    model = DNATransform.load_from_checkpoint(output_path, strict=False, cfg=cfg)
+    model = DNATransformer.load_from_checkpoint(output_path, strict=False, cfg=cfg)
     return model
 
 
@@ -200,7 +210,7 @@ def train(cfg: ModelSettings):
         )
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
     else:
-        model = DNATransform(cfg)
+        model = DNATransformer(cfg)
 
     # Setup wandb
     if cfg.wandb_active:
@@ -270,6 +280,8 @@ def inference(cfg: ModelSettings, dataset: str):
 
     print(f"Running inference with dataset length {len(loader)}")
 
+    # TODO: Instead could optionally return the hidden_states in a dictionary
+    # in the validation_step function.
     embeddings = []
     for batch in tqdm(loader):
         batch = batch.cuda()
