@@ -49,7 +49,7 @@ def generate_dna_to_stop(
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
-        stopping_criteria=stopping_criteria,
+#        stopping_criteria=stopping_criteria,
     )
 
     # Decode tokens to codon strings

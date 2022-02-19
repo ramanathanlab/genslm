@@ -8,7 +8,7 @@ train_file: data/full_mdh_fasta/train.fasta
 val_file: data/full_mdh_fasta/val.fasta
 test_file: data/full_mdh_fasta/test.fasta
 enable_blast: true
-blast_validation_file: data/full_mdh_codon/train_seqs.fasta
+blast_validation_file: data/full_mdh_fasta/train.fasta
 blast_exe_path: ../../conda-env/bin/blastn
 num_blast_seqs_per_gpu: 8
 use_pretrained: false

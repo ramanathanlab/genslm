@@ -164,12 +164,12 @@ class DNATransformer(pl.LightningModule):
         prefix = f"globalstep{self.global_step}"
         max_scores, mean_scores = self.blast.run(generated, prefix)
         metrics = np.mean(mean_scores), np.max(max_scores)
+        # Wait until all ranks meet up here
+        self.trainer._accelerator_connector.strategy.barrier()
         metrics = self.all_gather(metrics)
-        metrics = {
-            "val/mean_blast_score": np.mean(metrics[0]),
-            "val/max_blast_score": np.max(metrics[1]),
-        }
-        self.log(metrics, logger=True, prog_bar=True)
+        max_score, mean_score = metrics[1].max().cpu(), metrics[0].mean().cpu()
+        self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
+        self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
 
     def test_epoch_end(self, outputs):
         if self.trainer.is_global_zero and self.cfg.generate_upon_completion:
