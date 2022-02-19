@@ -2,7 +2,7 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 import torch
-from transformers import PreTrainedTokenizerFast, StoppingCriteria
+from transformers import PreTrainedTokenizerFast, StoppingCriteria, StoppingCriteriaList
 from typing import List
 
 # from config import ModelSettings
@@ -28,12 +28,15 @@ class FoundStopCodonCriteria(StoppingCriteria):
         #     for i in input_ids
         # ]
 
-        for i, codon in enumerate(codons):
-            if i not in self.stop_set and codon in stop_codons:
+        batch_size = input_ids.shape[0]
+        still_generating = set(range(batch_size)) - self.stop_set
+
+        for i in still_generating:
+            if codons[i] in stop_codons:
                 self.stop_set.add(i)
 
         # If each sequence in the batch has seen a stop codon
-        return len(self.stop_set) == input_ids.shape[0]
+        return len(self.stop_set) == batch_size
 
 
 def generate_dna_to_stop(
@@ -50,6 +53,7 @@ def generate_dna_to_stop(
 
     start = time.time()
     # generate the tokenized output
+    stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
     output = model.generate(
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
@@ -57,7 +61,7 @@ def generate_dna_to_stop(
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
-        stopping_criteria=FoundStopCodonCriteria(tokenizer),
+        stopping_criteria=stopping_criteria,
     )
     print(f"StoppingCriteria time: {time.time() - start}")
     start = time.time()
