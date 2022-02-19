@@ -220,7 +220,7 @@ class DNATransform(pl.LightningModule):
         )
 
         prefix = f"globalstep{self.global_step}"
-        top_scores, mean_scores = self.blast.parallel_run(generated, prefix)
+        top_scores, mean_scores = self.blast.run(generated, prefix)
         self.log("val/mean_blast_score", np.mean(mean_scores), logger=True)
         self.log("val/max_blast_score", np.max(top_scores), logger=True)
 

@@ -10,7 +10,7 @@ from typing import List
 
 
 # global variables
-stop_codons = set("TAA", "TAG", "TGA")
+stop_codons = {"TAA", "TAG", "TGA"}
 
 
 class FoundStopCodonCriteria(StoppingCriteria):
@@ -21,12 +21,7 @@ class FoundStopCodonCriteria(StoppingCriteria):
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
     ) -> bool:
-        print(f"StoppingCriteria: {input_ids.shape}")
         codons = self.tokenizer.batch_decode(input_ids[:, -1], skip_special_tokens=True)
-        # codons = [
-        #     self.tokenizer.decode(input_ids[i, -1], skip_special_tokens=True)
-        #     for i in input_ids
-        # ]
 
         batch_size = input_ids.shape[0]
         still_generating = set(range(batch_size)) - self.stop_set

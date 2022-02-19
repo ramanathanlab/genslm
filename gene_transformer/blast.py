@@ -147,21 +147,27 @@ class BLAST:
 
     def run(self, sequences: List[str], prefix: str) -> Tuple[List[float], List[float]]:
         top_scores, mean_scores = [], []
+        import time
+        start = time.time()
         for seq in sequences:
             top_score, mean_score = self._blast(seq, prefix)
             top_scores.append(top_score)
             mean_scores.append(mean_score)
+        print(f"Serial blast time: {time.time() - start}")
         return top_scores, mean_scores
 
     def parallel_run(
         self, sequences: List[str], prefix: str
     ) -> Tuple[List[float], List[float]]:
         top_scores, mean_scores = [], []
+        import time
+        start = time.time()
         futures = [self._executor.submit(self._blast, seq, prefix) for seq in sequences]
         for fut in futures:
             top_score, mean_score = fut.result()
             top_scores.append(top_score)
             mean_scores.append(mean_score)
+        print(f"Parallel blast time: {time.time() - start}")
         return top_scores, mean_scores
 
 
