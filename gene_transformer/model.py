@@ -41,21 +41,9 @@ class DNATransform(pl.LightningModule):
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.final_sequences = []
 
-        self.train_dataset = FASTADataset(
-            self.cfg.train_file,
-            tokenizer=self.tokenizer,
-            block_size=self.cfg.block_size,
-        )
-        self.val_dataset = FASTADataset(
-            self.cfg.val_file,
-            tokenizer=self.tokenizer,
-            block_size=self.cfg.block_size,
-        )
-        self.test_dataset = FASTADataset(
-            self.cfg.test_file,
-            tokenizer=self.tokenizer,
-            block_size=self.cfg.block_size,
-        )
+        self.train_dataset = self._get_dataset(self.cfg.train_file)
+        self.val_dataset = self._get_dataset(self.cfg.val_file)
+        self.test_dataset = self._get_dataset(self.cfg.test_file)
 
         # pdb.set_trace()
         if self.cfg.use_pretrained:
@@ -75,6 +63,32 @@ class DNATransform(pl.LightningModule):
             num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
         )
 
+    def _get_dataset(self, file: str) -> FASTADataset:
+        return FASTADataset(
+            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
+        )
+
+    def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
+        return DataLoader(
+            dataset,
+            shuffle=shuffle,
+            drop_last=True,
+            batch_size=self.cfg.batch_size,
+            num_workers=self.cfg.num_data_workers,
+            prefetch_factor=self.cfg.prefetch_factor,
+            pin_memory=self.cfg.pin_memory,
+            persistent_workers=self.cfg.persistent_workers,
+        )
+
+    def train_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.train_dataset, shuffle=True)
+
+    def val_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.val_dataset, shuffle=False)
+
+    def test_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.test_dataset, shuffle=False)
+
     # def configure_sharded_model(self):
     # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
     #     # Created within sharded model context, modules are instantly sharded across processes
@@ -92,42 +106,6 @@ class DNATransform(pl.LightningModule):
     #         # self.model = GPTNeoForCausalLM(base_config)
     #         base_config = GPT2Config()
     #         self.model = GPT2LMHeadModel(base_config)
-
-    def train_dataloader(self):
-        return DataLoader(
-            self.train_dataset,
-            shuffle=True,
-            drop_last=True,
-            batch_size=self.cfg.batch_size,
-            num_workers=self.cfg.num_data_workers,
-            prefetch_factor=self.cfg.prefetch_factor,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=self.cfg.persistent_workers,
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_dataset,
-            shuffle=False,
-            drop_last=True,
-            batch_size=self.cfg.batch_size,
-            num_workers=self.cfg.num_data_workers,
-            prefetch_factor=self.cfg.prefetch_factor,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=self.cfg.persistent_workers,
-        )
-
-    def test_dataloader(self):
-        return DataLoader(
-            self.test_dataset,
-            shuffle=False,
-            drop_last=True,
-            batch_size=self.cfg.batch_size,
-            num_workers=self.cfg.num_data_workers,
-            prefetch_factor=self.cfg.prefetch_factor,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=self.cfg.persistent_workers,
-        )
 
     def forward(self, x, **kwargs):
         return self.model(x, labels=x, **kwargs)
@@ -267,7 +245,7 @@ def train(cfg: ModelSettings):
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
-    if cfg.generate_upon_completion:
+    if trainer.is_global_zero and cfg.generate_upon_completion:
         save_path = cfg.checkpoint_dir / "final_generated_sequences.fasta"
         seqs = model.final_sequences
         print("Length of final sequence list: ", len(seqs))
