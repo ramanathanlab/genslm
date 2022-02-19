@@ -2,7 +2,7 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 import torch
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, StoppingCriteria
 from typing import List
 
 # from config import ModelSettings
@@ -10,27 +10,68 @@ from typing import List
 
 
 # global variables
-stop_codons = ["TAA", "TAG", "TGA"]
+stop_codons = set("TAA", "TAG", "TGA")
+
+
+class FoundStopCodonCriteria(StoppingCriteria):
+    def __init__(self, tokenizer: PreTrainedTokenizerFast) -> None:
+        self.tokenizer = tokenizer
+        self.stop_set = set()
+
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
+        print(f"StoppingCriteria: {input_ids.shape}")
+        codons = self.tokenizer.batch_decode(input_ids[:, -1], skip_special_tokens=True)
+        # codons = [
+        #     self.tokenizer.decode(input_ids[i, -1], skip_special_tokens=True)
+        #     for i in input_ids
+        # ]
+
+        for i, codon in enumerate(codons):
+            if i not in self.stop_set and codon in stop_codons:
+                self.stop_set.add(i)
+
+        # If each sequence in the batch has seen a stop codon
+        return len(self.stop_set) == input_ids.shape[0]
 
 
 def generate_dna_to_stop(
     model: torch.nn.Module,
-    fast_tokenizer: PreTrainedTokenizerFast,
+    tokenizer: PreTrainedTokenizerFast,
     max_length: int = 1024,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
     biopy_seq: bool = False,
 ):
+    # List of output sequences stored as tokens
+    import time
+
+    start = time.time()
     output = model.generate(
-        fast_tokenizer.encode("ATG", return_tensors="pt").cuda(),
+        tokenizer.encode("ATG", return_tensors="pt").cuda(),
+        max_length=max_length,
+        do_sample=True,
+        top_k=top_k,
+        top_p=top_p,
+        num_return_sequences=num_seqs,
+        stopping_criteria=FoundStopCodonCriteria(tokenizer),
+    )
+    print("StoppingCriteria time:", time.time() - start)
+    output = model.generate(
+        tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
         do_sample=True,
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
     )
-    seqs = [fast_tokenizer.decode(i, skip_special_tokens=True) for i in output]
+    print()
+
+    # Decode tokens to codon strings
+    seqs = tokenizer.batch_decode(output, skip_special_tokens=True)
+    # seqs = [tokenizer.decode(i, skip_special_tokens=True) for i in output]
     seq_strings = []
     for s in seqs:
         dna = s.split(" ")
@@ -64,7 +105,7 @@ def seqs_to_fasta(seqs: List[Seq], file_name: str):
 def generate_fasta_file(
     file_name,
     model,
-    fast_tokenizer,
+    tokenizer,
     max_length: int = 1024,
     top_k: int = 50,
     top_p: float = 0.95,
@@ -74,7 +115,7 @@ def generate_fasta_file(
     # generate seq objects
     generated = generate_dna_to_stop(
         model,
-        fast_tokenizer,
+        tokenizer,
         max_length=max_length,
         top_k=top_k,
         top_p=top_p,
