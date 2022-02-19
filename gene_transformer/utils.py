@@ -7,7 +7,7 @@ from typing import List
 
 
 # global variables
-stop_codons = {"TAA", "TAG", "TGA"}
+STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
 class FoundStopCodonCriteria(StoppingCriteria):
@@ -24,7 +24,7 @@ class FoundStopCodonCriteria(StoppingCriteria):
         still_generating = set(range(batch_size)) - self.stop_set
 
         for i in still_generating:
-            if codons[i] in stop_codons:
+            if codons[i] in STOP_CODONS:
                 self.stop_set.add(i)
 
         # If each sequence in the batch has seen a stop codon
@@ -49,7 +49,7 @@ def generate_dna_to_stop(
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
-#        stopping_criteria=stopping_criteria,
+        #        stopping_criteria=stopping_criteria,
     )
 
     # Decode tokens to codon strings
@@ -61,7 +61,7 @@ def generate_dna_to_stop(
         dna = s.split()
         # Iterate through until you reach a stop codon
         for i, codon in enumerate(dna):
-            if codon in stop_codons:
+            if codon in STOP_CODONS:
                 break
         # Get the open reading frame
         to_stop = dna[: i + 1]
