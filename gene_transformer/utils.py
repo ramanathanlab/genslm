@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Any
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
@@ -24,7 +24,7 @@ class FoundStopCodonCriteria(StoppingCriteria):
         #       of post processing.
 
     def __call__(
-        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs: Any
     ) -> bool:
         codons = self.tokenizer.batch_decode(input_ids[:, -1], skip_special_tokens=True)
 

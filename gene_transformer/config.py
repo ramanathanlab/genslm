@@ -26,6 +26,7 @@ class ModelSettings(BaseSettings):
     wandb_active: bool = True
     wandb_project_name: str = "codon_transformer"
     checkpoint_dir: Path = Path("codon_transformer")
+    node_local_path: Optional[Path] = None
     num_nodes: int = 1
 
     # data settings

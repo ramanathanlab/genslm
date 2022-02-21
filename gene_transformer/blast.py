@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 import numpy as np
 import pandas as pd  # type: ignore[import]
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
@@ -21,6 +21,7 @@ class ParallelBLAST:
         blast_dir: Path,
         blast_exe_path: Path = Path("blastn"),
         num_workers: int = 1,
+        node_local_path: Optional[Path] = None,
     ) -> None:
         """Runs BLAST using the blastn conda utility.
 
@@ -34,10 +35,21 @@ class ParallelBLAST:
             Path to blast executable, by default Path("blastn")
         num_workers : int, optional
             Number of threads used to spawn blast processes, by default 1
+        node_local_path : Optional[Path], by default None
+            If passed, will write temporary blast files to this node local
+            directory.
         """
         self.database_file = database_file
         self.blast_dir = blast_dir
         self.blast_exe_path = blast_exe_path
+        self.node_local_path = node_local_path
+
+        # Default temp dir to the file system blast dir
+        self.temp_dir = blast_dir
+
+        if self.node_local_path is not None:
+            self.temp_dir = self.node_local_path / "blast"
+            self.temp_dir.mkdir(exist_ok=True)
 
         self.blast_dir.mkdir(exist_ok=True, parents=True)
 
@@ -62,8 +74,8 @@ class ParallelBLAST:
 
         # Write a temporary fasta file
         seq_hash = hash(sequence)
-        temp_fasta = self.blast_dir / f"{prefix}-seq-{seq_hash}.fasta"
-        temp_csv = self.blast_dir / f"{prefix}-blast-{seq_hash}.csv"
+        temp_fasta = self.temp_dir / f"{prefix}-seq-{seq_hash}.fasta"
+        temp_csv = self.temp_dir / f"{prefix}-blast-{seq_hash}.csv"
         SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
 
         # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
@@ -83,6 +95,13 @@ class ParallelBLAST:
         top_score: float = scores[0]
         mean_score: float = np.mean(scores)
         return top_score, mean_score
+
+    def backup_results(self) -> None:
+        """Move node local files to :obj:`blast_dir`."""
+        if self.node_local_path is not None:
+            # Bulk move of blast files
+            command = f"mv {self.temp_dir / '*'} {self.blast_dir}"
+            subprocess.run(command, shell=True)
 
     def run(self, sequences: List[str], prefix: str) -> Tuple[List[float], List[float]]:
         top_scores, mean_scores = [], []

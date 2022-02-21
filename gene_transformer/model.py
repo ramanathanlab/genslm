@@ -63,6 +63,7 @@ class DNATransformer(pl.LightningModule):
             blast_dir=self.cfg.checkpoint_dir / "blast",
             blast_exe_path=self.cfg.blast_exe_path,
             num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
+            node_local_path=self.cfg.node_local_path,
         )
 
     def _get_dataset(self, file: str) -> FASTADataset:
@@ -172,6 +173,8 @@ class DNATransformer(pl.LightningModule):
         max_score, mean_score = metrics[1].max().cpu(), metrics[0].mean().cpu()
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
+        if self.trainer.is_global_zero:
+            self.blast.backup_results()
 
     def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:
         if self.trainer.is_global_zero and self.cfg.generate_upon_completion:
@@ -291,9 +294,9 @@ def inference(cfg: ModelSettings, dataset: str) -> None:
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
 
-    embeddings = np.concatenate(embeddings)
+    embeddings = np.concatenate(embeddings)  # type: ignore
 
-    print(f"Embeddings shape: {embeddings.shape}")
+    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     np.save("inference-train-embeddings.npy", embeddings)
 
 
