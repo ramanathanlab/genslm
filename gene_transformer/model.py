@@ -174,6 +174,9 @@ class DNATransformer(pl.LightningModule):
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
         if self.trainer.is_global_zero:
+            # Will move blast results (fasta and csv file) from the node
+            # where rank-0 runs to the file system (will also move files
+            # written by other ranks on the node)
             self.blast.backup_results()
 
     def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:
