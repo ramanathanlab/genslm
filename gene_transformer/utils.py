@@ -46,10 +46,10 @@ def generate_dna_to_stop(
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
-):
+) -> torch.Tensor:
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
-    output = model.generate(
+    return model.generate(
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
         do_sample=True,
@@ -59,8 +59,12 @@ def generate_dna_to_stop(
         #        stopping_criteria=stopping_criteria,
     )
 
+
+def tokens_to_sequences(
+    tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast
+) -> List[str]:
     # Decode tokens to codon strings
-    seqs = tokenizer.batch_decode(output, skip_special_tokens=True)
+    seqs = tokenizer.batch_decode(tokens, skip_special_tokens=True)
     # Convert from tokens to string
     seq_strings = []
     for s in seqs:

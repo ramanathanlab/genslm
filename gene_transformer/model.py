@@ -29,7 +29,11 @@ from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 from gene_transformer.config import ModelSettings
 from gene_transformer.dataset import FASTADataset
 from gene_transformer.blast import ParallelBLAST
-from gene_transformer.utils import generate_dna_to_stop, seqs_to_fasta
+from gene_transformer.utils import (
+    generate_dna_to_stop,
+    tokens_to_sequences,
+    seqs_to_fasta,
+)
 
 
 class DNATransformer(pl.LightningModule):
@@ -159,12 +163,13 @@ class DNATransformer(pl.LightningModule):
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
-        sequences = generate_dna_to_stop(
+        tokens = generate_dna_to_stop(
             self.model,
             self.tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
             max_length=self.cfg.block_size,
         )
+        sequences = tokens_to_sequences(tokens, self.tokenizer)
 
         prefix = f"globalstep{self.global_step}"
         max_scores, mean_scores = self.blast.run(sequences, prefix)
@@ -186,25 +191,26 @@ class DNATransformer(pl.LightningModule):
             return None
         print("Generating test sequences")
 
-        sequences = generate_dna_to_stop(
+        tokens = generate_dna_to_stop(
             self.model,
             self.tokenizer,
             num_seqs=self.cfg.num_test_seqs_per_gpu,
             max_length=self.cfg.block_size,
         )
 
-        print(f"Done generating seqs {len(sequences)}")
+        print(f"Done generating seqs {tokens.shape}")
         # Wait until all ranks meet up here
         self.trainer._accelerator_connector.strategy.barrier()
         # sequences after all_gather is shape (world_size, num_seqs)
-        sequences = self.all_gather(sequences)
-        
-        print(f"Gather sequences: {len(sequences)}")
+        tokens = self.all_gather(tokens)
+
+        print(f"Gather sequences: {tokens.shape}")
 
         if self.trainer.is_global_zero:
             # Concatenate over world size
-            #sequences = np.concatenate(sequences.cpu().numpy())
-            #print(f"sequences cat {sequences.shape}")
+            sequences = tokens_to_sequences(tokens, self.tokenizer)
+            # sequences = np.concatenate(sequences.cpu().numpy())
+            print(f"sequences {len(sequences)}")
             self.final_sequences[f"globalstep{self.global_step}"] = sequences
 
 
@@ -282,7 +288,7 @@ def train(cfg: ModelSettings) -> None:
 
     if trainer.is_global_zero:
         print("Completed training.")
-    
+
     if trainer.is_global_zero and cfg.num_test_seqs_per_gpu:
         save_path = cfg.checkpoint_dir / "generated"
         save_path.mkdir(exist_ok=True)
