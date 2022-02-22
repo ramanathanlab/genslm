@@ -184,6 +184,7 @@ class DNATransformer(pl.LightningModule):
     def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:
         if not self.cfg.num_test_seqs_per_gpu:
             return None
+        print("Generating test sequences")
 
         sequences = generate_dna_to_stop(
             self.model,
@@ -192,14 +193,18 @@ class DNATransformer(pl.LightningModule):
             max_length=self.cfg.block_size,
         )
 
+        print(f"Done generating seqs {len(sequences)}")
         # Wait until all ranks meet up here
         self.trainer._accelerator_connector.strategy.barrier()
         # sequences after all_gather is shape (world_size, num_seqs)
         sequences = self.all_gather(sequences)
+        
+        print(f"Gather sequences: {len(sequences)}")
 
         if self.trainer.is_global_zero:
             # Concatenate over world size
-            sequences = np.concatenate(sequences.cpu().numpy())
+            #sequences = np.concatenate(sequences.cpu().numpy())
+            #print(f"sequences cat {sequences.shape}")
             self.final_sequences[f"globalstep{self.global_step}"] = sequences
 
 
@@ -274,7 +279,10 @@ def train(cfg: ModelSettings) -> None:
     )
     trainer.fit(model)
     trainer.test(model)
-    print("Completed training.")
+
+    if trainer.is_global_zero:
+        print("Completed training.")
+    
     if trainer.is_global_zero and cfg.num_test_seqs_per_gpu:
         save_path = cfg.checkpoint_dir / "generated"
         save_path.mkdir(exist_ok=True)

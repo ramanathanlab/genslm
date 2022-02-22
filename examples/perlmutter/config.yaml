@@ -17,4 +17,4 @@ batch_size: 64
 epochs: 1
 block_size: 512
 accumulate_grad_batches: 4
-num_test_seqs_per_gpu: 8
+num_test_seqs_per_gpu: 2
