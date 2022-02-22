@@ -51,8 +51,7 @@ class ModelSettings(BaseSettings):
     load_from_checkpoint_dir: Optional[Path] = None
 
     # generation settings
-    generate_upon_completion: bool = True
-    num_seqs_test: int = 8
+    num_test_seqs_per_gpu: int = 8
 
     # training ops
     num_data_workers: int = 4

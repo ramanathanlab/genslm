@@ -46,7 +46,6 @@ def generate_dna_to_stop(
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
-    biopy_seq: bool = False,
 ):
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
@@ -75,13 +74,18 @@ def generate_dna_to_stop(
         to_stop = dna[: i + 1]
         # Create the string and append to list
         seq_strings.append("".join(to_stop))
-    # Convert to biopython objects if requested
-    if biopy_seq:
-        seq_strings = [Seq(s) for s in seq_strings]
     return seq_strings
 
 
-def seqs_to_fasta(seqs: List[Seq], file_name: Path) -> None:
+def seqs_to_fasta(
+    seqs: List[Seq], file_name: Path, translate_to_protein: bool = False
+) -> None:
+
+    sequences = [Seq(seq) for seq in seqs]
+
+    if translate_to_protein:
+        sequences = [s.translate() for s in sequences]
+
     records = [
         SeqRecord(
             seq,
@@ -89,34 +93,7 @@ def seqs_to_fasta(seqs: List[Seq], file_name: Path) -> None:
             name="MDH_sequence",
             description="synthetic malate dehydrogenase",
         )
-        for i, seq in enumerate(seqs)
+        for i, seq in enumerate(sequences)
     ]
 
     SeqIO.write(records, file_name, "fasta")
-
-
-# TODO: This function is never used, remove?
-def generate_fasta_file(
-    file_name: Path,
-    model: torch.nn.Module,
-    tokenizer: PreTrainedTokenizerFast,
-    max_length: int = 512,
-    top_k: int = 50,
-    top_p: float = 0.95,
-    num_seqs: int = 5,
-    translate_to_protein: bool = False,
-) -> None:
-    # generate seq objects
-    generated = generate_dna_to_stop(
-        model,
-        tokenizer,
-        max_length=max_length,
-        top_k=top_k,
-        top_p=top_p,
-        num_seqs=num_seqs,
-        biopy_seq=True,
-    )
-    if translate_to_protein:
-        generated = [s.translate() for s in generated]
-    # generate seq records
-    seqs_to_fasta(generated, file_name)

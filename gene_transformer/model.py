@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
 from argparse import ArgumentParser
-from typing import Any, List
+from typing import Any, List, Dict
 
 import torch
 from torch.utils.data import DataLoader
@@ -41,7 +41,6 @@ class DNATransformer(pl.LightningModule):
             tokenizer_object=Tokenizer.from_file(self.cfg.tokenizer_file)
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-        self.final_sequences = []
 
         self.train_dataset = self._get_dataset(self.cfg.train_file)
         self.val_dataset = self._get_dataset(self.cfg.val_file)
@@ -65,6 +64,9 @@ class DNATransformer(pl.LightningModule):
             num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
             node_local_path=self.cfg.node_local_path,
         )
+
+        # Collect generated sequences at each epoch end
+        self.final_sequences: Dict[str, List[str]] = {}
 
     def _get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
@@ -157,7 +159,7 @@ class DNATransformer(pl.LightningModule):
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
-        generated = generate_dna_to_stop(
+        sequences = generate_dna_to_stop(
             self.model,
             self.tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
@@ -165,12 +167,12 @@ class DNATransformer(pl.LightningModule):
         )
 
         prefix = f"globalstep{self.global_step}"
-        max_scores, mean_scores = self.blast.run(generated, prefix)
-        metrics = np.mean(mean_scores), np.max(max_scores)
+        max_scores, mean_scores = self.blast.run(sequences, prefix)
+        metrics = np.max(max_scores), np.mean(mean_scores)
         # Wait until all ranks meet up here
         self.trainer._accelerator_connector.strategy.barrier()
         metrics = self.all_gather(metrics)
-        max_score, mean_score = metrics[1].max().cpu(), metrics[0].mean().cpu()
+        max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
         if self.trainer.is_global_zero:
@@ -180,16 +182,26 @@ class DNATransformer(pl.LightningModule):
             self.blast.backup_results()
 
     def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:
-        if self.trainer.is_global_zero and self.cfg.generate_upon_completion:
-            generated = generate_dna_to_stop(
-                self.model,
-                self.tokenizer,
-                num_seqs=self.cfg.num_seqs_test,
-                max_length=self.cfg.block_size,
-                biopy_seq=True,
-            )
-            self.final_sequences.extend(generated)
+        if not self.cfg.num_test_seqs_per_gpu:
+            return None
+
+        sequences = generate_dna_to_stop(
+            self.model,
+            self.tokenizer,
+            num_seqs=self.cfg.num_test_seqs_per_gpu,
+            max_length=self.cfg.block_size,
+        )
+
+        # Wait until all ranks meet up here
         self.trainer._accelerator_connector.strategy.barrier()
+        # sequences after all_gather is shape (world_size, num_seqs)
+        sequences = self.all_gather(sequences)
+
+        if self.trainer.is_global_zero:
+            # Concatenate over world size
+            sequences = np.concatenate(sequences.cpu().numpy())
+            self.final_sequences[f"globalstep{self.global_step}"] = sequences
+
 
 def load_from_deepspeed(
     cfg: ModelSettings,
@@ -263,12 +275,12 @@ def train(cfg: ModelSettings) -> None:
     trainer.fit(model)
     trainer.test(model)
     print("Completed training.")
-    if trainer.is_global_zero and cfg.generate_upon_completion:
-        save_path = cfg.checkpoint_dir / "final_generated_sequences.fasta"
-        seqs = model.final_sequences
-        print("Length of final sequence list: ", len(seqs))
-        seqs_to_fasta(seqs, save_path)
-        print("Saved final generated sequences to ", save_path)
+    if trainer.is_global_zero and cfg.num_test_seqs_per_gpu:
+        save_path = cfg.checkpoint_dir / "generated"
+        save_path.mkdir(exist_ok=True)
+        for name, seqs in model.final_sequences.items():
+            seqs_to_fasta(seqs, save_path / f"{name}.fasta")
+        print(f"Saved final generated sequences to {save_path}")
 
 
 def inference(cfg: ModelSettings, dataset: str) -> None:
