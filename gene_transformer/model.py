@@ -189,7 +189,7 @@ class DNATransformer(pl.LightningModule):
                 biopy_seq=True,
             )
             self.final_sequences.extend(generated)
-
+        self.trainer._accelerator_connector.strategy.barrier()
 
 def load_from_deepspeed(
     cfg: ModelSettings,

@@ -13,7 +13,7 @@ blast_validation_file: data/full_mdh_fasta/train.fasta
 blast_exe_path: ../../conda-env/bin/blastn
 num_blast_seqs_per_gpu: 8
 use_pretrained: false
-batch_size: 8
+batch_size: 64
 epochs: 1
 block_size: 512
 accumulate_grad_batches: 4
