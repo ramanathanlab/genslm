@@ -4,7 +4,7 @@ from Bio import SeqIO  # type: ignore[import]
 from transformers import PreTrainedTokenizerFast
 
 
-class FASTADataset(Dataset):
+class FASTADataset(Dataset):  # type: ignore[type-arg]
     def __init__(
         self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
     ) -> None:
@@ -22,7 +22,7 @@ class FASTADataset(Dataset):
 
         # Read in the sequences from the fasta file, convert to
         # codon string, tokenize, and collect in tensor
-        self.sequences = torch.cat(
+        self.sequences = torch.cat(  # type: ignore[attr-defined]
             [
                 tokenizer.encode(
                     self.group_by_codon(seq),
@@ -44,4 +44,4 @@ class FASTADataset(Dataset):
         return len(self.sequences)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        return self.sequences[idx]
+        return self.sequences[idx]  # type:ignore[no-any-return]

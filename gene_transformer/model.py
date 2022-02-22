@@ -118,7 +118,7 @@ class DNATransformer(pl.LightningModule):
     #         base_config = GPT2Config()
     #         self.model = GPT2LMHeadModel(base_config)
 
-    def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:
+    def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
         return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
@@ -131,7 +131,7 @@ class DNATransformer(pl.LightningModule):
         # wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -149,7 +149,7 @@ class DNATransformer(pl.LightningModule):
         )
         return loss
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
+    def configure_optimizers(self) -> DeepSpeedCPUAdam:
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
     def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
@@ -175,12 +175,12 @@ class DNATransformer(pl.LightningModule):
         max_scores, mean_scores = self.blast.run(sequences, prefix)
         metrics = np.max(max_scores), np.mean(mean_scores)
         # Wait until all ranks meet up here
-        self.trainer._accelerator_connector.strategy.barrier()
+        self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
         metrics = self.all_gather(metrics)
         max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
-        if self.trainer.is_global_zero:
+        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
             # Will move blast results (fasta and csv file) from the node
             # where rank-0 runs to the file system (will also move files
             # written by other ranks on the node)
@@ -189,7 +189,6 @@ class DNATransformer(pl.LightningModule):
     def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         if not self.cfg.num_test_seqs_per_gpu:
             return None
-        print("Generating test sequences")
 
         tokens = generate_dna_to_stop(
             self.model,
@@ -198,13 +197,10 @@ class DNATransformer(pl.LightningModule):
             max_length=self.cfg.block_size,
         )
 
-        print(f"Done generating seqs {tokens.shape}")
         # Wait until all ranks meet up here
         self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
         # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
         tokens = self.all_gather(tokens)
-
-        print(f"Gather sequences: {tokens.shape}")
 
         if self.trainer.is_global_zero:  # type: ignore[attr-defined]
             # Concatenate over world size

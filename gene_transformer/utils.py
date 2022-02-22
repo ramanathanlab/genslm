@@ -13,7 +13,7 @@ from transformers import (
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
-class FoundStopCodonCriteria(StoppingCriteria):
+class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
     def __init__(self, tokenizer: PreTrainedTokenizerFast) -> None:
         self.tokenizer = tokenizer
         self.stop_set: Set[int] = set()
@@ -40,7 +40,7 @@ class FoundStopCodonCriteria(StoppingCriteria):
 
 
 def generate_dna_to_stop(
-    model: torch.nn.Module,
+    model: torch.nn.Module,  # type: ignore[name-defined]
     tokenizer: PreTrainedTokenizerFast,
     max_length: int = 512,
     top_k: int = 50,
@@ -49,7 +49,7 @@ def generate_dna_to_stop(
 ) -> torch.Tensor:
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
-    return model.generate(
+    return model.generate(  # type: ignore[no-any-return]
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
         do_sample=True,
