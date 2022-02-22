@@ -152,7 +152,7 @@ class DNATransformer(pl.LightningModule):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
-    def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:
+    def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         # NOTE: BLAST must be installed locally in order for this to work properly.
         if not self.cfg.enable_blast:
             return
@@ -186,7 +186,7 @@ class DNATransformer(pl.LightningModule):
             # written by other ranks on the node)
             self.blast.backup_results()
 
-    def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:
+    def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         if not self.cfg.num_test_seqs_per_gpu:
             return None
         print("Generating test sequences")
@@ -200,14 +200,15 @@ class DNATransformer(pl.LightningModule):
 
         print(f"Done generating seqs {tokens.shape}")
         # Wait until all ranks meet up here
-        self.trainer._accelerator_connector.strategy.barrier()
-        # sequences after all_gather is shape (world_size, num_seqs)
+        self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
+        # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
         tokens = self.all_gather(tokens)
 
         print(f"Gather sequences: {tokens.shape}")
 
-        if self.trainer.is_global_zero:
+        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
             # Concatenate over world size
+            tokens = tokens.view(-1, self.cfg.block_size)
             sequences = tokens_to_sequences(tokens, self.tokenizer)
             # sequences = np.concatenate(sequences.cpu().numpy())
             print(f"sequences {len(sequences)}")
@@ -228,7 +229,7 @@ def load_from_deepspeed(
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     # load model
     model = DNATransformer.load_from_checkpoint(output_path, strict=False, cfg=cfg)
-    return model
+    return model  # type: ignore[no-any-return]
 
 
 def train(cfg: ModelSettings) -> None:
@@ -339,7 +340,7 @@ if __name__ == "__main__":
 
     # Setup torch environment
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    torch.set_num_threads(config.num_data_workers)
+    torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
     if args.mode == "train":
