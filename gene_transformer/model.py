@@ -1,9 +1,9 @@
 import os
-import statistics
 import numpy as np
 from tqdm import tqdm  # type: ignore[import]
 from pathlib import Path
 from argparse import ArgumentParser
+from typing import Any, List, Dict
 
 import torch
 from torch.utils.data import DataLoader
@@ -24,39 +24,31 @@ from transformers import (
     GPT2LMHeadModel,
     GPTNeoForCausalLM,
 )
+from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
-from config import ModelSettings
-from utils import generate_dna_to_stop, seqs_to_fasta
-from dataset import FASTADataset
-from blast import BlastRun
+from gene_transformer.config import ModelSettings
+from gene_transformer.dataset import FASTADataset
+from gene_transformer.blast import ParallelBLAST
+from gene_transformer.utils import (
+    generate_dna_to_stop,
+    tokens_to_sequences,
+    seqs_to_fasta,
+)
 
 
-class DNATransform(pl.LightningModule):
-    def __init__(self, cfg: ModelSettings):
+class DNATransformer(pl.LightningModule):
+    def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
         self.save_hyperparameters(cfg.dict())
         self.cfg = cfg
-        self.fast_tokenizer = PreTrainedTokenizerFast(
+        self.tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(self.cfg.tokenizer_file)
         )
-        self.fast_tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-        self.final_sequences = []
+        self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
-        self.train_dataset = FASTADataset(
-            self.cfg.train_file,
-            tokenizer=self.fast_tokenizer,
-            block_size=self.cfg.block_size,
-        )
-        self.val_dataset = FASTADataset(
-            self.cfg.val_file,
-            tokenizer=self.fast_tokenizer,
-            block_size=self.cfg.block_size,
-        )
-        self.test_dataset = FASTADataset(
-            self.cfg.test_file,
-            tokenizer=self.fast_tokenizer,
-            block_size=self.cfg.block_size,
-        )
+        self.train_dataset = self._get_dataset(self.cfg.train_file)
+        self.val_dataset = self._get_dataset(self.cfg.val_file)
+        self.test_dataset = self._get_dataset(self.cfg.test_file)
 
         # pdb.set_trace()
         if self.cfg.use_pretrained:
@@ -64,8 +56,49 @@ class DNATransform(pl.LightningModule):
         else:
             # base_config = GPTNeoConfig()
             # self.model = GPTNeoForCausalLM(base_config)
-            base_config = GPT2Config(vocab_size=self.fast_tokenizer.vocab_size)
+            base_config = GPT2Config(vocab_size=self.tokenizer.vocab_size)
             self.model = GPT2LMHeadModel(base_config)
+
+        # To validate generated sequences
+        # TODO: make sure temp files are outputting to node local
+        self.blast = ParallelBLAST(
+            database_file=self.cfg.blast_validation_file,
+            blast_dir=self.cfg.checkpoint_dir / "blast",
+            blast_exe_path=self.cfg.blast_exe_path,
+            num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
+            node_local_path=self.cfg.node_local_path,
+        )
+
+        # Collect generated sequences at each epoch end
+        self.final_sequences: Dict[str, List[str]] = {}
+
+    def _get_dataset(self, file: str) -> FASTADataset:
+        """Helper function to generate dataset."""
+        return FASTADataset(
+            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
+        )
+
+    def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
+        """Helper function to generate dataloader."""
+        return DataLoader(
+            dataset,
+            shuffle=shuffle,
+            drop_last=True,
+            batch_size=self.cfg.batch_size,
+            num_workers=self.cfg.num_data_workers,
+            prefetch_factor=self.cfg.prefetch_factor,
+            pin_memory=self.cfg.pin_memory,
+            persistent_workers=self.cfg.persistent_workers,
+        )
+
+    def train_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.train_dataset, shuffle=True)
+
+    def val_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.val_dataset, shuffle=False)
+
+    def test_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.test_dataset, shuffle=False)
 
     # def configure_sharded_model(self):
     # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
@@ -85,46 +118,10 @@ class DNATransform(pl.LightningModule):
     #         base_config = GPT2Config()
     #         self.model = GPT2LMHeadModel(base_config)
 
-    def train_dataloader(self):
-        return DataLoader(
-            self.train_dataset,
-            shuffle=True,
-            drop_last=True,
-            batch_size=self.cfg.batch_size,
-            num_workers=self.cfg.num_data_workers,
-            prefetch_factor=self.cfg.prefetch_factor,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=self.cfg.persistent_workers,
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_dataset,
-            shuffle=False,
-            drop_last=True,
-            batch_size=self.cfg.batch_size,
-            num_workers=self.cfg.num_data_workers,
-            prefetch_factor=self.cfg.prefetch_factor,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=self.cfg.persistent_workers,
-        )
-
-    def test_dataloader(self):
-        return DataLoader(
-            self.test_dataset,
-            shuffle=False,
-            drop_last=True,
-            batch_size=self.cfg.batch_size,
-            num_workers=self.cfg.num_data_workers,
-            prefetch_factor=self.cfg.prefetch_factor,
-            pin_memory=self.cfg.pin_memory,
-            persistent_workers=self.cfg.persistent_workers,
-        )
-
-    def forward(self, x, **kwargs):
+    def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
         return self.model(x, labels=x, **kwargs)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -134,7 +131,7 @@ class DNATransform(pl.LightningModule):
         # wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -143,7 +140,7 @@ class DNATransform(pl.LightningModule):
         )
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         x = batch
         outputs = self(x)
         loss = outputs.loss
@@ -152,79 +149,86 @@ class DNATransform(pl.LightningModule):
         )
         return loss
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> DeepSpeedCPUAdam:
         return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
 
-    def validation_epoch_end(self, val_step_outputs):
-        """NOTE: BLAST must be installed locally in order for this to work properly."""
+    def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
+        # NOTE: BLAST must be installed locally in order for this to work properly.
         if not self.cfg.enable_blast:
             return
-        # don't do anything to the validation step outputs, we're using this space to generate sequences and run blast
-        # in order to monitor the similarity to training sequences
-        generated = generate_dna_to_stop(
+
+        # Generate sequences and run blast across all ranks,
+        # then gather mean, max for logging on rank 0.
+
+        # Don't do anything to the validation step outputs, we're using this
+        # space to generate sequences and run blast in order to monitor the
+        # similarity to training sequences
+        tokens = generate_dna_to_stop(
             self.model,
-            self.fast_tokenizer,
+            self.tokenizer,
             num_seqs=self.cfg.num_blast_seqs_per_gpu,
-            biopy_seq=False,
+            max_length=self.cfg.block_size,
         )
-        blast_scores = []
-        temp_fasta_dir = (
-            self.cfg.checkpoint_dir / f"blast_runs_globalstep{self.global_step}"
+        sequences = tokens_to_sequences(tokens, self.tokenizer)
+
+        prefix = f"globalstep{self.global_step}"
+        max_scores, mean_scores = self.blast.run(sequences, prefix)
+        metrics = np.max(max_scores), np.mean(mean_scores)
+        # Wait until all ranks meet up here
+        self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
+        metrics = self.all_gather(metrics)
+        max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
+        self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
+        self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
+        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
+            # Will move blast results (fasta and csv file) from the node
+            # where rank-0 runs to the file system (will also move files
+            # written by other ranks on the node)
+            self.blast.backup_results()
+
+    def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
+        if not self.cfg.num_test_seqs_per_gpu:
+            return None
+
+        tokens = generate_dna_to_stop(
+            self.model,
+            self.tokenizer,
+            num_seqs=self.cfg.num_test_seqs_per_gpu,
+            max_length=self.cfg.block_size,
         )
 
-        temp_fasta_dir.mkdir(exist_ok=True, parents=True)
+        # Wait until all ranks meet up here
+        self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
+        # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
+        tokens = self.all_gather(tokens)
 
-        for sequence in tqdm(generated):
-            # print(f"Blasting sequence {sequence}...")
-            run = BlastRun(
-                sequence,
-                self.cfg.blast_validation_file,
-                temp_fasta_dir=temp_fasta_dir,
-                temp_csv_dir=temp_fasta_dir,
-                blast_executable_path=self.cfg.blast_executable_path
-            )
-            run.run_blast()
-            run.get_scores()
-            score = run.get_mean_score()
-            blast_scores.append(score)
-        # calculate mean and max score
-        mean_score = statistics.mean(blast_scores)
-        max_score = max(blast_scores)
-        self.log("val/mean_blast_score", float(mean_score), logger=True)
-        self.log("val/max_blast_score", float(max_score), logger=True)
-
-    def test_epoch_end(self, outputs):
-        if self.cfg.generate_upon_completion:
-            generated = generate_dna_to_stop(
-                self.model,
-                self.fast_tokenizer,
-                num_seqs=self.cfg.num_blast_seqs_per_gpu,
-                biopy_seq=True,
-            )
-            self.final_sequences.extend(generated)
-            # save_path = self.cfg.checkpoint_dir / "final_generated_sequences.fasta"
-            # seqs_to_fasta(generated, save_path)
-            # print("Saved final generated sequences to ", save_path)
+        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
+            # Concatenate over world size
+            tokens = tokens.view(-1, self.cfg.block_size)
+            sequences = tokens_to_sequences(tokens, self.tokenizer)
+            # sequences = np.concatenate(sequences.cpu().numpy())
+            print(f"sequences {len(sequences)}")
+            self.final_sequences[f"globalstep{self.global_step}"] = sequences
 
 
 def load_from_deepspeed(
     cfg: ModelSettings,
     checkpoint_dir: Path,
-    checkpoint: Path = "last.ckpt",
-    model_weights: Path = "last.pt",
-):
+    checkpoint: str = "last.ckpt",
+    model_weights: str = "last.pt",
+) -> DNATransformer:
     """Utility function for deepspeed conversion"""
     # first convert the weights
-    save_path = checkpoint_dir / checkpoint
-    output_path = checkpoint_dir / model_weights
+    save_path = str(checkpoint_dir / checkpoint)
+    output_path = str(checkpoint_dir / model_weights)
     # perform the conversion
     convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
     # load model
-    model = DNATransform.load_from_checkpoint(output_path, strict=False, cfg=cfg)
-    return model
+    model = DNATransformer.load_from_checkpoint(output_path, strict=False, cfg=cfg)
+    return model  # type: ignore[no-any-return]
 
 
-def train(cfg: ModelSettings):
+def train(cfg: ModelSettings) -> None:
 
     # Check if loading from checkpoint - this assumes that you're
     # loading from a sharded DeepSpeed checkpoint!!!
@@ -234,7 +238,7 @@ def train(cfg: ModelSettings):
         )
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
     else:
-        model = DNATransform(cfg)
+        model = DNATransformer(cfg)
 
     # Setup wandb
     if cfg.wandb_active:
@@ -278,16 +282,22 @@ def train(cfg: ModelSettings):
     )
     trainer.fit(model)
     trainer.test(model)
-    print("Completed training.")
-    if cfg.generate_upon_completion:
-        save_path = cfg.checkpoint_dir / "final_generated_sequences.fasta"
-        seqs = model.final_sequences
-        print("Length of final sequence list: ", len(seqs))
-        seqs_to_fasta(seqs, save_path)
-        print("Saved final generated sequences to ", save_path)
+
+    if trainer.is_global_zero:
+        print("Completed training.")
+
+    if trainer.is_global_zero and cfg.num_test_seqs_per_gpu:
+        save_path = cfg.checkpoint_dir / "generated"
+        save_path.mkdir(exist_ok=True)
+        for name, seqs in model.final_sequences.items():
+            seqs_to_fasta(seqs, save_path / f"{name}.fasta")
+        print(f"Saved final generated sequences to {save_path}")
 
 
-def inference(cfg: ModelSettings, dataset: str):
+def inference(cfg: ModelSettings, dataset: str) -> None:
+
+    if cfg.load_from_checkpoint_dir is None:
+        raise ValueError("load_from_checkpoint_dir must be set in the config file")
 
     model = load_from_deepspeed(cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir)
     model.cuda()
@@ -301,6 +311,8 @@ def inference(cfg: ModelSettings, dataset: str):
 
     print(f"Running inference with dataset length {len(loader)}")
 
+    # TODO: Instead could optionally return the hidden_states in a dictionary
+    # in the validation_step function.
     embeddings = []
     for batch in tqdm(loader):
         batch = batch.cuda()
@@ -308,12 +320,10 @@ def inference(cfg: ModelSettings, dataset: str):
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
 
-    embeddings = np.concatenate(embeddings)
+    embeddings = np.concatenate(embeddings)  # type: ignore
 
-    print(f"Embeddings shape: {embeddings.shape}")
+    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     np.save("inference-train-embeddings.npy", embeddings)
-
-    return embeddings
 
 
 if __name__ == "__main__":
@@ -326,11 +336,10 @@ if __name__ == "__main__":
 
     # Setup torch environment
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    torch.set_num_threads(config.num_data_workers)
+    torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
     if args.mode == "train":
         train(config)
     if args.mode == "inference":
-        inference(config, args.config, args.inference_dataset)
-
+        inference(config, args.inference_dataset)

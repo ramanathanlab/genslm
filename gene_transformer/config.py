@@ -26,6 +26,7 @@ class ModelSettings(BaseSettings):
     wandb_active: bool = True
     wandb_project_name: str = "codon_transformer"
     checkpoint_dir: Path = Path("codon_transformer")
+    node_local_path: Optional[Path] = None
     num_nodes: int = 1
 
     # data settings
@@ -38,7 +39,7 @@ class ModelSettings(BaseSettings):
     enable_blast: bool = True
     blast_validation_file: str = "blast_file.fasta"
     num_blast_seqs_per_gpu: int = 5
-    blast_executable_path: Path = Path("/global/cfs/cdirs/m3957/mzvyagin/conda/envs/gpt/bin/blastn")
+    blast_exe_path: Path = Path("blastn")  # Defaults to current conda environment
 
     # model settings
     use_pretrained: bool = True
@@ -50,8 +51,7 @@ class ModelSettings(BaseSettings):
     load_from_checkpoint_dir: Optional[Path] = None
 
     # generation settings
-    generate_upon_completion: bool = True
-    num_generated_seqs_per_gpu: int = 15
+    num_test_seqs_per_gpu: int = 8
 
     # training ops
     num_data_workers: int = 4

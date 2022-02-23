@@ -1,90 +1,103 @@
+from pathlib import Path
+from typing import List, Set, Any
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 import torch
-from transformers import PreTrainedTokenizerFast
+from transformers import (
+    PreTrainedTokenizerFast,
+    StoppingCriteria,
+)  # , StoppingCriteriaList
 
-# from config import ModelSettings
-# from model import DNATransform
+
+STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
-# global variables
-stop_codons = set("TAA", "TAG", "TGA")
+class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
+    def __init__(self, tokenizer: PreTrainedTokenizerFast) -> None:
+        self.tokenizer = tokenizer
+        self.stop_set: Set[int] = set()
+
+        # TODO: If we can get this class working correctly,
+        #       we could store the indicies of the first stop
+        #       codon in each batch. That way we can avoid a loop
+        #       of post processing.
+
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs: Any
+    ) -> bool:
+        codons = self.tokenizer.batch_decode(input_ids[:, -1], skip_special_tokens=True)
+
+        batch_size = input_ids.shape[0]
+        still_generating = set(range(batch_size)) - self.stop_set
+
+        for i in still_generating:
+            if codons[i] in STOP_CODONS:
+                self.stop_set.add(i)
+
+        # If each sequence in the batch has seen a stop codon
+        return len(self.stop_set) == batch_size
+
 
 def generate_dna_to_stop(
-    model: torch.nn.Module,
-    fast_tokenizer: PreTrainedTokenizerFast,
+    model: torch.nn.Module,  # type: ignore[name-defined]
+    tokenizer: PreTrainedTokenizerFast,
     max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
-    biopy_seq: bool = False,
-):
-    # generate the tokenized output
-    output = model.generate(
-        fast_tokenizer.encode("ATG", return_tensors="pt").cuda(),
+) -> torch.Tensor:
+    # List of generated tokenized sequences.
+    # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
+    return model.generate(  # type: ignore[no-any-return]
+        tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
         do_sample=True,
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
+        #        stopping_criteria=stopping_criteria,
     )
-    # convert from tokens to string
-    seqs = [fast_tokenizer.decode(i, skip_special_tokens=True) for i in output]
+
+
+def tokens_to_sequences(
+    tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast
+) -> List[str]:
+    # Decode tokens to codon strings
+    seqs = tokenizer.batch_decode(tokens, skip_special_tokens=True)
+    # Convert from tokens to string
     seq_strings = []
     for s in seqs:
-        # break into codons
-        dna = s.split(" ")
-        # iterate through until you reach a stop codon
-        for n, i in enumerate(dna):
-            if i in stop_codons:
+        # Break into codons
+        dna = s.split()
+        # Iterate through until you reach a stop codon
+        for i, codon in enumerate(dna):
+            if codon in STOP_CODONS:
                 break
-        # get the open reading frame
-        to_stop = dna[:n+1]
-        # create the string and append to list
+        # Get the open reading frame
+        to_stop = dna[: i + 1]
+        # Create the string and append to list
         seq_strings.append("".join(to_stop))
-    # convert to biopython objects if requested
-    if biopy_seq:
-        seq_strings = [Seq(s) for s in seq_strings]
     return seq_strings
 
 
-def seqs_to_fasta(seqs, file_name):
+def seqs_to_fasta(
+    seqs: List[Seq], file_name: Path, translate_to_protein: bool = False
+) -> None:
+
+    sequences = [Seq(seq) for seq in seqs]
+
+    if translate_to_protein:
+        sequences = [s.translate() for s in sequences]
+
     records = [
         SeqRecord(
-            i,
-            id="MDH_SyntheticSeq_{}".format(seq),
+            seq,
+            id="MDH_SyntheticSeq_{}".format(i),
             name="MDH_sequence",
             description="synthetic malate dehydrogenase",
         )
-        for seq, i in enumerate(seqs)
+        for i, seq in enumerate(sequences)
     ]
 
-    with open(file_name, "w") as output_handle:
-        SeqIO.write(records, output_handle, "fasta")
-
-
-def generate_fasta_file(
-    file_name,
-    model,
-    fast_tokenizer,
-    max_length: int = 512,
-    top_k: int = 50,
-    top_p: float = 0.95,
-    num_seqs: int = 5,
-    translate_to_protein: bool = False,
-):
-    # generate seq objects
-    generated = generate_dna_to_stop(
-        model,
-        fast_tokenizer,
-        max_length=max_length,
-        top_k=top_k,
-        top_p=top_p,
-        num_seqs=num_seqs,
-        biopy_seq=True,
-    )
-    if translate_to_protein:
-        generated = [s.translate() for s in generated]
-    # generate seq records
-    seqs_to_fasta(generated, file_name)
+    SeqIO.write(records, file_name, "fasta")
