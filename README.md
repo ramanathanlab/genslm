@@ -1,6 +1,6 @@
 # Gene Transformer
 
-Fine tuning transformer language models for the generation of synthetic sequences
+Transformer language models for the generation of synthetic sequences
 
 
 ## DeepSpeed Setup 
