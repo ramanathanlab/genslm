@@ -323,7 +323,7 @@ def inference(cfg: ModelSettings, dataset: str) -> None:
     embeddings = np.concatenate(embeddings)  # type: ignore
 
     print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
-    np.save("inference-train-embeddings.npy", embeddings)
+    np.save(f"inference-{dataset}-embeddings.npy", embeddings)
 
 
 if __name__ == "__main__":
