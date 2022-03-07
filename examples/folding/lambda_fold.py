@@ -43,9 +43,9 @@ def process(input_dir: Path, output_dir: Path):
             if not available_gpus:
                 # Process fasta files in batches
                 finished = cf.wait(futures, return_when=cf.ALL_COMPLETED)
-                print("No available")
+                print("No available, available: ", available_gpus)
                 for future in finished.done:
-                    print("Finished")
+                    print("Finished, available: ", available_gpus)
                     gpu = future.result()  # Return gpu when finished with it
                     available_gpus.add(gpu)
 
