@@ -37,6 +37,7 @@ def process(input_dir: Path, output_dir: Path):
     futures = []
     with cf.ProcessPoolExecutor(max_workers=num_workers) as executor:
         for file in tqdm(files):
+            print("Available gpus: ", available_gpus)
             gpu = available_gpus.pop()
             future = executor.submit(run_single, file, gpu, output_dir)
             futures.append(future)
