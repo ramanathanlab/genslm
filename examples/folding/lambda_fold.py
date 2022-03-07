@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 import subprocess
 from tqdm import tqdm
+import time
 
 # This assumes you are running from within the alphafold singularity container
 cmd_template = """
@@ -20,8 +21,9 @@ def run_single(filename: Path, gpu: str, output_dir: Path):
     logfile = output_dir / filename.with_suffix(".log").name
     cmd = cmd_template.format(output_dir, filename, gpu, logfile)
     p = subprocess.run(cmd, shell=True)  # Blocking
-    p.wait()
-    return gpu
+    done_file = Path("/tmp/{}.done".format(filename.name))
+    while not done_file.exists():
+        time.sleep(30)
 
 
 def process(input_dir: Path, output_dir: Path):
@@ -51,7 +53,7 @@ def process(input_dir: Path, output_dir: Path):
                     gpu = future.result()  # Return gpu when finished with it
                     available_gpus.add(gpu)
 
-                #while future in futures:
+                # while future in futures:
                 #    if future.done():
                 #        gpu = future.result()  # Return gpu when finished with it
                 #        available_gpus.add(gpu)
