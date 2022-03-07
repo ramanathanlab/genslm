@@ -32,6 +32,7 @@ def process(input_dir: Path, output_dir: Path):
 
     # For each fasta file create a subprocess and launch alphafold on one gpu
     files = list(input_dir.glob("*.fasta"))
+    print("NUMBER OF FILES: {}".format(len(files)))
 
     futures = []
     with cf.ProcessPoolExecutor(max_workers=num_workers) as executor:
