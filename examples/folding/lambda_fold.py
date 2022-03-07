@@ -10,7 +10,7 @@ from tqdm import tqdm
 cmd_template = """
 /opt/alphafold/run.sh -d /lambda_stor/data/hsyoo/AlphaFoldData  -o {} -f \
 {} -t 2020-05-01 -p casp14 -m model_1,model_2,model_3,model_4,model_5 \
--a {} > {}
+-a {} &> {}
 """
 
 def run_single(filename: Path, gpu: str, output_dir: Path):
