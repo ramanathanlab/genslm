@@ -19,7 +19,7 @@ def run_single(filename: Path, gpu: str, output_dir: Path):
     output_dir.mkdir(parents=True)
     logfile = output_dir / filename.with_suffix(".log").name
     cmd = cmd_template.format(output_dir, filename, gpu, logfile)
-    subprocess.run(cmd, shell=True, capture_output=True)  # Blocking
+    subprocess.run(cmd, shell=True, capture_output=False)  # Blocking
     return gpu
 
 
