@@ -20,7 +20,7 @@ def run_single(filename: Path, gpu: str, output_dir: Path):
     output_dir.mkdir(parents=True)
     logfile = output_dir / filename.with_suffix(".log").name
     cmd = cmd_template.format(output_dir, filename, gpu, logfile)
-    p = subprocess.run(cmd, shell=True)  # Blocking
+    p = subprocess.run(cmd, shell=True, capture_output=True)  # Blocking
     done_file = Path("/tmp/{}.done".format(filename.name))
     while not done_file.exists():
         time.sleep(30)
