@@ -43,11 +43,9 @@ class ModelSettings(BaseSettings):
 
     # model settings
     model_name: str = "gpt2"
-    use_pretrained: bool = True
     batch_size: int = 8
     epochs: int = 5
     block_size: int = 512
-    val_check_interval: int = 100
     accumulate_grad_batches: int = 4
     load_from_checkpoint_dir: Optional[Path] = None
 
