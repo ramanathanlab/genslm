@@ -52,7 +52,7 @@ class DNATransformer(pl.LightningModule):
         self.val_dataset = self._get_dataset(self.cfg.val_file)
         self.test_dataset = self._get_dataset(self.cfg.test_file)
 
-        base_config = AutoConfig(self.cgf.model_name, vocab_size=self.tokenizer.vocab_size)
+        base_config = AutoConfig(self.cfg.model_name, vocab_size=self.tokenizer.vocab_size)
         self.model = AutoModelForCausalLM.from_config(base_config)
 
         # To validate generated sequences
