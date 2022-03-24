@@ -23,6 +23,8 @@ from transformers import (
     GPT2Config,
     GPT2LMHeadModel,
     GPTNeoForCausalLM,
+    AutoModelForCausalLM,
+    AutoConfig
 )
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
@@ -50,14 +52,8 @@ class DNATransformer(pl.LightningModule):
         self.val_dataset = self._get_dataset(self.cfg.val_file)
         self.test_dataset = self._get_dataset(self.cfg.test_file)
 
-        # pdb.set_trace()
-        if self.cfg.use_pretrained:
-            self.model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
-        else:
-            # base_config = GPTNeoConfig()
-            # self.model = GPTNeoForCausalLM(base_config)
-            base_config = GPT2Config(vocab_size=self.tokenizer.vocab_size)
-            self.model = GPT2LMHeadModel(base_config)
+        base_config = AutoConfig(self.cgf.model_name, vocab_size=self.tokenizer.vocab_size)
+        self.model = AutoModelForCausalLM.from_config(base_config)
 
         # To validate generated sequences
         # TODO: make sure temp files are outputting to node local
@@ -99,24 +95,6 @@ class DNATransformer(pl.LightningModule):
 
     def test_dataloader(self) -> DataLoader:
         return self._get_dataloader(self.test_dataset, shuffle=False)
-
-    # def configure_sharded_model(self):
-    # NOTE: commented this out because it was messing with loading from checkpoint, needs to be updated
-    #     # Created within sharded model context, modules are instantly sharded across processes
-    #     # as soon as they are made.
-    #     if self.cfg.use_pretrained:
-    #         # self.model = TransfoXLLMHeadModel.from_pretrained("transfo-xl-wt103")
-    #         # self.model = GPTJForCausalLM.from_pretrained('EleutherAI/gpt-j-6B', torch_dtype=torch.float16, low_cpu_mem_usage=True)
-    #         self.model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-1.3B')
-    #     else:
-    #         # base_config = TransfoXLConfig()
-    #         # self.model = TransfoXLLMHeadModel(base_config)
-    #         # base_config = GPTJConfig()
-    #         # self.model = GPTJForCausalLM(base_config)
-    #         # base_config = GPTNeoConfig()
-    #         # self.model = GPTNeoForCausalLM(base_config)
-    #         base_config = GPT2Config()
-    #         self.model = GPT2LMHeadModel(base_config)
 
     def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
         return self.model(x, labels=x, **kwargs)

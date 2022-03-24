@@ -42,6 +42,7 @@ class ModelSettings(BaseSettings):
     blast_exe_path: Path = Path("blastn")  # Defaults to current conda environment
 
     # model settings
+    model_name: str = "gpt2"
     use_pretrained: bool = True
     batch_size: int = 8
     epochs: int = 5
