@@ -244,7 +244,7 @@ def train(cfg: ModelSettings) -> None:
             offload_parameters=True,
             remote_device="nvme",
             offload_params_device="nvme",
-            offload_optimizer_device="nvme",
+            # offload_optimizer_device="nvme",
             nvme_path="/tmp",
             logging_batch_size_per_gpu=cfg.batch_size,
         ),
