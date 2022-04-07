@@ -215,6 +215,11 @@ def train(cfg: ModelSettings) -> None:
             cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir
         )
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
+        try:
+            model.model.lm_head.bias.data = torch.zeros_like(model.model.lm_head.bias.data)
+        except Exception as e:
+            print("Couldn't set bias equal to zeros.")
+            pass
     else:
         model = DNATransformer(cfg)
 
