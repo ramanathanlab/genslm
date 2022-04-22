@@ -71,7 +71,7 @@ class DNATransformer(pl.LightningModule):
     def _get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
         return FASTADataset(
-            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
+            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size, alphabet=self.cfg.alphabet_type
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:

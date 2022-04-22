@@ -30,6 +30,7 @@ class ModelSettings(BaseSettings):
     num_nodes: int = 1
 
     # data settings
+    alphabet_type: str = "codon"
     tokenizer_file: str = "tokenizer_files/codon_wordlevel_100vocab.json"
     train_file: str = "data/full_mdh_fasta/train.fasta"
     val_file: str = "data/full_mdh_fasta/val.fasta"
