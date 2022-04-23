@@ -29,7 +29,7 @@ from transformers import (
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from gene_transformer.config import ModelSettings
-from gene_transformer.dataset import FASTADataset
+from gene_transformer.dataset import FASTADataset, GenomeDataset
 from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
     generate_dna_to_stop,
@@ -48,9 +48,14 @@ class DNATransformer(pl.LightningModule):
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
-        self.train_dataset = self._get_dataset(self.cfg.train_file)
-        self.val_dataset = self._get_dataset(self.cfg.val_file)
-        self.test_dataset = self._get_dataset(self.cfg.test_file)
+        if not self.cfg.genome_level:
+
+            self.train_dataset = self._get_dataset(self.cfg.train_file)
+            self.val_dataset = self._get_dataset(self.cfg.val_file)
+            self.test_dataset = self._get_dataset(self.cfg.test_file)
+
+        else:
+
 
         base_config = AutoConfig.from_pretrained(self.cfg.model_name, vocab_size=self.tokenizer.vocab_size)
         self.model = AutoModelForCausalLM.from_config(base_config)
@@ -72,6 +77,11 @@ class DNATransformer(pl.LightningModule):
         """Helper function to generate dataset."""
         return FASTADataset(
             file, tokenizer=self.tokenizer, block_size=self.cfg.block_size, alphabet=self.cfg.alphabet_type
+        )
+
+    def _get_genome_dataset(self, file: str) -> GenomeDataset:
+        return GenomeDataset(
+            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
