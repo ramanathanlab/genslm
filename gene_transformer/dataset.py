@@ -42,7 +42,7 @@ class GenomeDataset(Dataset):
         return len(self.tokenized_sequences)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        return torch.tensor(self.sequences[idx])  # type:ignore[no-any-return]
+        return torch.tensor(self.tokenized_sequences[idx])  # type:ignore[no-any-return]
 
 
 class FASTADataset(Dataset):  # type: ignore[type-arg]
