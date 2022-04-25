@@ -33,7 +33,7 @@ class GenomeDataset(Dataset):
         out = tokenizer.encode(sequence, max_length=block_size, return_overflowing_tokens=True)
         if len(out[-1]) != block_size:
             padded_last_chunk = list(np.pad(out[-1], (0, block_size - len(out[-1])), mode="constant",
-                                            constant_values=fast_tokenizer.vocab["[PAD]"]))
+                                            constant_values=tokenizer.vocab["[PAD]"]))
             out = out[:-1]
             out.append(padded_last_chunk)
         return out
