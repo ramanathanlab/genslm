@@ -26,11 +26,11 @@ class GenomeDataset(Dataset):
             self.tokenized_sequences.extend(self.create_token_set_from_record(s, tokenizer=tokenizer,
                                                                               block_size=block_size))
 
-    def create_token_set_from_record(self, seq, tokenizer, block_size=512):
+    def create_token_set_from_record(self, s, tokenizer, block_size=512):
         sequence = str(s.seq.upper())
         sequence = " ".join(sequence[i: i + 3] for i in range(0, len(sequence), 3))
         sequence = "[START] " + sequence + " [END]"
-        out = fast_tokenizer.encode(sequence, max_length=block_size, return_overflowing_tokens=True)
+        out = tokenizer.encode(sequence, max_length=block_size, return_overflowing_tokens=True)
         if len(out[-1]) != block_size:
             padded_last_chunk = list(np.pad(out[-1], (0, block_size - len(out[-1])), mode="constant",
                                             constant_values=fast_tokenizer.vocab["[PAD]"]))
