@@ -167,7 +167,12 @@ class DNATransformer(pl.LightningModule):
         # Wait until all ranks meet up here
         self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
         metrics = self.all_gather(metrics)
-        max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
+        try:
+            max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
+        except AttributeError as e:
+            # getting a weird numpy error when running validation on the protein sequences so catching here
+            print("Attribute error when trying to move tensor to CPU... Error:", e)
+            max_score, mean_score = metrics[0].max(), metrics[1].mean()
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
         if self.trainer.is_global_zero:  # type: ignore[attr-defined]
