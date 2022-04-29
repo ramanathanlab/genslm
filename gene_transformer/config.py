@@ -53,7 +53,7 @@ class ModelSettings(BaseSettings):
 
     # generation settings
     num_test_seqs_per_gpu: int = 8
-    custom_seq_name: Optional[str] = train_file
+    custom_seq_name: Optional[str] = None
 
     # training ops
     num_data_workers: int = 4
