@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Set, Any, Optional
+from typing import List, Set, Any, Optional, Dict
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
@@ -10,6 +10,7 @@ from transformers import (
 )  # , StoppingCriteriaList
 from gene_transformer.config import ModelSettings
 from tqdm import tqdm
+import time
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
@@ -113,16 +114,45 @@ def non_redundant_generation(
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
-    train_file: Optional(str) = None,
-    val_file: Optional(str) = None,
-    test_file: Optional(str) = None,
-):
-    """TODO: utility which will generate unique sequences which are not duplicates of each other nor found within the
-    training dataset (optional). Returns a dictionary of unique sequences and all generated sequences.
+    known_sequence_files: [str] = None,
+) -> Dict:
+    """Utility which will generate unique sequences which are not duplicates of each other nor found within the
+    training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
     """
     # initialization of variables
-    all_generated_seqs = []
+    all_generated_seqs = list()
     unique_seqs = set()
+
+    if known_sequence_files is not None:
+        known_sequences = get_known_sequences(known_sequence_files)
+    else:
+        known_sequences = list()
+
+    # begin generation loop
+    start_time = time.time()
+    while len(unique_seqs) < num_seqs:
+        tokens = generate_dna_to_stop(
+            model,
+            tokenizer,
+            max_length=max_length,
+            top_k=top_k,
+            top_p=top_p,
+            num_seqs=1,
+        )
+        seq = tokens_to_sequences(tokens)[0]
+        if seq not in known_sequences:
+            all_generated_seqs.append(seq)
+            unique_seqs.add(seq)
+
+    end_time = time.time()
+
+    # create dictionary of results
+    results = {
+        "unique_seqs": unique_seqs,
+        "all_generated_seqs": all_generated_seqs,
+        "seconds_elapsed": end_time - start_time,
+    }
+    return results
 
 
 def get_known_sequences(files: [str]) -> [Seq]:
