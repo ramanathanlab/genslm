@@ -24,7 +24,7 @@ from transformers import (
     GPT2LMHeadModel,
     GPTNeoForCausalLM,
     AutoModelForCausalLM,
-    AutoConfig
+    AutoConfig,
 )
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
@@ -59,7 +59,9 @@ class DNATransformer(pl.LightningModule):
             self.val_dataset = self._get_genome_dataset(self.cfg.val_file)
             self.test_dataset = self._get_genome_dataset(self.cfg.test_file)
 
-        base_config = AutoConfig.from_pretrained(self.cfg.model_name, vocab_size=self.tokenizer.vocab_size)
+        base_config = AutoConfig.from_pretrained(
+            self.cfg.model_name, vocab_size=self.tokenizer.vocab_size
+        )
         self.model = AutoModelForCausalLM.from_config(base_config)
 
         # To validate generated sequences
@@ -78,7 +80,10 @@ class DNATransformer(pl.LightningModule):
     def _get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
         return FASTADataset(
-            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size, alphabet=self.cfg.alphabet_type
+            file,
+            tokenizer=self.tokenizer,
+            block_size=self.cfg.block_size,
+            alphabet=self.cfg.alphabet_type,
         )
 
     def _get_genome_dataset(self, file: str) -> GenomeDataset:
@@ -233,7 +238,9 @@ def train(cfg: ModelSettings) -> None:
         )
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
         try:
-            model.model.lm_head.bias.data = torch.zeros_like(model.model.lm_head.bias.data)
+            model.model.lm_head.bias.data = torch.zeros_like(
+                model.model.lm_head.bias.data
+            )
         except Exception as e:
             print("Couldn't set bias equal to zeros.")
             pass

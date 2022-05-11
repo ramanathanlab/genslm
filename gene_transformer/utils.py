@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Set, Any
+from typing import List, Set, Any, Optional
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
@@ -8,7 +8,8 @@ from transformers import (
     PreTrainedTokenizerFast,
     StoppingCriteria,
 )  # , StoppingCriteriaList
-
+from gene_transformer.config import ModelSettings
+from tqdm import tqdm
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
@@ -82,9 +83,11 @@ def tokens_to_sequences(
 
 
 def seqs_to_fasta(
-    seqs: List[Seq], file_name: Path, translate_to_protein: bool = False
+    seqs: List[Seq],
+    file_name: Path,
+    translate_to_protein: bool = False,
+    custom_seq_name: str = "MDH_SyntheticSeq",
 ) -> None:
-
     sequences = [Seq(seq) for seq in seqs]
 
     if translate_to_protein:
@@ -101,3 +104,43 @@ def seqs_to_fasta(
     ]
 
     SeqIO.write(records, file_name, "fasta")
+
+
+def non_redundant_generation(
+    model: torch.nn.Module,  # type: ignore[name-defined]
+    tokenizer: PreTrainedTokenizerFast,
+    max_length: int = 512,
+    top_k: int = 50,
+    top_p: float = 0.95,
+    num_seqs: int = 5,
+    train_file: Optional(str) = None,
+    val_file: Optional(str) = None,
+    test_file: Optional(str) = None,
+):
+    """TODO: utility which will generate unique sequences which are not duplicates of each other nor found within the
+    training dataset (optional). Returns a dictionary of unique sequences and all generated sequences.
+    """
+    # initialization of variables
+    all_generated_seqs = []
+    unique_seqs = set()
+
+
+def get_known_sequences(files: [str]) -> [Seq]:
+    """Return list of Seq objects from given list of files"""
+    known_sequences = []
+    for f in files:
+        records = list(SeqIO.parse(f, "fasta"))
+        seqs = [s.seq for s in records]
+        known_sequences.extend(seqs)
+    return known_sequences
+
+
+def redundancy_check(
+    generated: str, known_sequences: [Seq], verbose: bool = False
+) -> bool:
+    """Check if a sequence appears in a list of known sequence"""
+    for gen_seq in tqdm(generated, disable=verbose):
+        if gen_seq in known_sequences:
+            return False
+    # no redundancies found
+    return True
