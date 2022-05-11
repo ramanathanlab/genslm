@@ -139,7 +139,7 @@ def non_redundant_generation(
             top_p=top_p,
             num_seqs=1,
         )
-        seq = tokens_to_sequences(tokens)[0]
+        seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
         if seq not in known_sequences:
             all_generated_seqs.append(seq)
             unique_seqs.add(seq)
