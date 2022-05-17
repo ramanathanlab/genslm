@@ -5,6 +5,52 @@ from transformers import PreTrainedTokenizerFast
 import numpy as np
 
 
+class BPEGenomeDataset(Dataset):
+    def __init__(
+        self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
+    ) -> None:
+        """PyTorch Dataset that tokenizes genome sequences using byte pair encoding tokenizer
+
+        Parameters
+        ----------
+        fasta_file : str
+            Path to fasta file to read sequence from.
+        block_size : int
+            max_length of :obj:`tokenizer` encoder.
+        tokenizer : PreTrainedTokenizerFast
+            Converts raw strings to tokenized tensors.
+        """
+
+        self.block_size = block_size
+        self.tokenizer = tokenizer
+
+        with open(fasta_file, "r") as f:
+            fasta_string = f.read()
+
+        # not returning pt tensor, it messes with the batching/block size
+        self.batch_encode_output = tokenizer(
+            fasta_string, max_length=block_size, return_overflowing_tokens=True
+        )
+
+    def __len__(self) -> int:
+        return len(self.batch_encode_output.input_ids)
+
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        item = torch.tensor(self.batch_encode_output.input_ids[idx])
+        if len(item) < self.block_size:
+            item = torch.nn.functional.pad(
+                item,
+                (0, self.block_size - len(item)),
+                value=self.tokenizer.pad_token_id,
+            )
+        elif len(item) > self.block_size:
+            raise ValueError(
+                "Length of encoded block is greater than set block size, something is very wrong."
+            )
+
+        return item
+
+
 class GenomeDataset(Dataset):
     def __init__(
         self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast

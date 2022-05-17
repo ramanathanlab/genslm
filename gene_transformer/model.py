@@ -29,7 +29,7 @@ from transformers import (
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from gene_transformer.config import ModelSettings
-from gene_transformer.dataset import FASTADataset, GenomeDataset
+from gene_transformer.dataset import FASTADataset, GenomeDataset, BPEGenomeDataset
 from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
     generate_dna_to_stop,
@@ -87,7 +87,7 @@ class DNATransformer(pl.LightningModule):
         )
 
     def _get_genome_dataset(self, file: str) -> GenomeDataset:
-        return GenomeDataset(
+        return BPEGenomeDataset(
             file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
         )
 
