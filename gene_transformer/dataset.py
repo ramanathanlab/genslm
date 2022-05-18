@@ -3,11 +3,12 @@ from torch.utils.data import Dataset
 from Bio import SeqIO  # type: ignore[import]
 from transformers import PreTrainedTokenizerFast
 import numpy as np
+import pickle
 
 
 class BPEGenomeDataset(Dataset):
     def __init__(
-        self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
+            self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
     ) -> None:
         """PyTorch Dataset that tokenizes genome sequences using byte pair encoding tokenizer
 
@@ -24,19 +25,24 @@ class BPEGenomeDataset(Dataset):
         self.block_size = block_size
         self.tokenizer = tokenizer
 
-        with open(fasta_file, "r") as f:
-            fasta_string = f.read()
+        # with open(fasta_file, "r") as f:
+        #     fasta_string = f.read()
+        #
+        # # not returning pt tensor, it messes with the batching/block size
+        # self.batch_encode_output = tokenizer(
+        #     fasta_string, max_length=block_size, return_overflowing_tokens=True
+        # )
 
-        # not returning pt tensor, it messes with the batching/block size
-        self.batch_encode_output = tokenizer(
-            fasta_string, max_length=block_size, return_overflowing_tokens=True
-        )
+        with open(fasta_file, "rb") as f:
+            self.encoded_file = pickle.load(f)
 
     def __len__(self) -> int:
-        return len(self.batch_encode_output.input_ids)
+        # return len(self.batch_encode_output.input_ids)
+        return len(self.encoded_file)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        item = torch.tensor(self.batch_encode_output.input_ids[idx])
+        item = torch.tensor(self.encoded_file[idx])
+        # item = torch.tensor(self.batch_encode_output.input_ids[idx])
         if len(item) < self.block_size:
             item = torch.nn.functional.pad(
                 item,
@@ -53,7 +59,7 @@ class BPEGenomeDataset(Dataset):
 
 class GenomeDataset(Dataset):
     def __init__(
-        self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
+            self, fasta_file: str, block_size: int, tokenizer: PreTrainedTokenizerFast
     ) -> None:
         """PyTorch Dataset that tokenizes sequences by codon.
 
@@ -78,7 +84,7 @@ class GenomeDataset(Dataset):
 
     def create_token_set_from_record(self, s, tokenizer, block_size=512):
         sequence = str(s.seq.upper())
-        sequence = " ".join(sequence[i : i + 3] for i in range(0, len(sequence), 3))
+        sequence = " ".join(sequence[i: i + 3] for i in range(0, len(sequence), 3))
         sequence = "[START] " + sequence + " [END]"
         out = tokenizer.encode(
             sequence, max_length=block_size, return_overflowing_tokens=True
@@ -105,11 +111,11 @@ class GenomeDataset(Dataset):
 
 class FASTADataset(Dataset):  # type: ignore[type-arg]
     def __init__(
-        self,
-        fasta_file: str,
-        block_size: int,
-        tokenizer: PreTrainedTokenizerFast,
-        alphabet: str = "codon",
+            self,
+            fasta_file: str,
+            block_size: int,
+            tokenizer: PreTrainedTokenizerFast,
+            alphabet: str = "codon",
     ) -> None:
         """PyTorch Dataset that tokenizes sequences by codon.
 
@@ -148,7 +154,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         """Split SeqRecord by codons, return as a string with whitespace.
         eg. 'AAACCC' -> 'AAA CCC'"""
         seq = str(s.seq)
-        return " ".join(seq[i : i + 3] for i in range(0, len(seq), 3))
+        return " ".join(seq[i: i + 3] for i in range(0, len(seq), 3))
 
     def group_by_aa(self, s: SeqIO.SeqRecord) -> str:
         seq = str(s.seq).upper()
