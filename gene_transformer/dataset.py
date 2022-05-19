@@ -8,6 +8,7 @@ import os
 from glob import glob
 from natsort import natsorted
 from pathlib import Path
+import pdb
 
 
 class BPEGenomeDataset(Dataset):
@@ -45,6 +46,7 @@ class BPEGenomeDataset(Dataset):
         else:
             self.samples = []
             ls_path = Path(samples_path) / "*.pkl"
+            pdb.set_trace()
             files = natsorted(glob(ls_path))
             for path in files:
                 with open(path, "rb") as f:
