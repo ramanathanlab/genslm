@@ -47,7 +47,7 @@ class BPEGenomeDataset(Dataset):
             self.samples = []
             ls_path = Path(samples_path) / "*.pkl"
             pdb.set_trace()
-            files = natsorted(glob(ls_path))
+            files = natsorted(glob(str(ls_path)))
             for path in files:
                 with open(path, "rb") as f:
                     sample_section = pickle.load(f)
