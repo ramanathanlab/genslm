@@ -9,6 +9,7 @@ from glob import glob
 from natsort import natsorted
 from pathlib import Path
 import pdb
+from tqdm import tqdm
 
 
 class BPEGenomeDataset(Dataset):
@@ -162,7 +163,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
                     max_length=block_size,
                     padding="max_length",
                 )
-                for seq in SeqIO.parse(fasta_file, "fasta")
+                for seq in tqdm(list(SeqIO.parse(fasta_file, "fasta")))
             ]
         )
 
