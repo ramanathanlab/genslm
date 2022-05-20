@@ -167,7 +167,8 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         # codon string, tokenize, and collect in tensor
         print("Processing {}...".format(fasta_file))
         with ProcessPoolExecutor(max_workers=16) as executor:
-            results = executor.map(_single_encode, tqdm(list(SeqIO.parse(fasta_file, "fasta"))))
+            futures = executor.map(_single_encode, tqdm(list(SeqIO.parse(fasta_file, "fasta"))))
+            results = [f.result() for f in futures]
             self.sequences = torch.cat(results)
         print("Completed.")
         # self.sequences = torch.cat(  # type: ignore[attr-defined]
