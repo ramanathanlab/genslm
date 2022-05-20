@@ -10,6 +10,8 @@ from natsort import natsorted
 from pathlib import Path
 import pdb
 from tqdm import tqdm
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 
 
 class BPEGenomeDataset(Dataset):
@@ -153,19 +155,30 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         else:
             grouping = self.group_by_aa
 
+        def _single_encode(sequence):
+            return tokenizer.encode(
+                grouping(sequence),
+                return_tensors="pt",
+                max_length=block_size,
+                padding="max_length",
+            )
+
         # Read in the sequences from the fasta file, convert to
         # codon string, tokenize, and collect in tensor
-        self.sequences = torch.cat(  # type: ignore[attr-defined]
-            [
-                tokenizer.encode(
-                    grouping(seq),
-                    return_tensors="pt",
-                    max_length=block_size,
-                    padding="max_length",
-                )
-                for seq in tqdm(list(SeqIO.parse(fasta_file, "fasta")))
-            ]
-        )
+        with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+            results = executor.map(_single_encode, tqdm(list(SeqIO.parse(fasta_file, "fasta"))))
+            self.sequences = torch.cat(results)
+        # self.sequences = torch.cat(  # type: ignore[attr-defined]
+        #     [
+        #         tokenizer.encode(
+        #             grouping(seq),
+        #             return_tensors="pt",
+        #             max_length=block_size,
+        #             padding="max_length",
+        #         )
+        #         for seq in tqdm(list(SeqIO.parse(fasta_file, "fasta")))
+        #     ]
+        # )
 
     def group_by_codon(self, s: SeqIO.SeqRecord) -> str:
         """Split SeqRecord by codons, return as a string with whitespace.
