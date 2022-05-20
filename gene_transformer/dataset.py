@@ -165,9 +165,11 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
 
         # Read in the sequences from the fasta file, convert to
         # codon string, tokenize, and collect in tensor
+        print("Processing {}...".format(fasta_file))
         with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
             results = executor.map(_single_encode, tqdm(list(SeqIO.parse(fasta_file, "fasta"))))
             self.sequences = torch.cat(results)
+        print("Completed.")
         # self.sequences = torch.cat(  # type: ignore[attr-defined]
         #     [
         #         tokenizer.encode(
