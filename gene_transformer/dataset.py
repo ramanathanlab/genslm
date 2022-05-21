@@ -11,7 +11,7 @@ from pathlib import Path
 import pdb
 from tqdm import tqdm
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 class BPEGenomeDataset(Dataset):
@@ -173,8 +173,14 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         # self.sequences = torch.cat(results)
         with ProcessPoolExecutor(max_workers=16) as executor:
             parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
-            futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
-            results = [f.result() for f in futures]
+            futures = [executor.submit(_single_encode, seq) for seq in tqdm(parsed_seqs)]
+            results = []
+            for future in as_completed(tqdm(futures)):
+                # get the result for the next completed task
+                result = future.result()  # blocks
+                results.append(result)
+            # futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
+            # results = [f.result() for f in futures]
             self.sequences = torch.cat(results)
         print("Completed.")
         # self.sequences = torch.cat(  # type: ignore[attr-defined]
