@@ -13,6 +13,7 @@ from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from mpire import WorkerPool
+from mpire.utils import make_single_arguments
 
 
 class BPEGenomeDataset(Dataset):
@@ -170,8 +171,12 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
         num_seqs = len(parsed_seqs)
         with WorkerPool(n_jobs=60) as pool:
-            results = pool.map(_single_encode, make_single_arguments(parsed_seqs), progress_bar=True,
-                               iterable_len=num_seqs)
+            results = pool.map(
+                _single_encode,
+                make_single_arguments(parsed_seqs),
+                progress_bar=True,
+                iterable_len=num_seqs,
+            )
         self.sequences = torch.Tensor(results)
         print("Encoded all sequences.")
 
