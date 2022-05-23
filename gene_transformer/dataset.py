@@ -181,6 +181,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
                 results.append(result)
             # futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
             # results = [f.result() for f in futures]
+            print("Finished the futures.")
             self.sequences = torch.cat(results)
         print("Completed.")
         # self.sequences = torch.cat(  # type: ignore[attr-defined]
