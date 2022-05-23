@@ -12,6 +12,7 @@ import pdb
 from tqdm import tqdm
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from mpire import WorkerPool
 
 
 class BPEGenomeDataset(Dataset):
@@ -158,7 +159,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         def _single_encode(sequence):
             return tokenizer.encode(
                 grouping(sequence),
-                return_tensors="pt",
+                # return_tensors="pt", # currently not returning torch tensors since it causes memory issues
                 max_length=block_size,
                 padding="max_length",
             )
@@ -166,25 +167,34 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         # Read in the sequences from the fasta file, convert to
         # codon string, tokenize, and collect in tensor
         print("Processing {}...".format(fasta_file))
+        parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
+        num_seqs = len(parsed_seqs)
+        with WorkerPool(n_jobs=60) as pool:
+            results = pool.map(_single_encode, make_single_arguments(parsed_seqs), progress_bar=True,
+                               iterable_len=num_seqs)
+        self.sequences = torch.Tensor(results)
+        print("Encoded all sequences.")
+
         # pool = multiprocessing.Pool(processes=16)
         # results = pool.map(_single_encode, tqdm(list(SeqIO.parse(fasta_file, "fasta"))))
         # pool.close()
         # pool.join()
         # self.sequences = torch.cat(results)
-        with ProcessPoolExecutor(max_workers=16) as executor:
-            parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
-            futures = [executor.submit(_single_encode, seq) for seq in tqdm(parsed_seqs)]
-            results = []
-            for future in as_completed(tqdm(futures)):
-                # get the result for the next completed task
-                result = future.result()  # blocks
-                print(result)
-                results.append(result)
-            # futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
-            # results = [f.result() for f in futures]
-            print("Finished the futures.")
-            self.sequences = torch.cat(results)
-        print("Completed.")
+
+        # with ProcessPoolExecutor(max_workers=16) as executor:
+        #     parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
+        #     futures = [executor.submit(_single_encode, seq) for seq in tqdm(parsed_seqs)]
+        #     results = []
+        #     for future in as_completed(tqdm(futures)):
+        #         # get the result for the next completed task
+        #         result = future.result()  # blocks
+        #         print(result)
+        #         results.append(result)
+        #     # futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
+        #     # results = [f.result() for f in futures]
+        #     print("Finished the futures.")
+        #     self.sequences = torch.cat(results)
+        # print("Completed.")
         # self.sequences = torch.cat(  # type: ignore[attr-defined]
         #     [
         #         tokenizer.encode(
