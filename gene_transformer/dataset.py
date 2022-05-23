@@ -178,6 +178,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
             for future in as_completed(tqdm(futures)):
                 # get the result for the next completed task
                 result = future.result()  # blocks
+                print(result)
                 results.append(result)
             # futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
             # results = [f.result() for f in futures]
