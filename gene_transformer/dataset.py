@@ -14,6 +14,7 @@ import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from mpire import WorkerPool
 from mpire.utils import make_single_arguments
+from tqdm import tqdm
 
 
 class BPEGenomeDataset(Dataset):
@@ -170,14 +171,19 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         print("Processing {}...".format(fasta_file))
         parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
         num_seqs = len(parsed_seqs)
-        with WorkerPool(n_jobs=60) as pool:
-            results = pool.map(
-                _single_encode,
-                make_single_arguments(parsed_seqs),
-                progress_bar=True,
-                iterable_len=num_seqs,
-            )
-        self.sequences = torch.Tensor(results)
+        samples = []
+        for chunk in tqdm(list(chunks(parsed_seqs, 50000))):
+            with WorkerPool(n_jobs=60) as pool:
+                results = pool.map(
+                    _single_encode,
+                    make_single_arguments(
+                        chunk
+                    ),  # need make_single_arguments otherwise map unpacks the seqs
+                    progress_bar=False,
+                    iterable_len=50000,
+                )
+                samples.extend(results)
+        self.sequences = torch.Tensor(samples)
         print("Encoded all sequences.")
 
         # pool = multiprocessing.Pool(processes=16)
@@ -227,3 +233,9 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         return self.sequences[idx]  # type:ignore[no-any-return]
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
