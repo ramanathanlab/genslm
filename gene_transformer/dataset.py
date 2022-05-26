@@ -45,6 +45,9 @@ class BPEGenomeDataset(Dataset):
         # )
 
         # check if we're working with a single pickle file or a directory of them
+
+        print("Processing {}...".format(samples_path))
+
         if os.path.isfile(samples_path):
             with open(samples_path, "rb") as f:
                 self.samples = pickle.load(f)
@@ -53,7 +56,7 @@ class BPEGenomeDataset(Dataset):
             self.samples = []
             ls_path = Path(samples_path) / "*.pkl"
             files = natsorted(glob(str(ls_path)))
-            for path in files:
+            for path in tqdm(files):
                 with open(path, "rb") as f:
                     sample_section = pickle.load(f)
                 self.samples.extend(sample_section)
