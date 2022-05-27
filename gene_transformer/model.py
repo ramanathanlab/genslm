@@ -37,6 +37,8 @@ from gene_transformer.utils import (
     seqs_to_fasta,
 )
 
+import pdb
+
 
 class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: ModelSettings) -> None:
@@ -140,6 +142,7 @@ class DNATransformer(pl.LightningModule):
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
         x = batch
+        pdb.set_trace()
         outputs = self(x)
         loss = outputs.loss
         self.log(
