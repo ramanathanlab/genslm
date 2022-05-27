@@ -62,7 +62,10 @@ class DNATransformer(pl.LightningModule):
         #     self.test_dataset = self._get_genome_dataset(self.cfg.test_file)
 
         base_config = AutoConfig.from_pretrained(
-            self.cfg.model_name, vocab_size=self.tokenizer.vocab_size, feed_forward_size=self.cfg.block_size
+            self.cfg.model_name,
+            vocab_size=self.tokenizer.vocab_size,
+            feed_forward_size=self.cfg.block_size,
+            max_position_embeddings=self.cfg.block_size,
         )
         self.model = AutoModelForCausalLM.from_config(base_config)
 
