@@ -146,7 +146,7 @@ class DNATransformer(pl.LightningModule):
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
         x = batch
-        pdb.set_trace()
+        # pdb.set_trace()
         outputs = self(x)
         loss = outputs.loss
         self.log(
