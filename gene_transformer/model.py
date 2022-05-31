@@ -65,9 +65,10 @@ class DNATransformer(pl.LightningModule):
             self.cfg.model_name,
             vocab_size=self.tokenizer.vocab_size,
             feed_forward_size=self.cfg.block_size,
-            axial_pos_embds=False,
+            # axial_pos_embds=False,
             local_chunk_length=100,
             lsh_attn_chunk_length=100,
+            axial_pos_shape=(102, 118)
             # max_position_embeddings=self.cfg.block_size,
         )
         self.model = AutoModelForCausalLM.from_config(base_config)
