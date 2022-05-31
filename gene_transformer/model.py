@@ -68,7 +68,7 @@ class DNATransformer(pl.LightningModule):
             # axial_pos_embds=False,
             # local_chunk_length=100,
             # lsh_attn_chunk_length=100,
-            axial_pos_shape=(102, 118),
+            axial_pos_shape=(128, 94),
             max_position_embeddings=cfg.block_size,
             # max_position_embeddings=self.cfg.block_size,
         )
