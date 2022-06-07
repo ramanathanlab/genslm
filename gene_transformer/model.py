@@ -286,6 +286,7 @@ def train(cfg: ModelSettings) -> None:
         verbose=True,
     )
     trainer = pl.Trainer(
+        # use all available gpus
         gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
         # Use NVMe offloading on other clusters see more here:
@@ -299,6 +300,9 @@ def train(cfg: ModelSettings) -> None:
             # offload_optimizer_device="nvme",
             # nvme_path="/tmp",
             logging_batch_size_per_gpu=cfg.batch_size,
+            # add the option to load a config from json file with more deepspeed options
+            # note that if supplied all defaults are ignored - model settings defaults this arg to None
+            config=cfg.deepspeed_cfg_file
         ),
         callbacks=[checkpoint_callback],
         # max_steps=cfg.training_steps,

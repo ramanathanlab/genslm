@@ -50,6 +50,7 @@ class ModelSettings(BaseSettings):
     block_size: int = 512
     accumulate_grad_batches: int = 4
     load_from_checkpoint_dir: Optional[Path] = None
+    deepspeed_cfg_file: Optional[Path] = None
 
     # generation settings
     num_test_seqs_per_gpu: int = 8
