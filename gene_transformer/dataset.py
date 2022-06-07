@@ -235,7 +235,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         return len(self.sequences)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        return self.sequences[idx]  # type:ignore[no-any-return]
+        return self.sequences[idx].long()  # type:ignore[no-any-return]
 
 
 def chunks(lst, n):
