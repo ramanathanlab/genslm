@@ -177,6 +177,7 @@ class DNATransformer(pl.LightningModule):
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
+        pdb.set_trace()
         tokens = generate_dna_to_stop(
             self.model,
             self.tokenizer,
