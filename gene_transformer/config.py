@@ -30,7 +30,6 @@ class ModelSettings(BaseSettings):
     num_nodes: int = 1
 
     # data settings
-    genome_level: bool = False
     alphabet_type: str = "codon"
     tokenizer_file: str = "tokenizer_files/codon_wordlevel_100vocab.json"
     train_file: str = "data/full_mdh_fasta/train.fasta"
@@ -50,11 +49,9 @@ class ModelSettings(BaseSettings):
     block_size: int = 512
     accumulate_grad_batches: int = 4
     load_from_checkpoint_dir: Optional[Path] = None
-    deepspeed_cfg_file: Optional[Path] = None
 
     # generation settings
     num_test_seqs_per_gpu: int = 8
-    custom_seq_name: Optional[str] = None
 
     # training ops
     num_data_workers: int = 4
