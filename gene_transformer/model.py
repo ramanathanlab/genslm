@@ -48,9 +48,9 @@ class DNATransformer(pl.LightningModule):
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
-        self.train_dataset = self._get_dataset(self.cfg.train_file)
-        self.val_dataset = self._get_dataset(self.cfg.val_file)
-        self.test_dataset = self._get_dataset(self.cfg.test_file)
+        # self.train_dataset = self._get_dataset(self.cfg.train_file)
+        # self.val_dataset = self._get_dataset(self.cfg.val_file)
+        # self.test_dataset = self._get_dataset(self.cfg.test_file)
 
         base_config = AutoConfig.from_pretrained(self.cfg.model_name, vocab_size=self.tokenizer.vocab_size)
         self.model = AutoModelForCausalLM.from_config(base_config)
@@ -88,12 +88,15 @@ class DNATransformer(pl.LightningModule):
         )
 
     def train_dataloader(self) -> DataLoader:
+        self.train_dataset = self._get_dataset(self.cfg.train_file)
         return self._get_dataloader(self.train_dataset, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
+        self.val_dataset = self._get_dataset(self.cfg.val_file)
         return self._get_dataloader(self.val_dataset, shuffle=False)
 
     def test_dataloader(self) -> DataLoader:
+        self.test_dataset = self._get_dataset(self.cfg.test_file)
         return self._get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
