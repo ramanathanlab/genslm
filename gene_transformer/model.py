@@ -100,8 +100,7 @@ class DNATransformer(pl.LightningModule):
         return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
-        x = batch
-        outputs = self(x)
+        outputs = self(batch)
         loss = outputs.loss
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -110,8 +109,7 @@ class DNATransformer(pl.LightningModule):
         return loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
-        x = batch
-        outputs = self(x)
+        outputs = self(batch)
         loss = outputs.loss
         self.log(
             "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
@@ -119,8 +117,7 @@ class DNATransformer(pl.LightningModule):
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
-        x = batch
-        outputs = self(x)
+        outputs = self(batch)
         loss = outputs.loss
         self.log(
             "test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
