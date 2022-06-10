@@ -62,7 +62,7 @@ You can monitor job status using `sqs`.
 Note: All config paths should be absolute paths or relative paths to the running directory.
 
 
-### Note for Installing Deepspeed on Perlmutter
+### Note for Installing Deepspeed on Perlmutter - 6/9/2022
 To build the DeepSpeed ops on perlmutter, you need a very specific compiler setup with gcc and nvcc. It doesn't work when you try to build it using the compilers that come standard on Perlmutter. The best way I've found to address this is by creating a conda environment to install these compilers into, then re-running the deepspeed install with DS_BUILD_OPS=1 and DS_BUILD_AIO=0. 
 
 Conda environment list which led to successful build:
