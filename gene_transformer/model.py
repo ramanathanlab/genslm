@@ -272,7 +272,6 @@ def train(cfg: ModelSettings) -> None:
         precision=16,
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
-        deterministic=True
     )
     trainer.fit(model)
     trainer.test(model)
