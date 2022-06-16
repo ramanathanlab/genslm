@@ -19,17 +19,27 @@ import h5py
 
 
 class H5Dataset(Dataset):
-    def __init__(self, file_path, dset_name) -> None:
+    def __init__(self, file_path: str, dset_name: str, block_size: int, tokenizer: PreTrainedTokenizerFast) -> None:
         self.file_path = file_path
+        self.dset_name = dset_name
+        self.block_size = block_size
+        self.tokenizer = tokenizer
 
         with h5py.File(file_path, "r") as f:
-            self.samples = f[dset_name][:]
+            self.samples = f[self.dset_name][:]
 
     def __len__(self) -> int:
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        return torch.tensor(self.samples[idx]).long()  # type:ignore[no-any-return]
+        item = torch.tensor(self.samples[idx]).long()
+        if len(item) < self.block_size:
+            item = torch.nn.functional.pad(
+                item,
+                (0, self.block_size - len(item)),
+                value=self.tokenizer.pad_token_id,
+            )
+        return item # type:ignore[no-any-return]
 
 
 class BPEGenomeDataset(Dataset):
