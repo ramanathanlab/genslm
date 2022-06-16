@@ -1,14 +1,14 @@
 from pathlib import Path
-from typing import List, Set, Any
+from typing import Any, List, Set
+
+import torch
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
-import torch
 from transformers import (
-    PreTrainedTokenizerFast,
+    PreTrainedTokenizerFast,  # , StoppingCriteriaList
     StoppingCriteria,
-)  # , StoppingCriteriaList
-
+)
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 

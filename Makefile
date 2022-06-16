@@ -4,12 +4,13 @@ black = black --target-version py37 gene_transformer
 
 .PHONY: format
 format:
+	$(isort)
 	$(black)
 
 .PHONY: lint
 lint:
-	flake8 gene_transformer/
 	$(black) --check --diff
+	flake8 gene_transformer/
 
 .PHONY: mypy
 mypy:
