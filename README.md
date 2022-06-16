@@ -2,6 +2,10 @@
 
 Transformer language models for the generation of synthetic sequences
 
+## Important Note
+We are currently using a forked version of huggingface transformers library
+which fixes a problem with the Reformer model. Please clone our fork from:
+https://github.com/maxzvyagin/transformers
 
 ## DeepSpeed Setup 
 
