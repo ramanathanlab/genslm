@@ -16,6 +16,8 @@ from mpire import WorkerPool
 from mpire.utils import make_single_arguments
 from tqdm import tqdm
 import h5py
+from functools import partial
+
 
 
 class H5Dataset(Dataset):
@@ -23,23 +25,25 @@ class H5Dataset(Dataset):
         self.file_path = file_path
         self.dset_name = dset_name
         self.block_size = block_size
-        self.tokenizer = tokenizer
+        # self.tokenizer = tokenizer
 
         with h5py.File(file_path, "r") as f:
             # fetch all samples from the dataset
             self.samples = f[self.dset_name][...]
+
+        # define padding function
+        self.pad_sequence = partial(torch.nn.functional.pad, value=tokenizer.pad_token_id)
 
     def __len__(self) -> int:
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         item = torch.tensor(self.samples[idx]).long()
-        if len(item) < self.block_size:
-            item = torch.nn.functional.pad(
-                item,
-                (0, self.block_size - len(item)),
-                value=self.tokenizer.pad_token_id,
-            )
+        # if len(item) < self.block_size:
+        item = self.pad_sequence(
+            item,
+            (0, self.block_size - len(item)),
+        )
         return item  # type:ignore[no-any-return]
 
 
