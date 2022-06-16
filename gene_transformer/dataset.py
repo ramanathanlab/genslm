@@ -26,7 +26,8 @@ class H5Dataset(Dataset):
         self.tokenizer = tokenizer
 
         with h5py.File(file_path, "r") as f:
-            self.samples = f[self.dset_name][:]
+            # fetch all samples from the dataset
+            self.samples = f[self.dset_name][...]
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -39,7 +40,7 @@ class H5Dataset(Dataset):
                 (0, self.block_size - len(item)),
                 value=self.tokenizer.pad_token_id,
             )
-        return item # type:ignore[no-any-return]
+        return item  # type:ignore[no-any-return]
 
 
 class BPEGenomeDataset(Dataset):
