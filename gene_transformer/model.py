@@ -1,40 +1,31 @@
 import os
-import numpy as np
-from tqdm import tqdm  # type: ignore[import]
-from pathlib import Path
 from argparse import ArgumentParser
-from typing import Any, List, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
-import torch
-from torch.utils.data import DataLoader
-from tokenizers import Tokenizer  # type: ignore[import]
-
+import numpy as np
 import pytorch_lightning as pl
+import torch
+from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
-
-from transformers import (
-    PreTrainedTokenizerFast,
-    GPT2Config,
-    GPT2LMHeadModel,
-    GPTNeoForCausalLM,
-    AutoModelForCausalLM,
-    AutoConfig
-)
+from tokenizers import Tokenizer  # type: ignore[import]
+from torch.utils.data import DataLoader
+from tqdm import tqdm  # type: ignore[import]
+from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
+from gene_transformer.blast import ParallelBLAST
 from gene_transformer.config import ModelSettings
 from gene_transformer.dataset import FASTADataset
-from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
     generate_dna_to_stop,
-    tokens_to_sequences,
     seqs_to_fasta,
+    tokens_to_sequences,
 )
 
 
@@ -81,7 +72,10 @@ class DNATransformer(pl.LightningModule):
     def _get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
         return FASTADataset(
-            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size, alphabet=self.cfg.alphabet_type
+            file,
+            tokenizer=self.tokenizer,
+            block_size=self.cfg.block_size,
+            alphabet=self.cfg.alphabet_type,
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
@@ -226,9 +220,11 @@ def train(cfg: ModelSettings) -> None:
         )
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
         try:
-            model.model.lm_head.bias.data = torch.zeros_like(model.model.lm_head.bias.data)
-        except Exception as e:
-            print("Couldn't set bias equal to zeros.")
+            model.model.lm_head.bias.data = torch.zeros_like(
+                model.model.lm_head.bias.data
+            )
+        except Exception as exc:
+            print("Couldn't set bias equal to zeros.", exc)
             pass
     else:
         model = DNATransformer(cfg)
