@@ -17,4 +17,4 @@ pip3 install -r requirements/dev.txt
 pip3 install -r requirements/requirements.txt
 pip3 install -e .
 ```
-To run dev tools (flake8, black, mypy): `make`
+To run dev tools (isort, flake8, black, mypy): `make`
