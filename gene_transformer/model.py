@@ -138,7 +138,7 @@ class DNATransformer(pl.LightningModule):
         return loss
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
-        return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        return DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
 
     def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         # NOTE: BLAST must be installed locally in order for this to work properly.
