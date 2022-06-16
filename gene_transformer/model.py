@@ -29,7 +29,7 @@ from transformers import (
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from gene_transformer.config import ModelSettings
-from gene_transformer.dataset import FASTADataset, GenomeDataset, BPEGenomeDataset
+from gene_transformer.dataset import FASTADataset, GenomeDataset, BPEGenomeDataset, H5Dataset
 from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
     generate_dna_to_stop,
@@ -49,6 +49,11 @@ class DNATransformer(pl.LightningModule):
             tokenizer_object=Tokenizer.from_file(self.cfg.tokenizer_file)
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+
+        # these are defined in get_dataloader functions
+        self.train_dataset = None
+        self.val_dataset = None
+        self.test_dataset = None
 
         # if not self.cfg.genome_level:
         #
@@ -96,9 +101,10 @@ class DNATransformer(pl.LightningModule):
             alphabet=self.cfg.alphabet_type,
         )
 
-    def _get_genome_dataset(self, file: str) -> GenomeDataset:
-        return BPEGenomeDataset(
-            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size
+    def _get_genome_dataset(self, file: str, dset_name: str) -> H5Dataset:
+        """Helper function to generate genome dataset"""
+        return H5Dataset(
+            file, dset_name=dset_name
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
@@ -118,21 +124,21 @@ class DNATransformer(pl.LightningModule):
         if not self.cfg.genome_level:
             self.train_dataset = self._get_dataset(self.cfg.train_file)
         else:
-            self.train_dataset = self._get_genome_dataset(self.cfg.train_file)
+            self.train_dataset = self._get_genome_dataset(self.cfg.train_file, "train")
         return self._get_dataloader(self.train_dataset, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
         if not self.cfg.genome_level:
             self.val_dataset = self._get_dataset(self.cfg.val_file)
         else:
-            self.val_dataset = self._get_genome_dataset(self.cfg.val_file)
+            self.val_dataset = self._get_genome_dataset(self.cfg.val_file, "val")
         return self._get_dataloader(self.val_dataset, shuffle=False)
 
     def test_dataloader(self) -> DataLoader:
         if not self.cfg.genome_level:
             self.test_dataset = self._get_dataset(self.cfg.test_file)
         else:
-            self.test_dataset = self._get_genome_dataset(self.cfg.test_file)
+            self.test_dataset = self._get_genome_dataset(self.cfg.test_file, "test")
         return self._get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
@@ -232,10 +238,10 @@ class DNATransformer(pl.LightningModule):
 
 
 def load_from_deepspeed(
-    cfg: ModelSettings,
-    checkpoint_dir: Path,
-    checkpoint: str = "last.ckpt",
-    model_weights: str = "last.pt",
+        cfg: ModelSettings,
+        checkpoint_dir: Path,
+        checkpoint: str = "last.ckpt",
+        model_weights: str = "last.pt",
 ) -> DNATransformer:
     """Utility function for deepspeed conversion"""
     # first convert the weights
@@ -249,7 +255,6 @@ def load_from_deepspeed(
 
 
 def train(cfg: ModelSettings) -> None:
-
     # Check if loading from checkpoint - this assumes that you're
     # loading from a sharded DeepSpeed checkpoint!!!
     if cfg.load_from_checkpoint_dir is not None:
@@ -326,7 +331,6 @@ def train(cfg: ModelSettings) -> None:
 
 
 def inference(cfg: ModelSettings, dataset: str) -> None:
-
     if cfg.load_from_checkpoint_dir is None:
         raise ValueError("load_from_checkpoint_dir must be set in the config file")
 
