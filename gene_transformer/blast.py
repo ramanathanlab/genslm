@@ -1,14 +1,15 @@
 """Defining blast utilities to monitor training"""
 
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import List, Optional, Tuple
+
 import numpy as np
 import pandas as pd  # type: ignore[import]
-from typing import List, Tuple, Optional
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
-from concurrent.futures import ThreadPoolExecutor
 
 
 class ParallelBLAST:
