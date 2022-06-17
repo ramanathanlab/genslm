@@ -152,6 +152,7 @@ class DNATransformer(pl.LightningModule):
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/loss", loss)
+        self.log("train/learning_rate", self.hparams.learning_rate)
         # wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
