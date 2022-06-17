@@ -175,7 +175,10 @@ class DNATransformer(pl.LightningModule):
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
         scheduler = WarmupLR(optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=10000)
-        return [optimizer], [scheduler]
+        return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
+
+    def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
+        scheduler.step()
 
     def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         # NOTE: BLAST must be installed locally in order for this to work properly.
