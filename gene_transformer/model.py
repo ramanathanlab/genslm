@@ -17,6 +17,8 @@ from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
 from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
+# warm up scheduler
+from deepspeed.runtime.lr_schedules import WarmupLR
 
 from transformers import (
     PreTrainedTokenizerFast,
@@ -170,7 +172,9 @@ class DNATransformer(pl.LightningModule):
         return loss
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
-        return DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        scheduler = WarmupLR(optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=10000)
+        return [optimizer], [scheduler]
 
     def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         # NOTE: BLAST must be installed locally in order for this to work properly.
