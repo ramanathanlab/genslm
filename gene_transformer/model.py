@@ -179,6 +179,7 @@ class DNATransformer(pl.LightningModule):
 
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
         scheduler.step()
+        self.hparams.learning_rate = scheduler.get_last_lr()
 
     def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         # NOTE: BLAST must be installed locally in order for this to work properly.
