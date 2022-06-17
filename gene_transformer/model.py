@@ -52,6 +52,8 @@ class DNATransformer(pl.LightningModule):
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
+        self.current_learning_rate = None
+
         # these are defined in get_dataloader functions
         self.train_dataset = None
         self.val_dataset = None
@@ -152,7 +154,7 @@ class DNATransformer(pl.LightningModule):
         # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/loss", loss)
-        self.log("train/learning_rate", self.hparams.learning_rate)
+        self.log("train/learning_rate", self.current_learning_rate)
         # wandb.log({"train_loss": loss, 'random_value': 1})
         return loss
 
@@ -179,7 +181,7 @@ class DNATransformer(pl.LightningModule):
 
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
         scheduler.step()
-        self.hparams.learning_rate = scheduler.get_last_lr()
+        self.current_learning_rate = scheduler.get_last_lr()
 
     def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         # NOTE: BLAST must be installed locally in order for this to work properly.
