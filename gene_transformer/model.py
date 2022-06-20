@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tokenizers import Tokenizer  # type: ignore[import]
 
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.utilities.deepspeed import (
@@ -299,6 +299,8 @@ def train(cfg: ModelSettings) -> None:
         # filename="codon-transformer-{step:02d}-{val/loss:.2f}",
         verbose=True,
     )
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
@@ -318,7 +320,7 @@ def train(cfg: ModelSettings) -> None:
             # note that if supplied all defaults are ignored - model settings defaults this arg to None
             # config=cfg.deepspeed_cfg_file
         ),
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, lr_monitor],
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
         # profiler="simple",
