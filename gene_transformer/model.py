@@ -149,14 +149,9 @@ class DNATransformer(pl.LightningModule):
         return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
-        # pdb.set_trace()
         outputs = self(batch)
         loss = outputs.loss
-        # self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        # self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/loss", loss)
-        # self.log("train/learning_rate", self.learning_rate)
-        # wandb.log({"train_loss": loss, 'random_value': 1})
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
@@ -177,7 +172,7 @@ class DNATransformer(pl.LightningModule):
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
-        scheduler = WarmupLR(optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=10000)
+        scheduler = WarmupLR(optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=50000)
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
@@ -195,7 +190,6 @@ class DNATransformer(pl.LightningModule):
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
-        pdb.set_trace()
         tokens = generate_dna_to_stop(
             self.model,
             self.tokenizer,
@@ -288,6 +282,8 @@ def train(cfg: ModelSettings) -> None:
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
+        # log gradients and model topology
+        wandb_logger.watch(model)
     else:
         wandb_logger = None
 
