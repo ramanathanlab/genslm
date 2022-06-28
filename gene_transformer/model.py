@@ -41,6 +41,7 @@ from gene_transformer.utils import (
 
 import pdb
 import socket
+import os
 
 class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: ModelSettings) -> None:
@@ -298,6 +299,9 @@ def train(cfg: ModelSettings) -> None:
         verbose=True,
     )
     lr_monitor = LearningRateMonitor(logging_interval='step')
+
+    os.environ["WORLD_SIZE"] = str(cfg.num_nodes * 4)
+    print(os.environ["WORLD_SIZE"])
 
     trainer = pl.Trainer(
         # use all available gpus
