@@ -40,7 +40,7 @@ from gene_transformer.utils import (
 )
 
 import pdb
-
+import socket
 
 class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: ModelSettings) -> None:
@@ -95,6 +95,8 @@ class DNATransformer(pl.LightningModule):
 
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
+
+        print("Hostname: {}".format(socket.gethostname()))
 
     def _get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
