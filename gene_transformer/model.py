@@ -154,6 +154,7 @@ class DNATransformer(pl.LightningModule):
         return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
+        print("train step")
         outputs = self(batch)
         loss = outputs.loss
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
