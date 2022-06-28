@@ -19,7 +19,7 @@ from pytorch_lightning.utilities.deepspeed import (
 from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
 # warm up scheduler
 from deepspeed.runtime.lr_schedules import WarmupLR
-from pytorch_lightning.plugins.environments.slurm_environment import SlurmEnvironment
+from pytorch_lightning.plugins.environments.slurm_environment import SLURMEnvironment
 
 from transformers import (
     PreTrainedTokenizerFast,
