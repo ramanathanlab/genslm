@@ -301,16 +301,16 @@ def train(cfg: ModelSettings) -> None:
     )
     lr_monitor = LearningRateMonitor(logging_interval='step')
 
-    os.environ["WORLD_SIZE"] = str(cfg.num_nodes * 4)
-    print("World size: {}".format(os.environ["WORLD_SIZE"]))
-    os.environ["MASTER_PORT"] = "1234"
-    # get master host name
-    cmd = ["scontrol", "show", "hostnames"]
-    x = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    out = x.communicate()[0]
-    hostnames = out.decode()
-    os.environ["MASTER_ADDR"] = hostnames.split("\n")[0]
-    print("Master address: {}".format(os.environ["MASTER_ADDR"]))
+    # os.environ["WORLD_SIZE"] = str(cfg.num_nodes * 4)
+    # print("World size: {}".format(os.environ["WORLD_SIZE"]))
+    # os.environ["MASTER_PORT"] = "1234"
+    # # get master host name
+    # cmd = ["scontrol", "show", "hostnames"]
+    # x = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    # out = x.communicate()[0]
+    # hostnames = out.decode()
+    # os.environ["MASTER_ADDR"] = hostnames.split("\n")[0]
+    # print("Master address: {}".format(os.environ["MASTER_ADDR"]))
 
 
 
