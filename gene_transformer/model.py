@@ -19,6 +19,7 @@ from pytorch_lightning.utilities.deepspeed import (
 from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
 # warm up scheduler
 from deepspeed.runtime.lr_schedules import WarmupLR
+from pytorch_lightning.plugins.environments.slurm_environment import SlurmEnvironment
 
 from transformers import (
     PreTrainedTokenizerFast,
@@ -342,6 +343,7 @@ def train(cfg: ModelSettings) -> None:
         precision=16,
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
+        plugins=[SLURMEnvironment()]
     )
     trainer.fit(model)
     trainer.test(model)
