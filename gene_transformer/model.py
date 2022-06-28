@@ -344,7 +344,7 @@ def train(cfg: ModelSettings) -> None:
         precision=16,
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
-        plugins=[SLURMEnvironment()]
+        plugins=[SLURMEnvironment(auto_requeue=False)]
     )
     trainer.fit(model)
     trainer.test(model)
