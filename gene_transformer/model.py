@@ -42,6 +42,7 @@ from gene_transformer.utils import (
 import pdb
 import socket
 import os
+import subprocess
 
 class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: ModelSettings) -> None:
@@ -301,7 +302,17 @@ def train(cfg: ModelSettings) -> None:
     lr_monitor = LearningRateMonitor(logging_interval='step')
 
     os.environ["WORLD_SIZE"] = str(cfg.num_nodes * 4)
-    print(os.environ["WORLD_SIZE"])
+    print("World size: {}".format(os.environ["WORLD_SIZE"]))
+    os.environ["MASTER_PORT"] = "1234"
+    # get master host name
+    cmd = ["scontrol", "show", "hostnames"]
+    x = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    out = x.communicate()[0]
+    hostnames = out.decode()
+    os.environ["MASTER_ADDR"] = hostnames.split("\n")[0]
+    print("Master address: {}".format(os.environ["MASTER_ADDR"]))
+
+
 
     trainer = pl.Trainer(
         # use all available gpus
