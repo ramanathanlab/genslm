@@ -290,7 +290,7 @@ def train(cfg: ModelSettings) -> None:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
         # log gradients and model topology
-        wandb_logger.watch(model)
+        # wandb_logger.watch(model)
     else:
         wandb_logger = None
 
