@@ -45,6 +45,7 @@ import socket
 import os
 import subprocess
 
+
 class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
@@ -304,8 +305,9 @@ def train(cfg: ModelSettings) -> None:
 
     if cfg.wandb_active:
         lr_monitor = LearningRateMonitor(logging_interval='step')
+        callbacks = [checkpoint_callback, lr_monitor]
     else:
-        lr_monitor = None
+        callbacks = [checkpoint_callback]
 
     # os.environ["WORLD_SIZE"] = str(cfg.num_nodes * 4)
     # print("World size: {}".format(os.environ["WORLD_SIZE"]))
@@ -317,8 +319,6 @@ def train(cfg: ModelSettings) -> None:
     # hostnames = out.decode()
     # os.environ["MASTER_ADDR"] = hostnames.split("\n")[0]
     # print("Master address: {}".format(os.environ["MASTER_ADDR"]))
-
-
 
     trainer = pl.Trainer(
         # use all available gpus
@@ -339,7 +339,7 @@ def train(cfg: ModelSettings) -> None:
             # note that if supplied all defaults are ignored - model settings defaults this arg to None
             # config=cfg.deepspeed_cfg_file
         ),
-        callbacks=[checkpoint_callback, lr_monitor],
+        callbacks=callbacks,
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
         # profiler="simple",
