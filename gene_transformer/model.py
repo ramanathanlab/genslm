@@ -322,7 +322,7 @@ def train(cfg: ModelSettings) -> None:
 
     trainer = pl.Trainer(
         # use all available gpus
-        gpus=4,
+        gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
