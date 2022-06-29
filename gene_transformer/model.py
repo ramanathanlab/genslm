@@ -301,7 +301,11 @@ def train(cfg: ModelSettings) -> None:
         # filename="codon-transformer-{step:02d}-{val/loss:.2f}",
         verbose=True,
     )
-    lr_monitor = LearningRateMonitor(logging_interval='step')
+
+    if cfg.wandb_active:
+        lr_monitor = LearningRateMonitor(logging_interval='step')
+    else:
+        lr_monitor = None
 
     # os.environ["WORLD_SIZE"] = str(cfg.num_nodes * 4)
     # print("World size: {}".format(os.environ["WORLD_SIZE"]))
