@@ -12,9 +12,6 @@ from gene_transformer.config import ModelSettings
 from tqdm import tqdm
 import time
 import numpy as np
-from gene_transformer.dataset import FASTADataset
-from gene_transformer.model import DNATransformer
-from gene_transformer.config import ModelSettings
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
