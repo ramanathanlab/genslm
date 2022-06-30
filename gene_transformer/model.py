@@ -24,7 +24,7 @@ from transformers import (
     GPT2LMHeadModel,
     GPTNeoForCausalLM,
     AutoModelForCausalLM,
-    AutoConfig
+    AutoConfig,
 )
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
@@ -81,7 +81,10 @@ class DNATransformer(pl.LightningModule):
     def _get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
         return FASTADataset(
-            file, tokenizer=self.tokenizer, block_size=self.cfg.block_size, alphabet=self.cfg.alphabet_type
+            file,
+            tokenizer=self.tokenizer,
+            block_size=self.cfg.block_size,
+            alphabet=self.cfg.alphabet_type,
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
@@ -217,7 +220,6 @@ def load_from_deepspeed(
 
 
 def train(cfg: ModelSettings) -> None:
-
     # Check if loading from checkpoint - this assumes that you're
     # loading from a sharded DeepSpeed checkpoint!!!
     if cfg.load_from_checkpoint_dir is not None:
@@ -226,7 +228,9 @@ def train(cfg: ModelSettings) -> None:
         )
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
         try:
-            model.model.lm_head.bias.data = torch.zeros_like(model.model.lm_head.bias.data)
+            model.model.lm_head.bias.data = torch.zeros_like(
+                model.model.lm_head.bias.data
+            )
         except Exception as e:
             print("Couldn't set bias equal to zeros.")
             pass
@@ -288,7 +292,6 @@ def train(cfg: ModelSettings) -> None:
 
 
 def inference(cfg: ModelSettings, dataset: str) -> None:
-
     if cfg.load_from_checkpoint_dir is None:
         raise ValueError("load_from_checkpoint_dir must be set in the config file")
 
@@ -317,6 +320,48 @@ def inference(cfg: ModelSettings, dataset: str) -> None:
 
     print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     np.save(f"inference-{dataset}-embeddings.npy", embeddings)
+
+
+def get_embeddings_using_pt(
+    cfg: ModelSettings, fasta_file: str, pt_file: str
+) -> np.array:
+    """Given a .pt file, a config, and a fasta file, generate embeddings"""
+
+    model = DNATransformer.load_from_checkpoint(pt_file, strict=False, cfg=cfg)
+    model.cuda()
+
+    dataset = FASTADataset(
+        fasta_file,
+        tokenizer=model.tokenizer,
+        block_size=model.cfg.block_size,
+        alphabet=model.cfg.alphabet_type,
+    )
+    loader = DataLoader(
+        dataset,
+        shuffle=shuffle,
+        drop_last=True,
+        batch_size=model.cfg.batch_size,
+        num_workers=model.cfg.num_data_workers,
+        prefetch_factor=model.cfg.prefetch_factor,
+        pin_memory=model.cfg.pin_memory,
+        persistent_workers=model.cfg.persistent_workers,
+    )
+
+    print(f"Running inference with dataset length {len(loader)}")
+
+    # TODO: Instead could optionally return the hidden_states in a dictionary
+    # in the validation_step function.
+    embeddings = []
+    for batch in tqdm(loader):
+        batch = batch.cuda()
+        outputs = model(batch, output_hidden_states=True)
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
+
+    embeddings = np.concatenate(embeddings)  # type: ignore
+
+    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
+    return embeddings
 
 
 if __name__ == "__main__":
