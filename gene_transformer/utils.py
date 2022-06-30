@@ -1,17 +1,14 @@
+import time
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 import torch
-from typing import List, Set, Any, Dict, Optional
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
-from transformers import (
-    PreTrainedTokenizerFast,
-    StoppingCriteria,
-    # , StoppingCriteriaList
-)
 from tqdm import tqdm
-import time
+from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
+from transformers import StoppingCriteria
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
@@ -116,7 +113,7 @@ def non_redundant_generation(
     top_p: float = 0.95,
     num_seqs: int = 5,
     known_sequence_files: Optional[List[str]] = None,
-) -> Dict:
+) -> Dict[str, Any]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
     """
