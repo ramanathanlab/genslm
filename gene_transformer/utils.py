@@ -11,6 +11,10 @@ from transformers import (
 from gene_transformer.config import ModelSettings
 from tqdm import tqdm
 import time
+import numpy as np
+from gene_transformer.dataset import FASTADataset
+from gene_transformer.model import DNATransformer
+from gene_transformer.config import ModelSettings
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
@@ -174,3 +178,45 @@ def redundancy_check(
             return False
     # no redundancies found
     return True
+
+
+def get_embeddings_using_pt(
+    cfg: ModelSettings, fasta_file: str, pt_file: str
+) -> np.array:
+    """Given a .pt file, a config, and a fasta file, generate embeddings"""
+
+    model = DNATransformer.load_from_checkpoint(pt_file, strict=False, cfg=cfg)
+    model.cuda()
+
+    dataset = FASTADataset(
+        fasta_file,
+        tokenizer=model.tokenizer,
+        block_size=model.cfg.block_size,
+        alphabet=model.cfg.alphabet_type,
+    )
+    loader = DataLoader(
+        dataset,
+        shuffle=shuffle,
+        drop_last=True,
+        batch_size=model.cfg.batch_size,
+        num_workers=model.cfg.num_data_workers,
+        prefetch_factor=model.cfg.prefetch_factor,
+        pin_memory=model.cfg.pin_memory,
+        persistent_workers=model.cfg.persistent_workers,
+    )
+
+    print(f"Running inference with dataset length {len(loader)}")
+
+    # TODO: Instead could optionally return the hidden_states in a dictionary
+    # in the validation_step function.
+    embeddings = []
+    for batch in tqdm(loader):
+        batch = batch.cuda()
+        outputs = model(batch, output_hidden_states=True)
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
+
+    embeddings = np.concatenate(embeddings)  # type: ignore
+
+    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
+    return embeddings
