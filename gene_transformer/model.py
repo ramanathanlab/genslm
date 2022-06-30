@@ -322,9 +322,7 @@ def inference(cfg: ModelSettings, dataset: str) -> None:
     np.save(f"inference-{dataset}-embeddings.npy", embeddings)
 
 
-def get_embeddings_using_pt(
-    cfg: ModelSettings, fasta_file: str, pt_file: str
-) -> np.array:
+def get_embeddings_using_pt(cfg: ModelSettings, fasta_file: str, pt_file: str):
     """Given a .pt file, a config, and a fasta file, generate embeddings"""
 
     model = DNATransformer.load_from_checkpoint(pt_file, strict=False, cfg=cfg)
@@ -358,9 +356,9 @@ def get_embeddings_using_pt(
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
 
-    embeddings = np.concatenate(embeddings)  # type: ignore
-
-    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
+    # embeddings = np.concatenate(embeddings)  # type: ignore
+    #
+    # print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     return embeddings
 
 
