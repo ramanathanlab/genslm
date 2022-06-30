@@ -176,8 +176,9 @@ class DNATransformer(pl.LightningModule):
         )
         return loss
 
-    def configure_optimizers(self) -> DeepSpeedCPUAdam:
-        optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+    def configure_optimizers(self) -> torch.optim.Adam:
+        # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=5e-5)
         scheduler = WarmupLR(optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=50000)
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
@@ -393,49 +394,6 @@ def inference(cfg: ModelSettings, dataset: str) -> None:
     print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     np.save(f"inference-{dataset}-embeddings.npy", embeddings)
 
-
-def test(cfg: ModelSettings) -> None:
-    """Run test dataset after loading from checkpoint"""
-    if cfg.load_from_checkpoint_dir is None:
-        raise ValueError("load_from_checkpoint_dir must be set in the config file")
-
-    model = load_from_deepspeed(cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir)
-    model.cuda()
-
-    # Setup wandb
-    if cfg.wandb_active:
-        print("Using Weights and Biases for logging...")
-        wandb_logger = WandbLogger(project=cfg.wandb_project_name)
-    else:
-        wandb_logger = None
-
-    trainer = pl.Trainer(
-        gpus=-1,
-        default_root_dir=str(cfg.checkpoint_dir),
-        # Use NVMe offloading on other clusters see more here:
-        # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
-        strategy=DeepSpeedPlugin(
-            stage=3,
-            offload_optimizer=True,
-            offload_parameters=True,
-            remote_device="cpu",
-            offload_params_device="cpu",
-            # offload_optimizer_device="nvme",
-            # nvme_path="/tmp",
-            logging_batch_size_per_gpu=cfg.batch_size,
-        ),
-        callbacks=[checkpoint_callback],
-        # max_steps=cfg.training_steps,
-        logger=wandb_logger,
-        # profiler="simple",
-        accumulate_grad_batches=cfg.accumulate_grad_batches,
-        num_sanity_val_steps=2,
-        precision=16,
-        max_epochs=cfg.epochs,
-        num_nodes=cfg.num_nodes,
-    )
-
-    trainer.test(model)
 
 
 if __name__ == "__main__":
