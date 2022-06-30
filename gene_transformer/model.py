@@ -356,9 +356,9 @@ def get_embeddings_using_pt(cfg: ModelSettings, fasta_file: str, pt_file: str):
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
 
-    # embeddings = np.concatenate(embeddings)  # type: ignore
-    #
-    # print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
+    embeddings = np.concatenate(embeddings)  # type: ignore
+
+    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     return embeddings
 
 
