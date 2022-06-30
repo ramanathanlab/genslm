@@ -338,7 +338,7 @@ def get_embeddings_using_pt(
     )
     loader = DataLoader(
         dataset,
-        shuffle=shuffle,
+        shuffle=False,
         drop_last=True,
         batch_size=model.cfg.batch_size,
         num_workers=model.cfg.num_data_workers,
