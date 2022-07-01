@@ -6,3 +6,5 @@ pandas
 aitextgen
 transformers
 deepspeed
+mpire
+natsort

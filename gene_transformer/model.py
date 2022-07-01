@@ -1,40 +1,32 @@
 import os
-import numpy as np
-from tqdm import tqdm  # type: ignore[import]
-from pathlib import Path
+from abc import ABC, abstractmethod
 from argparse import ArgumentParser
-from typing import Any, List, Dict
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-import torch
-from torch.utils.data import DataLoader
-from tokenizers import Tokenizer  # type: ignore[import]
-
+import numpy as np
 import pytorch_lightning as pl
+import torch
+from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
-
-from transformers import (
-    PreTrainedTokenizerFast,
-    GPT2Config,
-    GPT2LMHeadModel,
-    GPTNeoForCausalLM,
-    AutoModelForCausalLM,
-    AutoConfig,
-)
+from tokenizers import Tokenizer  # type: ignore[import]
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
-from gene_transformer.config import ModelSettings
-from gene_transformer.dataset import FASTADataset
 from gene_transformer.blast import ParallelBLAST
+from gene_transformer.config import ModelSettings, PathLike
+from gene_transformer.dataset import FASTADataset
 from gene_transformer.utils import (
     generate_dna_to_stop,
-    tokens_to_sequences,
     seqs_to_fasta,
+    tokens_to_sequences,
 )
 
 
@@ -48,9 +40,9 @@ class DNATransformer(pl.LightningModule):
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
-        # self.train_dataset = self._get_dataset(self.cfg.train_file)
-        # self.val_dataset = self._get_dataset(self.cfg.val_file)
-        # self.test_dataset = self._get_dataset(self.cfg.test_file)
+        # self.train_dataset = self.get_dataset(self.cfg.train_file)
+        # self.val_dataset = self.get_dataset(self.cfg.val_file)
+        # self.test_dataset = self.get_dataset(self.cfg.test_file)
 
         base_config = AutoConfig.from_pretrained(
             self.cfg.model_name,
@@ -78,7 +70,7 @@ class DNATransformer(pl.LightningModule):
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
 
-    def _get_dataset(self, file: str) -> FASTADataset:
+    def get_dataset(self, file: str) -> FASTADataset:
         """Helper function to generate dataset."""
         return FASTADataset(
             file,
@@ -87,7 +79,7 @@ class DNATransformer(pl.LightningModule):
             alphabet=self.cfg.alphabet_type,
         )
 
-    def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
+    def get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
         """Helper function to generate dataloader."""
         return DataLoader(
             dataset,
@@ -101,16 +93,16 @@ class DNATransformer(pl.LightningModule):
         )
 
     def train_dataloader(self) -> DataLoader:
-        self.train_dataset = self._get_dataset(self.cfg.train_file)
-        return self._get_dataloader(self.train_dataset, shuffle=True)
+        self.train_dataset = self.get_dataset(self.cfg.train_file)
+        return self.get_dataloader(self.train_dataset, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
-        self.val_dataset = self._get_dataset(self.cfg.val_file)
-        return self._get_dataloader(self.val_dataset, shuffle=False)
+        self.val_dataset = self.get_dataset(self.cfg.val_file)
+        return self.get_dataloader(self.val_dataset, shuffle=False)
 
     def test_dataloader(self) -> DataLoader:
-        self.test_dataset = self._get_dataset(self.cfg.test_file)
-        return self._get_dataloader(self.test_dataset, shuffle=False)
+        self.test_dataset = self.get_dataset(self.cfg.test_file)
+        return self.get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
         return self.model(x, labels=x, **kwargs)
@@ -231,8 +223,8 @@ def train(cfg: ModelSettings) -> None:
             model.model.lm_head.bias.data = torch.zeros_like(
                 model.model.lm_head.bias.data
             )
-        except Exception as e:
-            print("Couldn't set bias equal to zeros.")
+        except Exception as exc:
+            print("Couldn't set bias equal to zeros.", exc)
             pass
     else:
         model = DNATransformer(cfg)
@@ -291,74 +283,66 @@ def train(cfg: ModelSettings) -> None:
         print(f"Saved final generated sequences to {save_path}")
 
 
-def inference(cfg: ModelSettings, dataset: str) -> None:
-    if cfg.load_from_checkpoint_dir is None:
-        raise ValueError("load_from_checkpoint_dir must be set in the config file")
+class ModelLoadStrategy(ABC):
+    @abstractmethod
+    def get_model(self) -> DNATransformer:
+        """Load and return a model object."""
 
-    model = load_from_deepspeed(cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir)
-    model.cuda()
 
-    if dataset == "train":
-        loader = model.train_dataloader()
-    elif dataset == "val":
-        loader = model.val_dataloader()
-    elif dataset == "test":
-        loader = model.test_dataloader()
+class LoadDeepSpeedStrategy(ModelLoadStrategy):
+    def __init__(self, cfg: ModelSettings) -> None:
+        self.cfg = cfg
 
-    print(f"Running inference with dataset length {len(loader)}")
+    def get_model(self) -> DNATransformer:
+        if self.cfg.load_from_checkpoint_dir is None:
+            raise ValueError("load_from_checkpoint_dir must be set in the config file")
+        model = load_from_deepspeed(
+            cfg=self.cfg, checkpoint_dir=self.cfg.load_from_checkpoint_dir
+        )
+        return model
 
-    # TODO: Instead could optionally return the hidden_states in a dictionary
-    # in the validation_step function.
+
+class LoadPTCheckpointStrategy(ModelLoadStrategy):
+    def __init__(self, cfg: ModelSettings, pt_file: str) -> None:
+        self.cfg = cfg
+        self.pt_file = pt_file
+
+    def get_model(self) -> DNATransformer:
+        model = DNATransformer.load_from_checkpoint(
+            self.pt_file, strict=False, cfg=self.cfg
+        )
+        return model
+
+
+def generate_embeddings(model: DNATransformer, dataloader: DataLoader) -> np.ndarray:
+    """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     embeddings = []
-    for batch in tqdm(loader):
+    for batch in tqdm(dataloader):
         batch = batch.cuda()
         outputs = model(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
 
     embeddings = np.concatenate(embeddings)  # type: ignore
-
-    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
-    np.save(f"inference-{dataset}-embeddings.npy", embeddings)
+    return embeddings
 
 
-def get_embeddings_using_pt(cfg: ModelSettings, fasta_file: str, pt_file: str):
-    """Given a .pt file, a config, and a fasta file, generate embeddings"""
-
-    model = DNATransformer.load_from_checkpoint(pt_file, strict=False, cfg=cfg)
+def inference(
+    model_load_strategy: ModelLoadStrategy,
+    fasta_file: str,
+    output_path: Optional[PathLike] = None,
+) -> np.ndarray:
+    """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
+    model = model_load_strategy.get_model()
     model.cuda()
-
-    dataset = FASTADataset(
-        fasta_file,
-        tokenizer=model.tokenizer,
-        block_size=model.cfg.block_size,
-        alphabet=model.cfg.alphabet_type,
-    )
-    loader = DataLoader(
-        dataset,
-        shuffle=False,
-        drop_last=True,
-        batch_size=model.cfg.batch_size,
-        num_workers=model.cfg.num_data_workers,
-        prefetch_factor=model.cfg.prefetch_factor,
-        pin_memory=model.cfg.pin_memory,
-        persistent_workers=model.cfg.persistent_workers,
-    )
-
-    print(f"Running inference with dataset length {len(loader)}")
-
-    # TODO: Instead could optionally return the hidden_states in a dictionary
-    # in the validation_step function.
-    embeddings = []
-    for batch in tqdm(loader):
-        batch = batch.cuda()
-        outputs = model(batch, output_hidden_states=True)
-        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
-
-    embeddings = np.concatenate(embeddings)  # type: ignore
-
-    print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
+    dataset = model.get_dataset(fasta_file)
+    dataloader = model.get_dataloader(dataset, shuffle=False)
+    print(f"Running inference with dataset length {len(dataloader)}")
+    embeddings = generate_embeddings(model, dataloader)
+    print(f"Embeddings shape: {embeddings.shape}")
+    if output_path:
+        assert Path(output_path).suffix == ".npy"
+        np.save(output_path, embeddings)
     return embeddings
 
 
@@ -366,7 +350,15 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("--mode", default="train")
-    parser.add_argument("--inference_dataset", default="train")
+    parser.add_argument("--inference_fasta", default="")
+    parser.add_argument("--inference_model_load", default="pt", help="deepspeed or pt")
+    parser.add_argument(
+        "--inference_pt_file",
+        help="Path to pytorch model weights if inference_model_load==pt",
+    )
+    parser.add_argument(
+        "--inference_output_path", default="./embeddings.npy", type=Path
+    )
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
 
@@ -378,4 +370,20 @@ if __name__ == "__main__":
     if args.mode == "train":
         train(config)
     if args.mode == "inference":
-        inference(config, args.inference_dataset)
+        if not args.inference_fasta:
+            raise ValueError("Must provide a fasta file to run inference on.")
+
+        if args.inference_output_path.exists():
+            raise FileExistsError(
+                f"inference_output_path: {args.inference_output_path} already exists!"
+            )
+
+        if args.inference_model_load == "pt":
+            model_strategy = LoadPTCheckpointStrategy(config, args.pt_file)
+        elif args.inference_model_load == "deepspeed":
+            model_strategy = LoadDeepSpeedStrategy(config)
+        else:
+            raise ValueError(
+                f"Invalid inference_model_load {args.inference_model_load}"
+            )
+        inference(model_strategy, args.inference_fasta, args.inference_output_path)

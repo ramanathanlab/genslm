@@ -1,7 +1,8 @@
 import json
-import yaml
 from pathlib import Path
-from typing import Type, TypeVar, Union, Optional
+from typing import Optional, Type, TypeVar, Union
+
+import yaml
 from pydantic import BaseSettings as _BaseSettings
 
 _T = TypeVar("_T")

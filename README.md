@@ -2,10 +2,14 @@
 
 Transformer language models for the generation of synthetic sequences
 
+## Important Note
+We are currently using a forked version of huggingface transformers library
+which fixes a problem with the Reformer model. Please clone our fork from:
+https://github.com/maxzvyagin/transformers
 
 ## DeepSpeed Setup 
 
-See `examples/` folder for platform specific setup
+See `examples/` folder for platform specific setup.
 
 ## Development
 Locally:
@@ -17,4 +21,4 @@ pip3 install -r requirements/dev.txt
 pip3 install -r requirements/requirements.txt
 pip3 install -e .
 ```
-To run dev tools (flake8, black, mypy): `make`
+To run dev tools (isort, flake8, black, mypy): `make`

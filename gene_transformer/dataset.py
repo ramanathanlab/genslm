@@ -58,23 +58,21 @@
 #         return self.sequences[idx].long()  # type:ignore[no-any-return]
 #
 #
-import torch
-from torch.utils.data import Dataset
-from Bio import SeqIO  # type: ignore[import]
-from transformers import PreTrainedTokenizerFast
-import numpy as np
-import pickle
 import os
+import pickle
 from glob import glob
-from natsort import natsorted
 from pathlib import Path
-import pdb
-from tqdm import tqdm
-import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import Any, Iterator, List
+
+import numpy as np
+import torch
+from Bio import SeqIO  # type: ignore[import]
 from mpire import WorkerPool
 from mpire.utils import make_single_arguments
+from natsort import natsorted
+from torch.utils.data import Dataset
 from tqdm import tqdm
+from transformers import PreTrainedTokenizerFast
 
 
 class BPEGenomeDataset(Dataset):
@@ -105,7 +103,6 @@ class BPEGenomeDataset(Dataset):
         # )
 
         # check if we're working with a single pickle file or a directory of them
-
         print("Processing {}...".format(samples_path))
 
         if os.path.isfile(samples_path):
@@ -233,7 +230,6 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         # codon string, tokenize, and collect in tensor
         print("Processing {}...".format(fasta_file))
         parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
-        num_seqs = len(parsed_seqs)
         samples = []
         for chunk in tqdm(list(chunks(parsed_seqs, 50000))):
             with WorkerPool(n_jobs=60) as pool:
@@ -249,38 +245,6 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         self.sequences = torch.Tensor(samples)
         print("Encoded all sequences.")
 
-        # pool = multiprocessing.Pool(processes=16)
-        # results = pool.map(_single_encode, tqdm(list(SeqIO.parse(fasta_file, "fasta"))))
-        # pool.close()
-        # pool.join()
-        # self.sequences = torch.cat(results)
-
-        # with ProcessPoolExecutor(max_workers=16) as executor:
-        #     parsed_seqs = list(SeqIO.parse(fasta_file, "fasta"))
-        #     futures = [executor.submit(_single_encode, seq) for seq in tqdm(parsed_seqs)]
-        #     results = []
-        #     for future in as_completed(tqdm(futures)):
-        #         # get the result for the next completed task
-        #         result = future.result()  # blocks
-        #         print(result)
-        #         results.append(result)
-        #     # futures = list(tqdm(executor.map(_single_encode, parsed_seqs), total=len(parsed_seqs)))
-        #     # results = [f.result() for f in futures]
-        #     print("Finished the futures.")
-        #     self.sequences = torch.cat(results)
-        # print("Completed.")
-        # self.sequences = torch.cat(  # type: ignore[attr-defined]
-        #     [
-        #         tokenizer.encode(
-        #             grouping(seq),
-        #             return_tensors="pt",
-        #             max_length=block_size,
-        #             padding="max_length",
-        #         )
-        #         for seq in tqdm(list(SeqIO.parse(fasta_file, "fasta")))
-        #     ]
-        # )
-
     def group_by_codon(self, s: SeqIO.SeqRecord) -> str:
         """Split SeqRecord by codons, return as a string with whitespace.
         eg. 'AAACCC' -> 'AAA CCC'"""
@@ -295,10 +259,10 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         return len(self.sequences)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        return self.sequences[idx].long()  # type:ignore[no-any-return]
+        return self.sequences[idx].long()
 
 
-def chunks(lst, n):
+def chunks(lst: List[Any], n: int) -> Iterator[List[Any]]:
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
