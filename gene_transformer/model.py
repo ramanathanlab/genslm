@@ -17,6 +17,7 @@ from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
 from deepspeed.ops.adam import DeepSpeedCPUAdam  # type: ignore[import]
+
 # warm up scheduler
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.plugins.environments.slurm_environment import SLURMEnvironment
@@ -32,7 +33,12 @@ from transformers import (
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from gene_transformer.config import ModelSettings
-from gene_transformer.dataset import FASTADataset, GenomeDataset, BPEGenomeDataset, H5Dataset
+from gene_transformer.dataset import (
+    FASTADataset,
+    GenomeDataset,
+    BPEGenomeDataset,
+    H5Dataset,
+)
 from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
     generate_dna_to_stop,
@@ -85,10 +91,7 @@ class DNATransformer(pl.LightningModule):
             # max_position_embeddings=cfg.block_size,
             max_position_embeddings=self.cfg.block_size,
         )
-
-        base_config.vocab_size = self.tokenizer.vocab_size
         self.model = AutoModelForCausalLM.from_config(base_config)
-
 
         # To validate generated sequences
         # TODO: make sure temp files are outputting to node local
@@ -117,7 +120,10 @@ class DNATransformer(pl.LightningModule):
     def _get_genome_dataset(self, file: str, dset_name: str) -> H5Dataset:
         """Helper function to generate genome dataset"""
         return H5Dataset(
-            file, dset_name=dset_name, block_size=self.cfg.block_size, tokenizer=self.tokenizer
+            file,
+            dset_name=dset_name,
+            block_size=self.cfg.block_size,
+            tokenizer=self.tokenizer,
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
@@ -161,7 +167,9 @@ class DNATransformer(pl.LightningModule):
         pdb.set_trace()
         outputs = self(batch)
         loss = outputs.loss
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+        )
         return loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
@@ -183,7 +191,9 @@ class DNATransformer(pl.LightningModule):
     def configure_optimizers(self) -> torch.optim.Adam:
         # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
         optimizer = torch.optim.Adam(self.parameters(), lr=5e-5)
-        scheduler = WarmupLR(optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=50000)
+        scheduler = WarmupLR(
+            optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=50000
+        )
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
@@ -255,10 +265,10 @@ class DNATransformer(pl.LightningModule):
 
 
 def load_from_deepspeed(
-        cfg: ModelSettings,
-        checkpoint_dir: Path,
-        checkpoint: str = "last.ckpt",
-        model_weights: str = "last.pt",
+    cfg: ModelSettings,
+    checkpoint_dir: Path,
+    checkpoint: str = "last.ckpt",
+    model_weights: str = "last.pt",
 ) -> DNATransformer:
     """Utility function for deepspeed conversion"""
     # first convert the weights
@@ -308,7 +318,7 @@ def train(cfg: ModelSettings) -> None:
     )
 
     if cfg.wandb_active:
-        lr_monitor = LearningRateMonitor(logging_interval='step')
+        lr_monitor = LearningRateMonitor(logging_interval="step")
         callbacks = [checkpoint_callback, lr_monitor]
     else:
         callbacks = [checkpoint_callback]
@@ -397,7 +407,6 @@ def inference(cfg: ModelSettings, dataset: str) -> None:
 
     print(f"Embeddings shape: {embeddings.shape}")  # type: ignore
     np.save(f"inference-{dataset}-embeddings.npy", embeddings)
-
 
 
 if __name__ == "__main__":
