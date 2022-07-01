@@ -88,7 +88,7 @@ class DNATransformer(pl.LightningModule):
 
         base_config.vocab_size = self.tokenizer.vocab_size
         self.model = AutoModelForCausalLM.from_config(base_config)
-        
+
 
         # To validate generated sequences
         # TODO: make sure temp files are outputting to node local
