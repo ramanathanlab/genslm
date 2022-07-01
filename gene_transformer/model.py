@@ -76,7 +76,7 @@ class DNATransformer(pl.LightningModule):
 
         base_config = AutoConfig.from_pretrained(
             self.cfg.model_name,
-            vocab_size=self.tokenizer.vocab_size,
+            vocab_size=self.tokenizer.vocab_size+100,
             feed_forward_size=self.cfg.block_size,
             # axial_pos_embds=False,
             # local_chunk_length=100,
