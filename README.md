@@ -9,7 +9,7 @@ https://github.com/maxzvyagin/transformers
 
 ## DeepSpeed Setup 
 
-See `examples/` folder for platform specific setup
+See `examples/` folder for platform specific setup.
 
 ## Development
 Locally:
