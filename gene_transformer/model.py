@@ -326,23 +326,23 @@ def train(cfg: ModelSettings) -> None:
 
     trainer = pl.Trainer(
         # use all available gpus
-        # gpus=-1,
+        gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
-        # strategy=DeepSpeedPlugin(
-        #     stage=3,
-        #     offload_optimizer=True,
-        #     offload_parameters=True,
-        #     remote_device="cpu",
-        #     offload_params_device="cpu",
-        #     # offload_optimizer_device="nvme",
-        #     # nvme_path="/tmp",
-        #     logging_batch_size_per_gpu=cfg.batch_size,
-        #     # add the option to load a config from json file with more deepspeed options
-        #     # note that if supplied all defaults are ignored - model settings defaults this arg to None
-        #     # config=cfg.deepspeed_cfg_file
-        # ),
+        strategy=DeepSpeedPlugin(
+            stage=3,
+            offload_optimizer=True,
+            offload_parameters=True,
+            remote_device="cpu",
+            offload_params_device="cpu",
+            # offload_optimizer_device="nvme",
+            # nvme_path="/tmp",
+            logging_batch_size_per_gpu=cfg.batch_size,
+            # add the option to load a config from json file with more deepspeed options
+            # note that if supplied all defaults are ignored - model settings defaults this arg to None
+            # config=cfg.deepspeed_cfg_file
+        ),
         callbacks=callbacks,
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
