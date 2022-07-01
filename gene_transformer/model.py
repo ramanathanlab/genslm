@@ -76,7 +76,7 @@ class DNATransformer(pl.LightningModule):
 
         base_config = AutoConfig.from_pretrained(
             self.cfg.model_name,
-            vocab_size=self.tokenizer.vocab_size+100,
+            vocab_size=self.tokenizer.vocab_size,
             feed_forward_size=self.cfg.block_size,
             # axial_pos_embds=False,
             # local_chunk_length=100,
@@ -85,7 +85,10 @@ class DNATransformer(pl.LightningModule):
             # max_position_embeddings=cfg.block_size,
             max_position_embeddings=self.cfg.block_size,
         )
+
+        base_config.vocab_size = self.tokenizer.vocab_size
         self.model = AutoModelForCausalLM.from_config(base_config)
+        
 
         # To validate generated sequences
         # TODO: make sure temp files are outputting to node local
