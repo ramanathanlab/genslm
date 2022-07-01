@@ -85,7 +85,7 @@ def seqs_to_fasta(
     seqs: List[str],
     file_name: Path,
     translate_to_protein: bool = False,
-    custom_seq_name: str = "MDH_SyntheticSeq",
+    custom_seq_name: str = "SyntheticSeq",
 ) -> None:
     sequences = [Seq(seq) for seq in seqs]
 
