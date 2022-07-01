@@ -45,7 +45,7 @@ class H5Dataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        item = torch.tensor(self.samples[idx]).long()
+        item = torch.tensor(self.samples[idx].astype("int32")).long()
         # if len(item) < self.block_size:
         item = self.pad_sequence(
             item,
