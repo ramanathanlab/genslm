@@ -164,7 +164,6 @@ class DNATransformer(pl.LightningModule):
         return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
-        pdb.set_trace()
         outputs = self(batch)
         loss = outputs.loss
         self.log(
@@ -189,8 +188,8 @@ class DNATransformer(pl.LightningModule):
         return loss
 
     def configure_optimizers(self) -> torch.optim.Adam:
-        # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
-        optimizer = torch.optim.Adam(self.parameters(), lr=5e-5)
+        optimizer = DeepSpeedCPUAdam(self.parameters(), lr=5e-5)
+        # optimizer = torch.optim.Adam(self.parameters(), lr=5e-5)
         scheduler = WarmupLR(
             optimizer, warmup_min_lr=5e-8, warmup_max_lr=5e-5, warmup_num_steps=50000
         )
