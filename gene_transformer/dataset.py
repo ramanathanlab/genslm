@@ -18,6 +18,56 @@ from tqdm import tqdm
 import h5py
 from functools import partial
 
+def group_with_spacing(s: SeqIO.SeqRecord, n: int) -> str:
+    seq = str(s.seq)
+    return " ".join(seq[i : i + n] for i in range(0, len(seq), n))
+
+
+class IndividualFastaDataset(Dataset):
+    def __init__(
+        self, dir_path: str, block_size: int, tokenizer: PreTrainedTokenizerFast, spacing: int = 3, njobs: int = 10
+    ):
+        self.dir_path = dir_path
+        self.block_size = block_size
+        self.tokenizer = tokenizer
+        self.spacing = spacing
+        self.njobs = njobs
+
+        ls_path = Path(self.dir_path) / "*.fasta"
+        self.files = natsorted(glob(str(ls_path)))
+
+        self.pad_sequence = partial(
+            torch.nn.functional.pad, value=tokenizer.pad_token_id
+        )
+
+        # initialize reading from fasta files
+        self.samples = []
+
+        def _single_encode(fasta_file):
+            sequence = SeqIO.parse(fasta_file, "fasta")[0]
+            return self.tokenizer.encode(
+                group_with_spacing(sequence, self.spacing),
+                # return_tensors="pt",
+                max_length=self.block_size,
+                padding="max_length",
+            )
+
+        def tokenize_samples(seqs):
+            print("Tokenizing samples...")
+            with WorkerPool(n_jobs=self.njobs) as pool:
+                results = pool.map(_single_encode, make_single_arguments(self.files), progress_bar=True,
+                                   iterable_len=len(seqs))
+            return torch.tensor(results)
+
+        self.samples = tokenize_samples(self.files)
+
+    def __len__(self) -> int:
+        return len(self.files)
+
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        return self.samples[idx].long()
+
+
 
 class H5Dataset(Dataset):
     def __init__(
