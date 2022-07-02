@@ -44,7 +44,7 @@ class IndividualFastaDataset(Dataset):
         self.samples = []
 
         def _single_encode(fasta_file):
-            sequence = SeqIO.parse(fasta_file, "fasta")[0]
+            sequence = list(SeqIO.parse(fasta_file, "fasta"))[0]
             return self.tokenizer.encode(
                 group_with_spacing(sequence, self.spacing),
                 # return_tensors="pt",
