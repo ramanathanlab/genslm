@@ -25,7 +25,7 @@ def group_with_spacing(s: SeqIO.SeqRecord, n: int) -> str:
 
 class IndividualFastaDataset(Dataset):
     def __init__(
-        self, dir_path: str, block_size: int, tokenizer: PreTrainedTokenizerFast, spacing: int = 3, njobs: int = 5
+        self, dir_path: str, block_size: int, tokenizer: PreTrainedTokenizerFast, spacing: int = 3, njobs: int = 20
     ):
         self.dir_path = dir_path
         self.block_size = block_size
