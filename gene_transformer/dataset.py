@@ -42,31 +42,39 @@ class IndividualFastaDataset(Dataset):
         )
 
         # initialize reading from fasta files
-        self.samples = []
+        # self.samples = {}
 
-        def _single_encode(fasta_file):
-            sequence = list(SeqIO.parse(fasta_file, "fasta"))[0]
-            return self.tokenizer.encode(
-                group_with_spacing(sequence, self.spacing),
-                # return_tensors="pt",
-                max_length=self.block_size,
-                padding="max_length",
-            )
-
-        def tokenize_samples(seqs):
-            print("Tokenizing samples...")
-            with WorkerPool(n_jobs=self.njobs) as pool:
-                results = pool.map(_single_encode, make_single_arguments(self.files), progress_bar=True,
-                                   iterable_len=len(seqs))
-            return torch.tensor(results)
-
-        self.samples = tokenize_samples(self.files)
+        # def _single_encode(fasta_file):
+        #     sequence = list(SeqIO.parse(fasta_file, "fasta"))[0]
+        #     return self.tokenizer.encode(
+        #         group_with_spacing(sequence, self.spacing),
+        #         # return_tensors="pt",
+        #         max_length=self.block_size,
+        #         padding="max_length",
+        #     )
+        #
+        # def tokenize_samples(seqs):
+        #     print("Tokenizing samples...")
+        #     with WorkerPool(n_jobs=self.njobs) as pool:
+        #         results = pool.map(_single_encode, make_single_arguments(self.files), progress_bar=True,
+        #                            iterable_len=len(seqs))
+        #     return torch.tensor(results)
+        #
+        # self.samples = tokenize_samples(self.files)
 
     def __len__(self) -> int:
         return len(self.files)
 
     def __getitem__(self, idx: int) -> torch.Tensor:
-        return self.samples[idx].long()
+        # tokenize on the fly
+        # return self.samples[idx].long()
+        sequence = list(SeqIO.parse(self.files[idx], "fasta"))[0]
+        return torch.tensor(self.tokenizer.encode(
+                group_with_spacing(sequence, self.spacing),
+                # return_tensors="pt",
+                max_length=self.block_size,
+                padding="max_length",
+            ))
 
 
 class H5Dataset(Dataset):
