@@ -259,7 +259,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
         num_seqs = len(parsed_seqs)
         samples = []
         for chunk in tqdm(list(chunks(parsed_seqs, 50000))):
-            with WorkerPool(n_jobs=60) as pool:
+            with WorkerPool(n_jobs=4) as pool:
                 results = pool.map(
                     _single_encode,
                     make_single_arguments(
