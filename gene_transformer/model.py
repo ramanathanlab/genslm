@@ -118,7 +118,7 @@ class DNATransformer(pl.LightningModule):
             alphabet=self.cfg.alphabet_type,
         )
 
-    def _get_genome_dataset(self, file: str, dset_name: str) -> H5Dataset:
+    def _get_genome_dataset(self, file: str, dset_name: str) -> IndividualFastaDataset:
         """Helper function to generate genome dataset"""
         return IndividualFastaDataset(
             file,
