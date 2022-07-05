@@ -69,7 +69,7 @@ class DNATransformer(pl.LightningModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
-        pdb.set_trace()
+        # pdb.set_trace()
 
         # if not self.cfg.genome_level:
         #
