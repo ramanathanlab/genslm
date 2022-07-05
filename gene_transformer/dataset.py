@@ -77,7 +77,7 @@ class IndividualFastaDataset(Dataset):
                 max_length=self.block_size,
                 padding="max_length",
             ))
-        print(encoded_sequence)
+        # print(encoded_sequence)
         return encoded_sequence
 
 
