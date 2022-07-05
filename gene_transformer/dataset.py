@@ -17,6 +17,7 @@ from mpire.utils import make_single_arguments
 from tqdm import tqdm
 import h5py
 from functools import partial
+import pdb
 
 
 def group_with_spacing(s: SeqIO.SeqRecord, n: int) -> str:
@@ -70,6 +71,7 @@ class IndividualFastaDataset(Dataset):
         # tokenize on the fly
         # return self.samples[idx].long()
         sequence = list(SeqIO.parse(self.files[idx], "fasta"))[0]
+        pdb.set_trace()
         encoded_sequence = torch.tensor(self.tokenizer.encode(
                 group_with_spacing(sequence, self.spacing),
                 # return_tensors="pt",
