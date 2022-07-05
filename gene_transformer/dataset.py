@@ -28,6 +28,7 @@ class IndividualFastaDataset(Dataset):
     def __init__(
             self, dir_path: str, block_size: int, tokenizer: PreTrainedTokenizerFast, spacing: int = 3, njobs: int = 20
     ):
+        print("Individual fasta dataset")
         self.dir_path = dir_path
         self.block_size = block_size
         self.tokenizer = tokenizer
