@@ -125,6 +125,7 @@ class DNATransformer(pl.LightningModule):
             # dset_name=dset_name,
             block_size=self.cfg.block_size,
             tokenizer=self.tokenizer,
+            spacing=self.cfg.gap_size
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
