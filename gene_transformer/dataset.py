@@ -44,7 +44,7 @@ class IndividualFastaDataset(Dataset):
         )
 
         # initialize reading from fasta files
-        # self.samples = {}
+        self.samples = {}
 
         # def _single_encode(fasta_file):
         #     sequence = list(SeqIO.parse(fasta_file, "fasta"))[0]
@@ -69,16 +69,18 @@ class IndividualFastaDataset(Dataset):
 
     def __getitem__(self, idx: int) -> torch.Tensor:
         # tokenize on the fly
-        # return self.samples[idx].long()
-        sequence = list(SeqIO.parse(self.files[idx], "fasta"))[0]
-        encoded_sequence = torch.tensor(self.tokenizer.encode(
-                group_with_spacing(sequence, self.spacing),
-                # return_tensors="pt",
-                max_length=self.block_size,
-                padding="max_length",
-            ))
-        # print(encoded_sequence)
-        return encoded_sequence
+        try:
+            return self.samples[idx]
+        except KeyError:
+            sequence = list(SeqIO.parse(self.files[idx], "fasta"))[0]
+            encoded_sequence = torch.tensor(self.tokenizer.encode(
+                    group_with_spacing(sequence, self.spacing),
+                    # return_tensors="pt",
+                    max_length=self.block_size,
+                    padding="max_length",
+                ))
+            self.samples[idx] = encoded_sequence
+            return encoded_sequence
 
 
 class H5Dataset(Dataset):
