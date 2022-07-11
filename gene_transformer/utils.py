@@ -1,16 +1,13 @@
 from pathlib import Path
-from typing import List, Set, Any, Optional, Dict
+from typing import Any, Dict, List, Optional, Set
+
+import torch
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
-import torch
-from transformers import (
-    PreTrainedTokenizerFast,
-    StoppingCriteria,
-)  # , StoppingCriteriaList
-from gene_transformer.config import ModelSettings
 from tqdm import tqdm
-import time
+from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
+from transformers import StoppingCriteria
 
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
@@ -84,10 +81,10 @@ def tokens_to_sequences(
 
 
 def seqs_to_fasta(
-    seqs: List[Seq],
+    seqs: List[str],
     file_name: Path,
     translate_to_protein: bool = False,
-    custom_seq_name: str = "MDH_SyntheticSeq",
+    custom_seq_name: str = "SyntheticSeq",
 ) -> None:
     sequences = [Seq(seq) for seq in seqs]
 
@@ -97,9 +94,9 @@ def seqs_to_fasta(
     records = [
         SeqRecord(
             seq,
-            id="MDH_SyntheticSeq_{}".format(i),
-            name="MDH_sequence",
-            description="synthetic malate dehydrogenase",
+            id=f"{custom_seq_name}_{i}",
+            name=custom_seq_name,
+            description=custom_seq_name,
         )
         for i, seq in enumerate(sequences)
     ]
@@ -114,22 +111,20 @@ def non_redundant_generation(
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
-    known_sequence_files: [str] = None,
-) -> Dict:
+    known_sequence_files: Optional[List[str]] = None,
+) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
     """
     # initialization of variables
-    all_generated_seqs = list()
-    unique_seqs = set()
+    known_sequences: Set[str] = set()
+    all_generated_seqs: List[str] = list()
+    unique_seqs: Set[str] = set()
 
     if known_sequence_files is not None:
-        known_sequences = get_known_sequences(known_sequence_files)
-    else:
-        known_sequences = list()
+        known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
     # begin generation loop
-    start_time = time.time()
     while len(unique_seqs) < num_seqs:
         tokens = generate_dna_to_stop(
             model,
@@ -144,18 +139,15 @@ def non_redundant_generation(
             all_generated_seqs.append(seq)
             unique_seqs.add(seq)
 
-    end_time = time.time()
-
     # create dictionary of results
     results = {
-        "unique_seqs": unique_seqs,
+        "unique_seqs": list(unique_seqs),
         "all_generated_seqs": all_generated_seqs,
-        "seconds_elapsed": end_time - start_time,
     }
     return results
 
 
-def get_known_sequences(files: [str]) -> [Seq]:
+def get_known_sequences(files: List[str]) -> List[Seq]:
     """Return list of Seq objects from given list of files"""
     known_sequences = []
     for f in files:
@@ -166,7 +158,7 @@ def get_known_sequences(files: [str]) -> [Seq]:
 
 
 def redundancy_check(
-    generated: str, known_sequences: [Seq], verbose: bool = False
+    generated: str, known_sequences: List[Seq], verbose: bool = False
 ) -> bool:
     """Check if a sequence appears in a list of known sequence"""
     for gen_seq in tqdm(generated, disable=verbose):

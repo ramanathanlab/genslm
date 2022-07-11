@@ -1,7 +1,8 @@
 import json
-import yaml
 from pathlib import Path
-from typing import Type, TypeVar, Union, Optional
+from typing import Optional, Type, TypeVar, Union
+
+import yaml
 from pydantic import BaseSettings as _BaseSettings
 
 _T = TypeVar("_T")
@@ -21,6 +22,15 @@ class BaseSettings(_BaseSettings):
         return cls(**raw_data)
 
 
+class WarmupLRSettings(BaseSettings):
+    """Learning rate warm up settings."""
+
+    min_lr: float = 5e-8
+    """The starting learning rate."""
+    num_steps: int = 50000
+    """Steps to warm up for."""
+
+
 class ModelSettings(BaseSettings):
     # logging settings
     wandb_active: bool = True
@@ -31,17 +41,16 @@ class ModelSettings(BaseSettings):
 
     # data settings
     genome_level: bool = False
-    alphabet_type: str = "codon"
-    tokenizer_file: str = "tokenizer_files/codon_wordlevel_100vocab.json"
-    train_file: str = "data/full_mdh_fasta/train.fasta"
-    val_file: str = "data/full_mdh_fasta/val.fasta"
-    test_file: str = "data/full_mdh_fasta/test.fasta"
-    gap_size: int = 3
+    tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
+    train_file: Path
+    val_file: Path
+    test_file: Path
+    kmer_size: int = 3
     small_subset: int = 0
 
     # blast settings
     enable_blast: bool = True
-    blast_validation_file: str = "blast_file.fasta"
+    blast_validation_file: Path = Path("blast_file.fasta")
     num_blast_seqs_per_gpu: int = 5
     blast_exe_path: Path = Path("blastn")  # Defaults to current conda environment
 
@@ -51,6 +60,9 @@ class ModelSettings(BaseSettings):
     epochs: int = 5
     block_size: int = 512
     accumulate_grad_batches: int = 4
+    learning_rate: float = 5e-5
+    precision: int = 16
+    warm_up_lr: Optional[WarmupLRSettings] = None
     load_from_checkpoint_dir: Optional[Path] = None
     deepspeed_cfg_file: Optional[Path] = None
 
@@ -66,5 +78,9 @@ class ModelSettings(BaseSettings):
 
 
 if __name__ == "__main__":
-    settings = ModelSettings()
+    settings = ModelSettings(
+        train_file=Path("train.fasta"),
+        val_file=Path("val.fasta"),
+        test_file=Path("test.fasta"),
+    )
     settings.dump_yaml("settings_template.yaml")
