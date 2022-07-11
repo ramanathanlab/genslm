@@ -37,6 +37,7 @@ class ModelSettings(BaseSettings):
     val_file: str = "data/full_mdh_fasta/val.fasta"
     test_file: str = "data/full_mdh_fasta/test.fasta"
     gap_size: int = 3
+    small_subset: int = 0
 
     # blast settings
     enable_blast: bool = True
