@@ -38,6 +38,7 @@ from gene_transformer.dataset import (
     GenomeDataset,
     BPEGenomeDataset,
     H5Dataset,
+    IndividualFastaDataset,
 )
 from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
@@ -68,6 +69,7 @@ class DNATransformer(pl.LightningModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+        # pdb.set_trace()
 
         # if not self.cfg.genome_level:
         #
@@ -117,13 +119,15 @@ class DNATransformer(pl.LightningModule):
             alphabet=self.cfg.alphabet_type,
         )
 
-    def _get_genome_dataset(self, file: str, dset_name: str) -> H5Dataset:
+    def _get_genome_dataset(self, file: str, dset_name: str) -> IndividualFastaDataset:
         """Helper function to generate genome dataset"""
-        return H5Dataset(
+        return IndividualFastaDataset(
             file,
-            dset_name=dset_name,
+            # dset_name=dset_name,
             block_size=self.cfg.block_size,
             tokenizer=self.tokenizer,
+            spacing=self.cfg.gap_size,
+            small_subset=self.cfg.small_subset,
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
