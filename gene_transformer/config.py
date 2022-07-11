@@ -49,6 +49,7 @@ class ModelSettings(BaseSettings):
     epochs: int = 5
     block_size: int = 512
     accumulate_grad_batches: int = 4
+    learning_rate: float = 5e-5
     load_from_checkpoint_dir: Optional[Path] = None
 
     # generation settings
