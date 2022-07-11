@@ -5,6 +5,19 @@ from transformers import PreTrainedTokenizerFast
 
 
 class FASTADataset(Dataset):  # type: ignore[type-arg]
+
+    @staticmethod
+    def group_by_codon(s: SeqIO.SeqRecord) -> str:
+        """Split SeqRecord by codons, return as a string with whitespace.
+        eg. 'AAACCC' -> 'AAA CCC'"""
+        seq = str(s.seq)
+        return " ".join(seq[i: i + 3] for i in range(0, len(seq), 3))
+
+    @staticmethod
+    def group_by_aa(s: SeqIO.SeqRecord) -> str:
+        seq = str(s.seq).upper()
+        return " ".join(i for i in seq)
+
     def __init__(
         self,
         fasta_file: str,
@@ -24,12 +37,7 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
             Converts raw strings to tokenized tensors.
         """
 
-        self.alphabet = alphabet
-
-        if self.alphabet == "codon":
-            grouping = self.group_by_codon
-        else:
-            grouping = self.group_by_aa
+        grouping = self.group_by_codon if alphabet == "codon" else self.group_by_aa
 
         # Read in the sequences from the fasta file, convert to
         # codon string, tokenize, and collect in tensor
@@ -44,16 +52,6 @@ class FASTADataset(Dataset):  # type: ignore[type-arg]
                 for seq in SeqIO.parse(fasta_file, "fasta")
             ]
         )
-
-    def group_by_codon(self, s: SeqIO.SeqRecord) -> str:
-        """Split SeqRecord by codons, return as a string with whitespace.
-        eg. 'AAACCC' -> 'AAA CCC'"""
-        seq = str(s.seq)
-        return " ".join(seq[i : i + 3] for i in range(0, len(seq), 3))
-
-    def group_by_aa(self, s: SeqIO.SeqRecord) -> str:
-        seq = str(s.seq).upper()
-        return " ".join(i for i in seq)
 
     def __len__(self) -> int:
         return len(self.sequences)
