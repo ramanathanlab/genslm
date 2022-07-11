@@ -187,9 +187,9 @@ class DNATransformer(pl.LightningModule):
         metrics = self.all_gather(metrics)
         try:
             max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
-        except AttributeError as e:
+        except AttributeError as exc:
             # getting a weird numpy error when running validation on the protein sequences so catching here
-            print("Attribute error when trying to move tensor to CPU... Error:", e)
+            print("Attribute error when trying to move tensor to CPU... Error:", exc)
             max_score, mean_score = metrics[0].max(), metrics[1].mean()
         self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
         self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
