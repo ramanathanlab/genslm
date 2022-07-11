@@ -38,7 +38,7 @@ from gene_transformer.dataset import (
     GenomeDataset,
     BPEGenomeDataset,
     H5Dataset,
-    IndividualFastaDataset
+    IndividualFastaDataset,
 )
 from gene_transformer.blast import ParallelBLAST
 from gene_transformer.utils import (
@@ -127,7 +127,7 @@ class DNATransformer(pl.LightningModule):
             block_size=self.cfg.block_size,
             tokenizer=self.tokenizer,
             spacing=self.cfg.gap_size,
-            small_subset=self.cfg.small_subset
+            small_subset=self.cfg.small_subset,
         )
 
     def _get_dataloader(self, dataset: FASTADataset, shuffle: bool) -> DataLoader:
