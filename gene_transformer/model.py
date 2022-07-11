@@ -318,7 +318,9 @@ def train(cfg: ModelSettings) -> None:
         save_path = cfg.checkpoint_dir / "generated"
         save_path.mkdir(exist_ok=True)
         for name, seqs in model.final_sequences.items():
-            seqs_to_fasta(seqs, save_path / f"{name}.fasta")
+            seqs_to_fasta(
+                seqs, save_path / f"{name}.fasta", custom_seq_name=cfg.custom_seq_name
+            )
         print(f"Saved final generated sequences to {save_path}")
 
 
