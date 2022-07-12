@@ -1,4 +1,3 @@
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -113,21 +112,19 @@ def non_redundant_generation(
     top_p: float = 0.95,
     num_seqs: int = 5,
     known_sequence_files: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
     """
     # initialization of variables
-    all_generated_seqs = list()
-    unique_seqs = set()
+    known_sequences: Set[str] = set()
+    all_generated_seqs: List[str] = list()
+    unique_seqs: Set[str] = set()
 
     if known_sequence_files is not None:
-        known_sequences = get_known_sequences(known_sequence_files)
-    else:
-        known_sequences = list()
+        known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
     # begin generation loop
-    start_time = time.time()
     while len(unique_seqs) < num_seqs:
         tokens = generate_dna_to_stop(
             model,
@@ -142,13 +139,10 @@ def non_redundant_generation(
             all_generated_seqs.append(seq)
             unique_seqs.add(seq)
 
-    end_time = time.time()
-
     # create dictionary of results
     results = {
-        "unique_seqs": unique_seqs,
+        "unique_seqs": list(unique_seqs),
         "all_generated_seqs": all_generated_seqs,
-        "seconds_elapsed": end_time - start_time,
     }
     return results
 

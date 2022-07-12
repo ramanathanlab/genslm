@@ -22,6 +22,15 @@ class BaseSettings(_BaseSettings):
         return cls(**raw_data)
 
 
+class WarmupLRSettings(BaseSettings):
+    """Learning rate warm up settings."""
+
+    min_lr: float = 5e-8
+    """The starting learning rate."""
+    num_steps: int = 50000
+    """Steps to warm up for."""
+
+
 class ModelSettings(BaseSettings):
     # logging settings
     wandb_active: bool = True
@@ -31,15 +40,17 @@ class ModelSettings(BaseSettings):
     num_nodes: int = 1
 
     # data settings
-    alphabet_type: str = "codon"
-    tokenizer_file: str = "tokenizer_files/codon_wordlevel_100vocab.json"
-    train_file: str = "data/full_mdh_fasta/train.fasta"
-    val_file: str = "data/full_mdh_fasta/val.fasta"
-    test_file: str = "data/full_mdh_fasta/test.fasta"
+    genome_level: bool = False
+    tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
+    train_file: Path
+    val_file: Path
+    test_file: Path
+    kmer_size: int = 3
+    small_subset: int = 0
 
     # blast settings
     enable_blast: bool = True
-    blast_validation_file: str = "blast_file.fasta"
+    blast_validation_file: Path = Path("blast_file.fasta")
     num_blast_seqs_per_gpu: int = 5
     blast_exe_path: Path = Path("blastn")  # Defaults to current conda environment
 
@@ -50,10 +61,14 @@ class ModelSettings(BaseSettings):
     block_size: int = 512
     accumulate_grad_batches: int = 4
     learning_rate: float = 5e-5
+    precision: int = 16
+    warm_up_lr: Optional[WarmupLRSettings] = None
     load_from_checkpoint_dir: Optional[Path] = None
+    deepspeed_cfg_file: Optional[Path] = None
 
     # generation settings
     num_test_seqs_per_gpu: int = 8
+    custom_seq_name: str = "SyntheticSeq"
 
     # training ops
     num_data_workers: int = 4
@@ -63,5 +78,9 @@ class ModelSettings(BaseSettings):
 
 
 if __name__ == "__main__":
-    settings = ModelSettings()
+    settings = ModelSettings(
+        train_file=Path("train.fasta"),
+        val_file=Path("val.fasta"),
+        test_file=Path("test.fasta"),
+    )
     settings.dump_yaml("settings_template.yaml")
