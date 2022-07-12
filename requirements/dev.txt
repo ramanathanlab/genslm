@@ -4,6 +4,8 @@ black
 flake8
 pytest
 isort
+pylint
+pydocstyle
 
 # mypy type stubs:
 types-PyYAML
