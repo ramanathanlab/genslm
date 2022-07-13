@@ -63,7 +63,7 @@ class IndividualFastaDataset(Dataset):
                     max_length=self.block_size,
                     padding="max_length",
                 )
-            )
+            ).long()
             self.samples[idx] = encoded_sequence
             return encoded_sequence
 
