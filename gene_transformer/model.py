@@ -286,10 +286,10 @@ def train(cfg: ModelSettings) -> None:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedPlugin(
             stage=3,
-            offload_optimizer=True,
-            offload_parameters=True,
-            remote_device="cpu",
-            offload_params_device="cpu",
+            # offload_optimizer=True,
+            # offload_parameters=True,
+            # remote_device="cpu",
+            # offload_params_device="cpu",
             # offload_optimizer_device="nvme",
             # nvme_path="/tmp",
             logging_batch_size_per_gpu=cfg.batch_size,
