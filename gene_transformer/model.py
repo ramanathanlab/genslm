@@ -302,7 +302,7 @@ def train(cfg: ModelSettings) -> None:
         callbacks=callbacks,
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
-        profiler=AdvancedProfiler(filename="advanced_profile_output.txt"),
+        profiler=AdvancedProfiler(dirname="advanced_profile_output"),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=0,
         precision=cfg.precision,
