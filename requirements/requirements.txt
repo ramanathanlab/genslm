@@ -4,7 +4,6 @@ pydantic
 biopython
 pandas
 aitextgen
-transformers
 deepspeed
 mpire
 natsort
