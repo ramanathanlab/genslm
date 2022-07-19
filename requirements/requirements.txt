@@ -7,3 +7,4 @@ aitextgen
 deepspeed
 mpire
 natsort
+git+https://github.com/maxzvyagin/transformers
