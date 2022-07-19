@@ -15,7 +15,7 @@ from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from pytorch_lightning.profiler import AdvancedProfiler
+from pytorch_lightning.profiler import PyTorchProfiler
 from tokenizers import Tokenizer  # type: ignore[import]
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -146,7 +146,7 @@ class DNATransformer(pl.LightningModule):
         return loss
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
-        #optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
+        # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
         optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
         if self.cfg.warm_up_lr is not None:
             scheduler = WarmupLR(
@@ -302,7 +302,17 @@ def train(cfg: ModelSettings) -> None:
         callbacks=callbacks,
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
-        profiler=AdvancedProfiler(dirpath="advanced_profile_output"),
+        profiler=PyTorchProfiler(
+            dirpath="pytorch_profile_output2",
+            profiler_kwargs={
+                "activities": [
+                    torch.profiler.ProfilerActivity.CPU,
+                    torch.profiler.ProfilerActivity.CUDA,
+                ],
+                "schedule": torch.profiler.schedule(wait=0, warmup=1, active=3),
+                "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
+            },
+        ),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=0,
         precision=cfg.precision,
