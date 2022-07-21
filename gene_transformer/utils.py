@@ -187,7 +187,7 @@ class ThroughputMonitor(Callback):
         if pl_module.current_epoch > 0:
             self.start_time = time.time()
 
-    def on_train_batch_end(self, trainer, pl_module, batch, batch_idx):
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if pl_module.current_epoch > 0:
             batch_time = time.time() - self.start_time
             self.batch_times.append(batch_time)
