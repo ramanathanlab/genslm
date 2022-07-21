@@ -1,4 +1,5 @@
 import os
+import warnings
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from pathlib import Path
@@ -12,10 +13,10 @@ from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.plugins import DeepSpeedPlugin
+from pytorch_lightning.profiler import PyTorchProfiler
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from pytorch_lightning.profiler import PyTorchProfiler
 from tokenizers import Tokenizer  # type: ignore[import]
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -23,9 +24,10 @@ from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFa
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from gene_transformer.blast import ParallelBLAST
-from gene_transformer.config import ModelSettings, PathLike
+from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import FASTADataset, IndividualFastaDataset
 from gene_transformer.utils import (
+    ThroughputMonitor,
     generate_dna_to_stop,
     seqs_to_fasta,
     tokens_to_sequences,
@@ -280,6 +282,11 @@ def train(cfg: ModelSettings) -> None:
     else:
         callbacks = [checkpoint_callback]
 
+    if cfg.compute_throughput:
+        callbacks = [
+            ThroughputMonitor(num_nodes=cfg.num_nodes, batch_size=cfg.batch_size)
+        ]
+
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
@@ -318,9 +325,14 @@ def train(cfg: ModelSettings) -> None:
         precision=cfg.precision,
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
+        check_val_every_n_epoch=cfg.check_val_every_n_epoch
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
     trainer.fit(model)
+    if cfg.compute_throughput:
+        return
+
+    # continue on if a normal training run - testing and inference mode
     trainer.test(model)
 
     if trainer.is_global_zero:
@@ -447,9 +459,18 @@ if __name__ == "__main__":
     torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
+    # check if we're computing throughput - this means a new config with specific settings - default is false
+    if config.compute_throughput:
+        warnings.warn(
+            "You are running in compute throughput mode - running for 6 epochs to compute samples per second. "
+            "No validation or test sets run. No model checkpointing."
+        )
+        # new config definition
+        config = throughput_config(config)
+
     if args.mode == "train":
         train(config)
-    if args.mode == "inference":
+    elif args.mode == "inference" and not config.compute_throughput:
         if not args.inference_fasta:
             raise ValueError("Must provide a fasta file to run inference on.")
 

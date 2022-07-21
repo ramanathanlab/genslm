@@ -48,6 +48,8 @@ class ModelSettings(BaseSettings):
     """A node local storage option to write temporary files to."""
     num_nodes: int = 1
     """The number of compute nodes used for training."""
+    compute_throughput: bool = False
+    """Flag for profiling - uses small subset to compute average throughput over 5 epochs after pinning."""
 
     # data settings
     tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
@@ -96,6 +98,8 @@ class ModelSettings(BaseSettings):
     """If specified, will load a model weight checkpoint to resume training from."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
+    check_val_every_n_epoch: int = 1
+    """Run validation every n number of epochs"""
 
     # generation settings
     num_test_seqs_per_gpu: int = 8
@@ -112,6 +116,15 @@ class ModelSettings(BaseSettings):
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
     persistent_workers: bool = True
     """If True, the data loader will not shutdown the worker processes after a dataset has been consumed once."""
+
+
+def throughput_config(cfg: ModelSettings) -> ModelSettings:
+    new_config = cfg.copy()
+    new_config.epochs = 6
+    new_config.check_val_every_n_epoch = 7
+    new_config.num_test_seqs_per_gpu = 0
+    new_config.small_subset = 1000
+    return new_config
 
 
 if __name__ == "__main__":

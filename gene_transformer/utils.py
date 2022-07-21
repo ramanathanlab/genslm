@@ -1,10 +1,13 @@
+import time
 from pathlib import Path
+from statistics import mean
 from typing import Any, Dict, List, Optional, Set
 
 import torch
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
+from pytorch_lightning.callbacks import Callback
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
 from transformers import StoppingCriteria
@@ -166,3 +169,38 @@ def redundancy_check(
             return False
     # no redundancies found
     return True
+
+
+class ThroughputMonitor(Callback):
+    """Custom callback in order to monitor the throughput and log to weights and biases."""
+
+    def __init__(self, num_nodes: int, batch_size: int) -> None:
+        """Logs throughput statistics starting at the 2nd epoch."""
+        super().__init__()
+        self.start_time = 0
+        self.average_throughput = 0
+        self.batch_times = []
+        self.epoch_throughputs = []
+        self.macro_batch_size = batch_size * num_nodes * torch.cuda.device_count()
+
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+        if pl_module.epoch > 0:
+            self.start_time = time.time()
+
+    def on_train_batch_end(self, trainer, pl_module, batch, batch_idx):
+        if pl_module.epoch > 0:
+            batch_time = time.time() - self.start_time
+            self.batch_times.append(batch_time)
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        if pl_module.epoch > 0:
+            # compute average epoch throughput
+            average_epoch_throughput = mean(self.batch_times) / self.macro_batch_size
+            pl_module.log(average_epoch_throughput, "average epoch throughput")
+            self.epoch_throughputs.append(average_epoch_throughput)
+            self.batch_times = []  # Reset for next epoch
+
+    def on_train_end(self, trainer, pl_module):
+        self.average_throughput = mean(self.epoch_throughputs)
+        pl_module.log(self.average_throughput, "average overall throughput")
+        print("AVERAGE THROUGHPUT: {} samples/second".format(self.average_throughput))

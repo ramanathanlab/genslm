@@ -28,4 +28,4 @@ mypy:
 	$(run_mypy) $(extra_folders)
 
 .PHONY: all
-all: format lint mypy
+all: format lint #mypy
