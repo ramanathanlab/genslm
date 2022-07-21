@@ -202,7 +202,13 @@ class ThroughputMonitor(Callback):
 
     def on_train_end(self, trainer, pl_module):
         self.average_throughput = mean(self.epoch_throughputs)
-        # pl_module.log("stats/average_overall_throughput", self.average_throughput)
-        # pl_module.log("stats/macro_batch_size", self.macro_batch_size)
-        pl_module.logger.log_text(key="stats/throughput", columns=["throughput"], data=[[self.average_throughput]])
-        print("AVERAGE THROUGHPUT: {} samples/second".format(self.average_throughput))
+        pl_module.logger.log_text(
+            key="stats/performance",
+            columns=["average_throughput", "macro_batch_size"],
+            data=[[self.average_throughput, self.macro_batch_size]],
+        )
+        if trainer.is_global_zero:
+            print("AVERAGE THROUGHPUT: {} samples/second".format(self.average_throughput))
+
+        # TODO: Can run gather and print mean + stdev of throughput across ranks
+        # trainer._accelerator_connector.strategy.barrier()
