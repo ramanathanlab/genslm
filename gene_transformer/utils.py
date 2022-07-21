@@ -3,11 +3,13 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, List, Optional, Set
 
+import pytorch_lightning as pl
 import torch
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
 from transformers import StoppingCriteria
@@ -174,25 +176,41 @@ def redundancy_check(
 class ThroughputMonitor(Callback):
     """Custom callback in order to monitor the throughput and log to weights and biases."""
 
-    def __init__(self, num_nodes: int, batch_size: int) -> None:
+    def __init__(self, batch_size: int, num_nodes: int = 1) -> None:
         """Logs throughput statistics starting at the 2nd epoch."""
         super().__init__()
-        self.start_time = 0
-        self.average_throughput = 0
-        self.batch_times = []
-        self.epoch_throughputs = []
-        self.macro_batch_size = batch_size * num_nodes * torch.cuda.device_count()
+        self.start_time = 0.0
+        self.average_throughput = 0.0
+        self.batch_times: List[float] = []
+        self.epoch_throughputs: List[float] = []
+        self.num_ranks = num_nodes * torch.cuda.device_count()
+        self.macro_batch_size = batch_size * self.num_ranks
 
-    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+    def on_train_batch_start(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        batch: Any,
+        batch_idx: int,
+    ) -> None:
         if pl_module.current_epoch > 0:
             self.start_time = time.time()
 
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+    def on_train_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: STEP_OUTPUT,
+        batch: Any,
+        batch_idx: int,
+    ) -> None:
         if pl_module.current_epoch > 0:
             batch_time = time.time() - self.start_time
             self.batch_times.append(batch_time)
 
-    def on_train_epoch_end(self, trainer, pl_module):
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         if pl_module.current_epoch > 0:
             # compute average epoch throughput
             average_epoch_throughput = mean(self.batch_times) / self.macro_batch_size
@@ -200,15 +218,28 @@ class ThroughputMonitor(Callback):
             self.epoch_throughputs.append(average_epoch_throughput)
             self.batch_times = []  # Reset for next epoch
 
-    def on_train_end(self, trainer, pl_module):
+    def on_train_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         self.average_throughput = mean(self.epoch_throughputs)
-        pl_module.logger.log_text(
-            key="stats/performance",
-            columns=["average_throughput", "macro_batch_size"],
-            data=[[self.average_throughput, self.macro_batch_size]],
-        )
         if trainer.is_global_zero:
-            print("AVERAGE THROUGHPUT: {} samples/second".format(self.average_throughput))
+            print(f"AVERAGE THROUGHPUT: {self.average_throughput} samples/second")
 
-        # TODO: Can run gather and print mean + stdev of throughput across ranks
-        # trainer._accelerator_connector.strategy.barrier()
+        trainer._accelerator_connector.strategy.barrier()
+        throughputs = trainer.all_gather(self.average_throughput)
+        if trainer.is_global_zero:
+            avg, stdev = throughputs.mean().item(), throughputs.std().item()
+            print(
+                f"AVERAGE THROUGHPUT: {avg} +- {stdev} samples/second over {self.num_ranks} ranks"
+            )
+
+            pl_module.logger.log_text(
+                key="stats/performance",
+                columns=[
+                    "average_throughput",
+                    "stdev_throughput",
+                    "macro_batch_size",
+                    "ranks",
+                ],
+                data=[[avg, stdev, self.macro_batch_size, self.num_ranks]],
+            )

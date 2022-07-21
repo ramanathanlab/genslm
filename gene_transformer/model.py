@@ -8,16 +8,16 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam  # type: ignore[import]
+from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.profiler import PyTorchProfiler
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from tokenizers import Tokenizer  # type: ignore[import]
+from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
@@ -264,29 +264,24 @@ def train(cfg: ModelSettings) -> None:
         model = DNATransformer(cfg)
 
     # Setup wandb
+    wandb_logger = None
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
-        # log gradients and model topology
-        # wandb_logger.watch(model)
-    else:
-        wandb_logger = None
 
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=cfg.checkpoint_dir, save_last=True, verbose=True
+    callbacks: List[Callback] = []
+    callbacks.append(
+        ModelCheckpoint(dirpath=cfg.checkpoint_dir, save_last=True, verbose=True)
     )
 
     if cfg.wandb_active:
-        lr_monitor = LearningRateMonitor(logging_interval="step")
-        callbacks = [checkpoint_callback, lr_monitor]
-    else:
-        callbacks = [checkpoint_callback]
+        callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     if cfg.compute_throughput:
-        callbacks = [
-            ThroughputMonitor(num_nodes=cfg.num_nodes, batch_size=cfg.batch_size)
-        ]
+        # Remove other callbacks
+        callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes)]
 
+    profiler = None
     if cfg.profiling_path:
         profiler = PyTorchProfiler(
             dirpath=cfg.profiling_path,
@@ -299,8 +294,6 @@ def train(cfg: ModelSettings) -> None:
                 "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
             },
         )
-    else:
-        profiler = None
 
     trainer = pl.Trainer(
         # use all available gpus
