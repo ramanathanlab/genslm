@@ -196,11 +196,11 @@ class ThroughputMonitor(Callback):
         if pl_module.current_epoch > 0:
             # compute average epoch throughput
             average_epoch_throughput = mean(self.batch_times) / self.macro_batch_size
-            pl_module.log(average_epoch_throughput, "average epoch throughput")
+            pl_module.log({"average epoch throughput": average_epoch_throughput})
             self.epoch_throughputs.append(average_epoch_throughput)
             self.batch_times = []  # Reset for next epoch
 
     def on_train_end(self, trainer, pl_module):
         self.average_throughput = mean(self.epoch_throughputs)
-        pl_module.log(self.average_throughput, "average overall throughput")
+        pl_module.log({"average overall throughput": self.average_throughput})
         print("AVERAGE THROUGHPUT: {} samples/second".format(self.average_throughput))
