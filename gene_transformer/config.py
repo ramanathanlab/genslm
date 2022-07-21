@@ -50,6 +50,8 @@ class ModelSettings(BaseSettings):
     """The number of compute nodes used for training."""
     compute_throughput: bool = False
     """Flag for profiling - uses small subset to compute average throughput over 5 epochs after pinning."""
+    profiling_path: Optional[Path] = None
+    """Set to path if we want to run pytorch profiler"""
 
     # data settings
     tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
@@ -124,6 +126,7 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.check_val_every_n_epoch = 7
     new_config.num_test_seqs_per_gpu = 0
     new_config.small_subset = 1000
+    new_config.profiling_path = None
     return new_config
 
 

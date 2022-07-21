@@ -287,6 +287,21 @@ def train(cfg: ModelSettings) -> None:
             ThroughputMonitor(num_nodes=cfg.num_nodes, batch_size=cfg.batch_size)
         ]
 
+    if cfg.profiling_path:
+        profiler = PyTorchProfiler(
+            dirpath=cfg.profiling_path,
+            profiler_kwargs={
+                "activities": [
+                    torch.profiler.ProfilerActivity.CPU,
+                    torch.profiler.ProfilerActivity.CUDA,
+                ],
+                "schedule": torch.profiler.schedule(wait=0, warmup=1, active=3),
+                "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
+            },
+        )
+    else:
+        profiler = None
+
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
@@ -309,17 +324,7 @@ def train(cfg: ModelSettings) -> None:
         callbacks=callbacks,
         # max_steps=cfg.training_steps,
         logger=wandb_logger,
-        profiler=PyTorchProfiler(
-            dirpath="pytorch_profile_output2",
-            profiler_kwargs={
-                "activities": [
-                    torch.profiler.ProfilerActivity.CPU,
-                    torch.profiler.ProfilerActivity.CUDA,
-                ],
-                "schedule": torch.profiler.schedule(wait=0, warmup=1, active=3),
-                "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
-            },
-        ),
+        profiler=profiler,
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=0,
         precision=cfg.precision,
