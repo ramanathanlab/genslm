@@ -184,16 +184,16 @@ class ThroughputMonitor(Callback):
         self.macro_batch_size = batch_size * num_nodes * torch.cuda.device_count()
 
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
-        if pl_module.epoch > 0:
+        if pl_module.current_epoch > 0:
             self.start_time = time.time()
 
     def on_train_batch_end(self, trainer, pl_module, batch, batch_idx):
-        if pl_module.epoch > 0:
+        if pl_module.current_epoch > 0:
             batch_time = time.time() - self.start_time
             self.batch_times.append(batch_time)
 
     def on_train_epoch_end(self, trainer, pl_module):
-        if pl_module.epoch > 0:
+        if pl_module.current_epoch > 0:
             # compute average epoch throughput
             average_epoch_throughput = mean(self.batch_times) / self.macro_batch_size
             pl_module.log(average_epoch_throughput, "average epoch throughput")
