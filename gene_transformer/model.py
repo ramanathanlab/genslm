@@ -67,13 +67,14 @@ class DNATransformer(pl.LightningModule):
 
         # To validate generated sequences
         # TODO: make sure temp files are outputting to node local
-        self.blast = ParallelBLAST(
-            database_file=self.cfg.blast_validation_file,
-            blast_dir=self.cfg.checkpoint_dir / "blast",
-            blast_exe_path=self.cfg.blast_exe_path,
-            num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
-            node_local_path=self.cfg.node_local_path,
-        )
+        if self.cfg.enable_blast:
+            self.blast = ParallelBLAST(
+                database_file=self.cfg.blast_validation_file,
+                blast_dir=self.cfg.checkpoint_dir / "blast",
+                blast_exe_path=self.cfg.blast_exe_path,
+                num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
+                node_local_path=self.cfg.node_local_path,
+            )
 
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
