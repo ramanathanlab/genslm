@@ -88,7 +88,7 @@ class ModelSettings(BaseSettings):
     """Number of training epochs."""
     block_size: int = 512
     """Block size to specify sequence length passed to the transformer."""
-    accumulate_grad_batches: int = 4
+    accumulate_grad_batches: int = 1
     """Number of batches to accumulate before gradient updates."""
     learning_rate: float = 5e-5
     """Learning rate to use for training."""
