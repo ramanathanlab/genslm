@@ -226,7 +226,7 @@ class ThroughputMonitor(Callback):
             print(f"AVERAGE THROUGHPUT: {self.average_throughput} samples/second")
 
         trainer._accelerator_connector.strategy.barrier()
-        throughputs = trainer.all_gather(self.average_throughput)
+        throughputs = pl_module.all_gather(self.average_throughput)
         if trainer.is_global_zero:
             avg, stdev = throughputs.mean().item(), throughputs.std().item()
             print(
