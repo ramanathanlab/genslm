@@ -181,8 +181,10 @@ class ThroughputMonitor(Callback):
         super().__init__()
         self.start_time = 0.0
         self.average_throughput = 0.0
+        self.average_sample_time = 0.0
         self.batch_times: List[float] = []
         self.epoch_throughputs: List[float] = []
+        self.epoch_sample_times: List[float] = []
         self.num_ranks = num_nodes * torch.cuda.device_count()
         self.macro_batch_size = batch_size * self.num_ranks
 
@@ -213,33 +215,59 @@ class ThroughputMonitor(Callback):
     ) -> None:
         if pl_module.current_epoch > 0:
             # compute average epoch throughput
-            average_epoch_throughput = mean(self.batch_times) / self.macro_batch_size
-            pl_module.log("stats/average_epoch_throughput", average_epoch_throughput)
-            self.epoch_throughputs.append(average_epoch_throughput)
+            avg_batch_time = mean(self.batch_times)
+            avg_epoch_throughput = self.macro_batch_size / avg_batch_time
+            avg_secs_per_sample = avg_batch_time / self.macro_batch_size
+            pl_module.log("stats/average_epoch_throughput", avg_epoch_throughput)
+            pl_module.log("stats/average_secs_per_sample", avg_secs_per_sample)
+            self.epoch_throughputs.append(avg_epoch_throughput)
+            self.epoch_sample_times.append(avg_secs_per_sample)
             self.batch_times = []  # Reset for next epoch
 
     def on_train_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         self.average_throughput = mean(self.epoch_throughputs)
-        if trainer.is_global_zero:
-            print(f"AVERAGE THROUGHPUT: {self.average_throughput} samples/second")
+        self.average_sample_time = mean(self.epoch_sample_times)
 
+        # Collect metrics on each rank and compute overall statistics on rank 0
+        metrics = self.average_throughput, self.average_sample_time
         trainer._accelerator_connector.strategy.barrier()
-        throughputs = pl_module.all_gather(self.average_throughput)
+        metrics = pl_module.all_gather(metrics)
+        throughputs, sample_times = metrics[0], metrics[1]
         if trainer.is_global_zero:
-            avg, stdev = throughputs.mean().item(), throughputs.std().item()
+            thru_avg, thru_stdev = throughputs.mean().item(), throughputs.std().item()
             print(
-                f"AVERAGE THROUGHPUT: {avg} +- {stdev} samples/second over {self.num_ranks} ranks"
+                f"AVERAGE THROUGHPUT: {thru_avg} +- {thru_stdev} "
+                f" samples/second over {self.num_ranks} ranks"
+            )
+
+            sample_time_avg = sample_times.mean().item()
+            sample_time_stdev = sample_times.std().item()
+
+            print(
+                f"AVERAGE THROUGHPUT: {sample_time_avg} +- {sample_time_stdev} "
+                f"samples/second over {self.num_ranks} ranks"
             )
 
             pl_module.logger.log_text(
                 key="stats/performance",
                 columns=[
-                    "average_throughput",
-                    "stdev_throughput",
+                    "throughput_avg",
+                    "throughput_stdev",
+                    "sample_time_avg",
+                    "sample_time_stdev",
                     "macro_batch_size",
                     "ranks",
                 ],
-                data=[[avg, stdev, self.macro_batch_size, self.num_ranks]],
+                data=[
+                    [
+                        thru_avg,
+                        thru_stdev,
+                        sample_time_avg,
+                        sample_time_stdev,
+                        self.macro_batch_size,
+                        self.num_ranks,
+                    ]
+                ],
             )
