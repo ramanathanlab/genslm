@@ -70,7 +70,7 @@ class ModelSettings(BaseSettings):
     """Only applies when :obj:`genome_level` is true. Uses the full dataset by default."""
 
     # blast settings
-    enable_blast: bool = True
+    enable_blast: bool = False
     """Whether or not to run BLAST during validation steps."""
     blast_validation_file: Path = Path("blast_file.fasta")
     """Path to fasta file to BLAST against."""
