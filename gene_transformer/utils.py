@@ -238,7 +238,7 @@ class ThroughputMonitor(Callback):
         if trainer.is_global_zero:
             thru_avg, thru_stdev = throughputs.mean().item(), throughputs.std().item()
             print(
-                f"AVERAGE THROUGHPUT: {thru_avg} +- {thru_stdev} "
+                f"\nAVERAGE THROUGHPUT: {thru_avg} +- {thru_stdev} "
                 f" samples/second over {self.num_ranks} ranks"
             )
 
@@ -246,8 +246,8 @@ class ThroughputMonitor(Callback):
             sample_time_stdev = sample_times.std().item()
 
             print(
-                f"AVERAGE THROUGHPUT: {sample_time_avg} +- {sample_time_stdev} "
-                f"samples/second over {self.num_ranks} ranks"
+                f"AVERAGE SECONDS PER SAMPLE: {sample_time_avg} +- {sample_time_stdev} "
+                f"seconds/sample over {self.num_ranks} ranks"
             )
 
             pl_module.logger.log_text(
