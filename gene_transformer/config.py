@@ -125,7 +125,7 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
     new_config.num_test_seqs_per_gpu = 0
-    new_config.small_subset = 1000
+    new_config.small_subset = 10000
     new_config.profiling_path = None
     return new_config
 
