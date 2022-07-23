@@ -23,7 +23,7 @@ class ParallelBLAST:
     def __init__(
         self,
         database_file: Path,
-        blast_dir: Path,
+        output_dir: Path,
         blast_exe_path: Path = Path("blastn"),
         num_workers: int = 1,
     ) -> None:
@@ -33,7 +33,7 @@ class ParallelBLAST:
         ----------
         database_file : Path
             The fasta file containing sequences to blast against.
-        blast_dir : Path
+        output_dir : Path
             Output directory to write fasta files and blast csv files.
         blast_exe_path : Path, optional
             Path to blast executable, by default Path("blastn")
@@ -41,7 +41,7 @@ class ParallelBLAST:
             Number of threads used to spawn blast processes, by default 1
         """
         self.database_file = database_file
-        self.blast_dir = blast_dir
+        self.output_dir = output_dir
         self.blast_exe_path = blast_exe_path
         self._executor = ThreadPoolExecutor(max_workers=num_workers)
 
@@ -64,8 +64,8 @@ class ParallelBLAST:
 
         # Write a temporary fasta file
         seq_hash = hash(sequence)
-        temp_fasta = self.blast_dir / f"{prefix}-seq-{seq_hash}.fasta"
-        temp_csv = self.blast_dir / f"{prefix}-blast-{seq_hash}.csv"
+        temp_fasta = self.output_dir / f"{prefix}-seq-{seq_hash}.fasta"
+        temp_csv = self.output_dir / f"{prefix}-blast-{seq_hash}.csv"
         SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
 
         # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
@@ -106,7 +106,7 @@ class BLASTCallback(Callback):
         self,
         block_size: int,
         database_file: Path,
-        blast_dir: Path,
+        output_dir: Path,
         blast_exe_path: Path = Path("blastn"),
         num_blast_seqs_per_gpu: int = 1,
         node_local_path: Optional[Path] = None,
@@ -119,7 +119,7 @@ class BLASTCallback(Callback):
             Block size to specify sequence length passed to the transformer.
         database_file : Path
             The fasta file containing sequences to blast against.
-        blast_dir : Path
+        output_dir : Path
             Output directory to write fasta files and blast csv files.
         blast_exe_path : Path, optional
             Path to blast executable, by default Path("blastn")
@@ -136,27 +136,27 @@ class BLASTCallback(Callback):
         self.node_local_path = node_local_path
 
         # Default temp dir to the file system blast dir
-        self.blast_dir = blast_dir
-        self.temp_dir = blast_dir
+        self.output_dir = output_dir
+        self.temp_dir = output_dir
 
         if self.node_local_path is not None:
             self.temp_dir = self.node_local_path / "blast"
             self.temp_dir.mkdir(exist_ok=True)
 
-        self.blast_dir.mkdir(exist_ok=True, parents=True)
+        self.output_dir.mkdir(exist_ok=True, parents=True)
 
         self.blast = ParallelBLAST(
             database_file=database_file,
-            blast_dir=self.temp_dir,
+            output_dir=self.temp_dir,
             blast_exe_path=blast_exe_path,
             num_workers=num_blast_seqs_per_gpu,
         )
 
     def _backup_results(self) -> None:
-        """Move node local files to :obj:`blast_dir`."""
+        """Move node local files to :obj:`output_dir`."""
         if self.node_local_path is not None:
             # Bulk move of blast files
-            command = f"mv {self.temp_dir / '*'} {self.blast_dir}"
+            command = f"mv {self.temp_dir / '*'} {self.output_dir}"
             subprocess.run(command, shell=True)
 
     def on_validation_epoch_end(

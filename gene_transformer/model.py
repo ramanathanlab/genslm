@@ -27,10 +27,8 @@ from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import FASTADataset, IndividualFastaDataset
 from gene_transformer.utils import (
+    SequenceGenerationCallback,
     ThroughputMonitor,
-    generate_dna_to_stop,
-    seqs_to_fasta,
-    tokens_to_sequences,
 )
 
 SequenceDataset = Union[FASTADataset, IndividualFastaDataset]
@@ -64,9 +62,6 @@ class DNATransformer(pl.LightningModule):
             # max_position_embeddings=self.cfg.block_size,
         )
         self.model = AutoModelForCausalLM.from_config(base_config)
-
-        # Collect generated sequences at each epoch end
-        self.final_sequences: Dict[str, List[str]] = {}
 
     def get_dataset(self, data_path: PathLike) -> SequenceDataset:
         """Helper function to generate dataset."""
@@ -148,30 +143,6 @@ class DNATransformer(pl.LightningModule):
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric) -> None:
         scheduler.step()
 
-    def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
-        if not self.cfg.num_test_seqs_per_gpu:
-            return None
-
-        tokens = generate_dna_to_stop(
-            self.model,
-            self.tokenizer,
-            num_seqs=self.cfg.num_test_seqs_per_gpu,
-            max_length=self.cfg.block_size,
-        )
-
-        # Wait until all ranks meet up here
-        self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
-        # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
-        tokens = self.all_gather(tokens)
-
-        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
-            # Concatenate over world size
-            tokens = tokens.view(-1, self.cfg.block_size)
-            sequences = tokens_to_sequences(tokens, self.tokenizer)
-            # sequences = np.concatenate(sequences.cpu().numpy())
-            print(f"sequences {len(sequences)}")
-            self.final_sequences[f"globalstep{self.global_step}"] = sequences
-
 
 def load_from_deepspeed(
     cfg: ModelSettings,
@@ -227,10 +198,20 @@ def train(cfg: ModelSettings) -> None:
             BLASTCallback(
                 block_size=cfg.block_size,
                 database_file=cfg.blast_validation_file,
-                blast_dir=cfg.checkpoint_dir / "blast",
+                output_dir=cfg.checkpoint_dir / "blast",
                 blast_exe_path=cfg.blast_exe_path,
                 num_blast_seqs_per_gpu=cfg.num_blast_seqs_per_gpu,
                 node_local_path=cfg.node_local_path,
+            )
+        )
+
+    if cfg.num_test_seqs_per_gpu:
+        callbacks.append(
+            SequenceGenerationCallback(
+                block_size=cfg.block_size,
+                num_test_seqs_per_gpu=cfg.num_blast_seqs_per_gpu,
+                output_dir=cfg.checkpoint_dir / "generated",
+                custom_seq_name=cfg.custom_seq_name,
             )
         )
 
@@ -292,15 +273,6 @@ def train(cfg: ModelSettings) -> None:
 
     if trainer.is_global_zero:
         print("Completed training.")
-
-    if trainer.is_global_zero and cfg.num_test_seqs_per_gpu:
-        save_path = cfg.checkpoint_dir / "generated"
-        save_path.mkdir(exist_ok=True)
-        for name, seqs in model.final_sequences.items():
-            seqs_to_fasta(
-                seqs, save_path / f"{name}.fasta", custom_seq_name=cfg.custom_seq_name
-            )
-        print(f"Saved final generated sequences to {save_path}")
 
 
 class ModelLoadStrategy(ABC):

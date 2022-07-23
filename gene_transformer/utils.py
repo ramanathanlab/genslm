@@ -271,3 +271,60 @@ class ThroughputMonitor(Callback):
                     ]
                 ],
             )
+
+
+class SequenceGenerationCallback(Callback):
+    """Custom callback to generate sequences at the end of epoch."""
+
+    def __init__(
+        self,
+        block_size: int,
+        num_test_seqs_per_gpu: int,
+        output_dir: Path,
+        custom_seq_name: str = "SyntheticSeq",
+    ) -> None:
+        super().__init__()
+
+        self.block_size = block_size
+        self.num_test_seqs_per_gpu = num_test_seqs_per_gpu
+        self.output_dir = output_dir
+        self.custom_seq_name = custom_seq_name
+
+        # Collect generated sequences at each epoch end
+        self.final_sequences: Dict[str, List[str]] = {}
+
+    def on_test_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+
+        tokens = generate_dna_to_stop(
+            pl_module.model,
+            pl_module.tokenizer,
+            num_seqs=self.num_test_seqs_per_gpu,
+            max_length=self.block_size,
+        )
+
+        # Wait until all ranks meet up here
+        trainer._accelerator_connector.strategy.barrier()
+        # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
+        tokens = pl_module.all_gather(tokens)
+
+        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
+            # Concatenate over world size
+            tokens = tokens.view(-1, self.block_size)
+            sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
+            print(f"sequences {len(sequences)}")
+            self.final_sequences[f"globalstep-{pl_module.global_step}"] = sequences
+
+    def on_test_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        if trainer.is_global_zero:
+            self.output_dir.mkdir(exist_ok=True, parents=True)
+            for name, seqs in self.final_sequences.items():
+                seqs_to_fasta(
+                    seqs,
+                    self.output_dir / f"{name}.fasta",
+                    custom_seq_name=self.custom_seq_name,
+                )
+            print(f"Saved final generated sequences to {self.output_dir}")
