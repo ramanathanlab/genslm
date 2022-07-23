@@ -3,7 +3,7 @@ import warnings
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import pytorch_lightning as pl
@@ -26,10 +26,7 @@ from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import FASTADataset, IndividualFastaDataset
-from gene_transformer.utils import (
-    SequenceGenerationCallback,
-    ThroughputMonitor,
-)
+from gene_transformer.utils import SequenceGenerationCallback, ThroughputMonitor
 
 SequenceDataset = Union[FASTADataset, IndividualFastaDataset]
 
