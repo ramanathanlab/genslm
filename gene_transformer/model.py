@@ -23,7 +23,7 @@ from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
-from gene_transformer.blast import ParallelBLAST
+from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import FASTADataset, IndividualFastaDataset
 from gene_transformer.utils import (
@@ -64,17 +64,6 @@ class DNATransformer(pl.LightningModule):
             # max_position_embeddings=self.cfg.block_size,
         )
         self.model = AutoModelForCausalLM.from_config(base_config)
-
-        # To validate generated sequences
-        # TODO: make sure temp files are outputting to node local
-        if self.cfg.enable_blast:
-            self.blast = ParallelBLAST(
-                database_file=self.cfg.blast_validation_file,
-                blast_dir=self.cfg.checkpoint_dir / "blast",
-                blast_exe_path=self.cfg.blast_exe_path,
-                num_workers=min(10, self.cfg.num_blast_seqs_per_gpu),
-                node_local_path=self.cfg.node_local_path,
-            )
 
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
@@ -127,25 +116,19 @@ class DNATransformer(pl.LightningModule):
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log(
-            "train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
-        )
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
         outputs = self(batch)
         loss = outputs.loss
-        self.log(
-            "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
-        )
+        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log(
-            "test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
-        )
+        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
@@ -164,45 +147,6 @@ class DNATransformer(pl.LightningModule):
 
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric) -> None:
         scheduler.step()
-
-    def validation_epoch_end(self, val_step_outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
-        # NOTE: BLAST must be installed locally in order for this to work properly.
-        if not self.cfg.enable_blast:
-            return
-
-        # Generate sequences and run blast across all ranks,
-        # then gather mean, max for logging on rank 0.
-
-        # Don't do anything to the validation step outputs, we're using this
-        # space to generate sequences and run blast in order to monitor the
-        # similarity to training sequences
-        tokens = generate_dna_to_stop(
-            self.model,
-            self.tokenizer,
-            num_seqs=self.cfg.num_blast_seqs_per_gpu,
-            max_length=self.cfg.block_size,
-        )
-        sequences = tokens_to_sequences(tokens, self.tokenizer)
-
-        prefix = f"globalstep{self.global_step}"
-        max_scores, mean_scores = self.blast.run(sequences, prefix)
-        metrics = np.max(max_scores), np.mean(mean_scores)
-        # Wait until all ranks meet up here
-        self.trainer._accelerator_connector.strategy.barrier()  # type: ignore[attr-defined]
-        metrics = self.all_gather(metrics)
-        try:
-            max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
-        except AttributeError as exc:
-            # getting a weird numpy error when running validation on the protein sequences so catching here
-            print("Attribute error when trying to move tensor to CPU... Error:", exc)
-            max_score, mean_score = metrics[0].max(), metrics[1].mean()
-        self.log("val/max_blast_score", max_score, logger=True, prog_bar=True)
-        self.log("val/mean_blast_score", mean_score, logger=True, prog_bar=True)
-        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
-            # Will move blast results (fasta and csv file) from the node
-            # where rank-0 runs to the file system (will also move files
-            # written by other ranks on the node)
-            self.blast.backup_results()
 
     def test_epoch_end(self, outputs: List[torch.FloatTensor]) -> None:  # type: ignore[override]
         if not self.cfg.num_test_seqs_per_gpu:
@@ -277,6 +221,18 @@ def train(cfg: ModelSettings) -> None:
 
     if cfg.wandb_active:
         callbacks.append(LearningRateMonitor(logging_interval="step"))
+
+    if cfg.enable_blast:
+        callbacks.append(
+            BLASTCallback(
+                block_size=cfg.block_size,
+                database_file=cfg.blast_validation_file,
+                blast_dir=cfg.checkpoint_dir / "blast",
+                blast_exe_path=cfg.blast_exe_path,
+                num_blast_seqs_per_gpu=cfg.num_blast_seqs_per_gpu,
+                node_local_path=cfg.node_local_path,
+            )
+        )
 
     if cfg.compute_throughput:
         # Remove other callbacks
