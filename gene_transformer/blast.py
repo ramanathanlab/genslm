@@ -150,7 +150,6 @@ class BLASTCallback(Callback):
             blast_dir=self.temp_dir,
             blast_exe_path=blast_exe_path,
             num_workers=num_blast_seqs_per_gpu,
-            node_local_path=node_local_path,
         )
 
     def _backup_results(self) -> None:
