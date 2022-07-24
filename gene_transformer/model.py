@@ -49,18 +49,9 @@ class DNATransformer(pl.LightningModule):
         )
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
-        base_config = AutoConfig.from_pretrained(
-            self.cfg.model_name,
-            vocab_size=self.tokenizer.vocab_size,
-            feed_forward_size=self.cfg.block_size,
-            axial_pos_embds=False,
-            # local_chunk_length=100,
-            # lsh_attn_chunk_length=100,
-            axial_pos_shape=(128, 94),
-            num_buckets=None
-            # max_position_embeddings=cfg.block_size,
-            # max_position_embeddings=self.cfg.block_size,
-        )
+        # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
+        base_config = AutoConfig.from_json_file(self.cfg.model_config_json)
+
         self.model = AutoModelForCausalLM.from_config(base_config)
 
     def get_dataset(self, data_path: PathLike) -> SequenceDataset:

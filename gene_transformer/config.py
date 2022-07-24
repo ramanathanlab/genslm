@@ -80,8 +80,8 @@ class ModelSettings(BaseSettings):
     """Path to the BLAST executable, defaults to current conda environment."""
 
     # model settings
-    model_name: str = "gpt2"
-    """Name of the huggingface model to use."""
+    model_config_json: Path
+    """Huggingface json dict to load AutoConfig from."""
     batch_size: int = 8
     """Training micro-batch size."""
     epochs: int = 5
@@ -135,5 +135,6 @@ if __name__ == "__main__":
         train_file=Path("train.fasta"),
         val_file=Path("val.fasta"),
         test_file=Path("test.fasta"),
+        model_config_json=Path("model.json"),
     )
     settings.dump_yaml("settings_template.yaml")
