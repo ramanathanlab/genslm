@@ -1,7 +1,8 @@
 import time
+from abc import ABC, abstractmethod
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Type
 
 import pytorch_lightning as pl
 import torch
@@ -9,6 +10,9 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
@@ -171,6 +175,52 @@ def redundancy_check(
             return False
     # no redundancies found
     return True
+
+
+class ModelLoadStrategy(ABC):
+    @abstractmethod
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+        """Load and return a module object."""
+
+
+class LoadDeepSpeedStrategy(ModelLoadStrategy):
+    def __init__(self, checkpoint_dir: Path, **kwargs: Any) -> None:
+        self.checkpoint_dir = checkpoint_dir
+        self.kwargs = kwargs
+
+    @staticmethod
+    def load_from_deepspeed(
+        pl_module: "Type[pl.LightningModule]",
+        checkpoint_dir: Path,
+        checkpoint: str = "last.ckpt",
+        model_weights: str = "last.pt",
+        **kwargs: Any,
+    ) -> "pl.LightningModule":
+        """Utility function for deepspeed conversion"""
+        # first convert the weights
+        save_path = str(checkpoint_dir / checkpoint)
+        output_path = str(checkpoint_dir / model_weights)
+        # perform the conversion
+        convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
+        # load model
+        model = pl_module.load_from_checkpoint(output_path, strict=False, **kwargs)
+        return model
+
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+        model = self.load_from_deepspeed(pl_module, self.checkpoint_dir, **self.kwargs)
+        return model
+
+
+class LoadPTCheckpointStrategy(ModelLoadStrategy):
+    def __init__(self, pt_file: str, **kwargs: Any) -> None:
+        self.pt_file = pt_file
+        self.kwargs = kwargs
+
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+        model = pl_module.load_from_checkpoint(
+            self.pt_file, strict=False, **self.kwargs
+        )
+        return model
 
 
 class ThroughputMonitor(Callback):

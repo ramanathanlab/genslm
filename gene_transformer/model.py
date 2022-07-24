@@ -1,6 +1,5 @@
 import os
 import warnings
-from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, List, Optional, Union
@@ -14,9 +13,6 @@ from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelChec
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.profiler import PyTorchProfiler
-from pytorch_lightning.utilities.deepspeed import (
-    convert_zero_checkpoint_to_fp32_state_dict,
-)
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -26,7 +22,13 @@ from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import FASTADataset, IndividualFastaDataset
-from gene_transformer.utils import SequenceGenerationCallback, ThroughputMonitor
+from gene_transformer.utils import (
+    LoadDeepSpeedStrategy,
+    LoadPTCheckpointStrategy,
+    ModelLoadStrategy,
+    SequenceGenerationCallback,
+    ThroughputMonitor,
+)
 
 SequenceDataset = Union[FASTADataset, IndividualFastaDataset]
 
@@ -141,38 +143,13 @@ class DNATransformer(pl.LightningModule):
         scheduler.step()
 
 
-def load_from_deepspeed(
-    cfg: ModelSettings,
-    checkpoint_dir: Path,
-    checkpoint: str = "last.ckpt",
-    model_weights: str = "last.pt",
-) -> DNATransformer:
-    """Utility function for deepspeed conversion"""
-    # first convert the weights
-    save_path = str(checkpoint_dir / checkpoint)
-    output_path = str(checkpoint_dir / model_weights)
-    # perform the conversion
-    convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
-    # load model
-    model = DNATransformer.load_from_checkpoint(output_path, strict=False, cfg=cfg)
-    return model  # type: ignore[no-any-return]
-
-
 def train(cfg: ModelSettings) -> None:
     # Check if loading from checkpoint - this assumes that you're
     # loading from a sharded DeepSpeed checkpoint!!!
     if cfg.load_from_checkpoint_dir is not None:
-        model = load_from_deepspeed(
-            cfg=cfg, checkpoint_dir=cfg.load_from_checkpoint_dir
-        )
+        load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
+        model = load_strategy.get_model(DNATransformer)
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
-        try:
-            model.model.lm_head.bias.data = torch.zeros_like(
-                model.model.lm_head.bias.data
-            )
-        except Exception as exc:
-            print("Couldn't set bias equal to zeros.", exc)
-            pass
     else:
         model = DNATransformer(cfg)
 
@@ -272,37 +249,6 @@ def train(cfg: ModelSettings) -> None:
         print("Completed training.")
 
 
-class ModelLoadStrategy(ABC):
-    @abstractmethod
-    def get_model(self) -> DNATransformer:
-        """Load and return a model object."""
-
-
-class LoadDeepSpeedStrategy(ModelLoadStrategy):
-    def __init__(self, cfg: ModelSettings) -> None:
-        self.cfg = cfg
-
-    def get_model(self) -> DNATransformer:
-        if self.cfg.load_from_checkpoint_dir is None:
-            raise ValueError("load_from_checkpoint_dir must be set in the config file")
-        model = load_from_deepspeed(
-            cfg=self.cfg, checkpoint_dir=self.cfg.load_from_checkpoint_dir
-        )
-        return model
-
-
-class LoadPTCheckpointStrategy(ModelLoadStrategy):
-    def __init__(self, cfg: ModelSettings, pt_file: str) -> None:
-        self.cfg = cfg
-        self.pt_file = pt_file
-
-    def get_model(self) -> DNATransformer:
-        model = DNATransformer.load_from_checkpoint(
-            self.pt_file, strict=False, cfg=self.cfg
-        )
-        return model
-
-
 def generate_embeddings(model: DNATransformer, dataloader: DataLoader) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     embeddings = []
@@ -323,7 +269,7 @@ def inference(
     output_path: Optional[PathLike] = None,
 ) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
-    model = model_load_strategy.get_model()
+    model: DNATransformer = model_load_strategy.get_model(DNATransformer)
     model.cuda()
     dataset = model.get_dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False)
@@ -338,7 +284,10 @@ def inference(
 
 def test(cfg: ModelSettings) -> None:
     """Run test dataset after loading from checkpoint"""
-    model = LoadDeepSpeedStrategy(cfg).get_model()
+    if cfg.load_from_checkpoint_dir is None:
+        raise ValueError("load_from_checkpoint_dir must be set in the config file")
+    load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
+    model = load_strategy.get_model(DNATransformer)
     model.cuda()
 
     trainer = pl.Trainer(
@@ -394,6 +343,8 @@ if __name__ == "__main__":
 
     if args.mode == "train":
         train(config)
+    elif args.mode == "test":
+        test(config)
     elif args.mode == "inference" and not config.compute_throughput:
         if not args.inference_fasta:
             raise ValueError("Must provide a fasta file to run inference on.")
@@ -404,9 +355,15 @@ if __name__ == "__main__":
             )
 
         if args.inference_model_load == "pt":
-            model_strategy = LoadPTCheckpointStrategy(config, args.pt_file)
+            model_strategy = LoadPTCheckpointStrategy(args.pt_file, cfg=config)
         elif args.inference_model_load == "deepspeed":
-            model_strategy = LoadDeepSpeedStrategy(config)
+            if config.load_from_checkpoint_dir is None:
+                raise ValueError(
+                    "load_from_checkpoint_dir must be set in the config file"
+                )
+            model_strategy = LoadDeepSpeedStrategy(
+                config.load_from_checkpoint_dir, cfg=config
+            )
         else:
             raise ValueError(
                 f"Invalid inference_model_load {args.inference_model_load}"
