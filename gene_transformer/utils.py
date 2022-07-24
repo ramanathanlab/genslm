@@ -18,8 +18,6 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
 from transformers import StoppingCriteria
 
-import pdb
-
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
@@ -62,7 +60,6 @@ def generate_dna(
     # but is more robust for the reformer model.
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
-    pdb.set_trace()
     return model.generate(  # type: ignore[no-any-return]
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
