@@ -78,6 +78,7 @@ def find_stop_codon(codons: List[str]) -> int:
     for i, codon in enumerate(codons):
         if codon in STOP_CODONS:
             return i
+    return len(codons) - 1
 
 
 def tokens_to_sequences(
