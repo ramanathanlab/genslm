@@ -170,6 +170,8 @@ class DNATransformer(pl.LightningModule):
         if not self.cfg.enable_blast:
             return
 
+        self.model.eval()
+
         # Generate sequences and run blast across all ranks,
         # then gather mean, max for logging on rank 0.
 
