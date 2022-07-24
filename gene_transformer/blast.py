@@ -13,7 +13,7 @@ from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
 
-from gene_transformer.utils import generate_dna_to_stop, tokens_to_sequences
+from gene_transformer.utils import generate_dna, tokens_to_sequences
 
 
 class ParallelBLAST:
@@ -171,7 +171,7 @@ class BLASTCallback(Callback):
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
-        tokens = generate_dna_to_stop(
+        tokens = generate_dna(
             pl_module.model,
             pl_module.tokenizer,
             num_seqs=self.num_blast_seqs_per_gpu,

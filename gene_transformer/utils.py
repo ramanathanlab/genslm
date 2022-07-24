@@ -47,14 +47,17 @@ class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
         return len(self.stop_set) == batch_size
 
 
-def generate_dna_to_stop(
+def generate_dna(
     model: torch.nn.Module,  # type: ignore[name-defined]
     tokenizer: PreTrainedTokenizerFast,
     max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
+    remove_invalid_values: bool = True,
 ) -> torch.Tensor:
+    # remove_invalid_values slows down the calculation
+    # but is more robust for the reformer model.
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
     return model.generate(  # type: ignore[no-any-return]
@@ -64,12 +67,21 @@ def generate_dna_to_stop(
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
+        remove_invalid_values=remove_invalid_values,
         #        stopping_criteria=stopping_criteria,
     )
 
 
+def find_stop_codon(codons: List[str]) -> int:
+    # Iterate through until you reach a stop codon
+    # and return the index
+    for i, codon in enumerate(codons):
+        if codon in STOP_CODONS:
+            return i
+
+
 def tokens_to_sequences(
-    tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast
+    tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast, to_stop_codon: bool = True
 ) -> List[str]:
     # Decode tokens to codon strings
     seqs = tokenizer.batch_decode(tokens, skip_special_tokens=True)
@@ -77,15 +89,13 @@ def tokens_to_sequences(
     seq_strings = []
     for s in seqs:
         # Break into codons
-        dna = s.split()
-        # Iterate through until you reach a stop codon
-        for i, codon in enumerate(dna):
-            if codon in STOP_CODONS:
-                break
-        # Get the open reading frame
-        to_stop = dna[: i + 1]
-        # Create the string and append to list
-        seq_strings.append("".join(to_stop))
+        codons = s.split()
+        if to_stop_codon:
+            # Get the open reading frame
+            ind = find_stop_codon(codons)
+            codons = codons[: ind + 1]
+        # Create the DNA string and append to list
+        seq_strings.append("".join(codons))
     return seq_strings
 
 
@@ -135,7 +145,7 @@ def non_redundant_generation(
 
     # begin generation loop
     while len(unique_seqs) < num_seqs:
-        tokens = generate_dna_to_stop(
+        tokens = generate_dna(
             model,
             tokenizer,
             max_length=max_length,
@@ -347,7 +357,7 @@ class SequenceGenerationCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
 
-        tokens = generate_dna_to_stop(
+        tokens = generate_dna(
             pl_module.model,
             pl_module.tokenizer,
             num_seqs=self.num_test_seqs_per_gpu,
