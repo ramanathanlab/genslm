@@ -67,7 +67,7 @@ class ParallelBLAST:
         temp_fasta = self.output_dir / f"{prefix}-seq-{seq_hash}.fasta"
         temp_csv = self.output_dir / f"{prefix}-blast-{seq_hash}.csv"
         SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
-
+        print("running blast...")
         # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
         command = "{} -query {} -subject {} -out {} -outfmt 10".format(
             self.blast_exe_path, temp_fasta, self.database_file, temp_csv
