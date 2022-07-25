@@ -68,6 +68,7 @@ def generate_dna(
         top_p=top_p,
         num_return_sequences=num_seqs,
         remove_invalid_values=remove_invalid_values,
+        use_cache=True
         #        stopping_criteria=stopping_criteria,
     )
 
