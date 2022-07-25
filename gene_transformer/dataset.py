@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
@@ -17,6 +18,24 @@ from gene_transformer.config import PathLike
 def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
     seq = str(s.seq)
     return " ".join(seq[i : i + n] for i in range(0, len(seq), n))
+
+
+def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
+    SeqIO.write(seq, str(output_file), "fasta")
+
+
+def write_individual_fasta_files(
+    fasta_file: Path, output_dir: Path, num_workers: int = 1
+) -> None:
+    output_dir.mkdir(exist_ok=True)
+    seqs = list(SeqIO.parse(fasta_file, "fasta"))
+    output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
+    chunksize = len(seqs) // num_workers
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for _ in tqdm(
+            executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize)
+        ):
+            pass
 
 
 # TODO: We may need to revisit to see how the file system handles this.
