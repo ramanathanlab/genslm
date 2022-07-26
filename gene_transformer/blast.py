@@ -180,11 +180,11 @@ class BLASTCallback(Callback):
             num_seqs=self.num_blast_seqs_per_gpu,
             max_length=self.block_size,
         )
-        print("dna generated")
-        sys.stdout.flush()
         sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
 
         prefix = f"globalstep{pl_module.global_step}"
+        print("dna generated")
+        sys.stdout.flush()
         max_scores, mean_scores = self.blast.run(sequences, prefix)
         metrics = np.max(max_scores), np.mean(mean_scores)
         # Wait until all ranks meet up here

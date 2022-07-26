@@ -29,7 +29,7 @@ def main() -> None:
     model_names = ["reformer", "gpt-neox"]
     num_nodes = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     num_params = ["25M", "250M", "2.5B", "20B"]
-    block_sizes = [512, 10240]  # protein vs genome scale
+    block_sizes = [2048, 10240]  # protein vs genome scale
 
     model_architectures = {
         "reformer": {
@@ -64,7 +64,7 @@ def main() -> None:
             test_file=args.test_file,
             genome_level=(block_size == 10240),
             model_config_json=Path(model_architectures[model_name][params]),
-            batch_size=4,
+            batch_size=4,  # TODO: Set based on max size possible
             block_size=block_size,
         )
         config_path = args.config_dir / f"{experiment_name}.yaml"
@@ -73,5 +73,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    # TODO: Set automatically with lightning?
     # TODO: Set json files to specify model architectures
