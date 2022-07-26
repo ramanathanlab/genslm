@@ -2,7 +2,7 @@ import os
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -21,7 +21,7 @@ from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
-from gene_transformer.dataset import FASTADataset, IndividualFastaDataset
+from gene_transformer.dataset import FastaDataset
 from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
@@ -30,15 +30,13 @@ from gene_transformer.utils import (
     ThroughputMonitor,
 )
 
-SequenceDataset = Union[FASTADataset, IndividualFastaDataset]
-
 
 class DNATransformer(pl.LightningModule):
 
     cfg: ModelSettings
-    train_dataset: SequenceDataset
-    val_dataset: SequenceDataset
-    test_dataset: SequenceDataset
+    train_dataset: FastaDataset
+    val_dataset: FastaDataset
+    test_dataset: FastaDataset
 
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
@@ -55,24 +53,17 @@ class DNATransformer(pl.LightningModule):
     def configure_sharded_model(self):
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
-    def get_dataset(self, data_path: PathLike) -> SequenceDataset:
+    def get_dataset(self, data_path: PathLike) -> FastaDataset:
         """Helper function to generate dataset."""
-        if self.cfg.genome_level:
-            return IndividualFastaDataset(
-                data_path,
-                block_size=self.cfg.block_size,
-                tokenizer=self.tokenizer,
-                kmer_size=self.cfg.kmer_size,
-                small_subset=self.cfg.small_subset,
-            )
-        return FASTADataset(
+        return FastaDataset(
             data_path,
             block_size=self.cfg.block_size,
             tokenizer=self.tokenizer,
             kmer_size=self.cfg.kmer_size,
+            small_subset=self.cfg.small_subset,
         )
 
-    def get_dataloader(self, dataset: SequenceDataset, shuffle: bool) -> DataLoader:
+    def get_dataloader(self, dataset: FastaDataset, shuffle: bool) -> DataLoader:
         """Helper function to generate dataloader."""
         return DataLoader(
             dataset,

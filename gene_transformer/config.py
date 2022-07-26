@@ -66,10 +66,8 @@ class ModelSettings(BaseSettings):
     """Path to the testing data."""
     kmer_size: int = 3
     """Size of kmer to use for tokenization."""
-    genome_level: bool = False
-    """Whether or not to use the genome-scale dataset class."""
     small_subset: int = 0
-    """Only applies when :obj:`genome_level` is true. Uses the full dataset by default."""
+    """Subset of data files to use during training. Uses the full dataset by default."""
 
     # blast settings
     enable_blast: bool = False
