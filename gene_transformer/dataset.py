@@ -30,7 +30,7 @@ def write_individual_fasta_files(
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
-    chunksize = len(seqs) // num_workers
+    chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
         for _ in executor.map(
             _write_fasta_file, seqs, output_files, chunksize=chunksize
