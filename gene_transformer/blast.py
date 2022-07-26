@@ -196,9 +196,15 @@ class BLASTCallback(Callback):
         sys.stdout.flush()
         max_scores, mean_scores = self.blast.run(sequences, prefix)
         metrics = np.max(max_scores), np.mean(mean_scores)
+        print("blast done")
+        sys.stdout.flush()
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
+        print("barrier done")
+        sys.stdout.flush()
         metrics = pl_module.all_gather(metrics)
+        print("gather done")
+        sys.stdout.flush()
         if trainer.is_global_zero:
             max_score, mean_score = metrics[0].max().item(), metrics[1].mean().item()
             # TODO: Test the above line and if it works, then remove the commented out code below
