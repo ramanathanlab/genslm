@@ -50,9 +50,10 @@ class DNATransformer(pl.LightningModule):
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
-        base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
+        self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
 
-        self.model = AutoModelForCausalLM.from_config(base_config)
+    def configure_sharded_model(self):
+        self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     def get_dataset(self, data_path: PathLike) -> SequenceDataset:
         """Helper function to generate dataset."""
