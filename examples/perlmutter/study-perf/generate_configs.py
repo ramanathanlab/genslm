@@ -23,7 +23,6 @@ def parse_args():
 def main() -> None:
     args = parse_args()
     args.config_dir.mkdir(exist_ok=True)
-    args.checkpoint_dir.mkdir(exist_ok=True)
 
     model_names = ["reformer"]  # "gpt-neox"]
     num_nodes = [1, 2, 4, 8, 16, 32, 64, 128, 256]
