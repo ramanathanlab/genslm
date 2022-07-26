@@ -68,7 +68,7 @@ def main() -> None:
             batch_size=4,  # TODO: Set based on max size possible
             block_size=block_size,
         )
-        config_path = args.config_dir / f"{experiqment_name}.yaml"
+        config_path = args.config_dir / f"{experiment_name}.yaml"
         config.dump_yaml(config_path)
 
 
