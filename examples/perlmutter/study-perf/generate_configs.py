@@ -10,40 +10,67 @@ def parse_args():
         "--config_dir",
         type=Path,
         required=True,
-        help="Directory to write config files to",
+        help="Directory to write config files to.",
     )
-    parser.add_argument("--checkpoint_dir", type=Path, required=True)
     parser.add_argument("--tokenizer_file", type=Path, required=True)
+    parser.add_argument("--train_file", type=Path, required=True)
+    parser.add_argument("--val_file", type=Path, required=True)
+    parser.add_argument("--test_file", type=Path, required=True)
     args = parser.parse_args()
     return args
 
 
-if __name__ == "__main__":
-
+def main() -> None:
     args = parse_args()
     args.config_dir.mkdir(exist_ok=True)
-    args.checkpoint_dir.mkdir(exist_ok=True)
 
-    model_names = ["gpt2", "reformer", "gpt-neox"]
+    model_names = ["reformer"]  # "gpt-neox"]
     num_nodes = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     num_params = ["25M", "250M", "2.5B", "20B"]
-    block_sizes = ["protein-scale", "genome-scale"]
+    block_sizes = [2048, 10240]  # protein vs genome scale
+
+    model_architectures = {
+        "reformer": {
+            "25M": "architectures/reformer_24,313,413.json",
+            "250M": "architectures/reformer_243,038,277.json",
+            "2.5B": "architectures/reformer_2,551,869,509.json",
+            "20B": "architectures/reformer_20,405,579,845.json",
+        },
+        "gpt-neox": {
+            "25M": "/path/to/model.json",
+            "250M": "/path/to/model.json",
+            "2.5B": "/path/to/model.json",
+            "20B": "/path/to/model.json",
+        },
+    }
 
     experiment_combinations = list(
         product(model_names, num_nodes, num_params, block_sizes)
     )
+
     for experiment in experiment_combinations:
         model_name, nodes, params, block_size = experiment
         experiment_name = f"{model_name}_{nodes}nodes_{params}_{block_size}"
         print(experiment_name)
-        # TODO: Add more arguments, translate experiment params into valid model architectures.
         config = ModelSettings(
-            checkpoint_dir=args.checkpoint_dir,
-            node_local_path="/tmp",
+            checkpoint_dir=None,
+            node_local_path=Path("/tmp"),
             num_nodes=nodes,
             compute_throughput=True,
             tokenizer_file=args.tokenizer_file,
-            ...
+            train_file=args.train_file,
+            val_file=args.val_file,
+            test_file=args.test_file,
+            genome_level=True,
+            model_config_json=Path(model_architectures[model_name][params]),
+            batch_size=4,  # TODO: Set based on max size possible
+            block_size=block_size,
+            num_test_seqs_per_gpu=0,
         )
         config_path = args.config_dir / f"{experiment_name}.yaml"
-        config.write_yaml(config_path)
+        config.dump_yaml(config_path)
+
+
+if __name__ == "__main__":
+    main()
+    # TODO: Set json files to specify model architectures

@@ -1,5 +1,5 @@
 """Defining blast utilities to monitor training"""
-
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -144,6 +144,12 @@ class BLASTCallback(Callback):
             self.temp_dir = self.node_local_path / "blast"
             self.temp_dir.mkdir(exist_ok=True)
 
+            # Copy other files to node local storage
+            database_file = self._copy_to_node_local(database_file)
+            # Copy shared object file for blast
+            self._copy_to_node_local(blast_exe_path.parent / "libblastinput.so")
+            blast_exe_path = self._copy_to_node_local(blast_exe_path)
+
         self.output_dir.mkdir(exist_ok=True, parents=True)
 
         self.blast = ParallelBLAST(
@@ -152,6 +158,11 @@ class BLASTCallback(Callback):
             blast_exe_path=blast_exe_path,
             num_workers=num_blast_seqs_per_gpu,
         )
+
+    def _copy_to_node_local(self, file: Path) -> Path:
+        assert self.node_local_path is not None
+        dst = self.node_local_path / file.name
+        return dst if dst.exists() else shutil.copy(file, dst)
 
     def _backup_results(self) -> None:
         """Move node local files to :obj:`output_dir`."""
@@ -180,16 +191,22 @@ class BLASTCallback(Callback):
             num_seqs=self.num_blast_seqs_per_gpu,
             max_length=self.block_size,
         )
-        print("dna generated")
-        sys.stdout.flush()
         sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
 
         prefix = f"globalstep{pl_module.global_step}"
+        print("dna generated")
+        sys.stdout.flush()
         max_scores, mean_scores = self.blast.run(sequences, prefix)
         metrics = np.max(max_scores), np.mean(mean_scores)
+        print("blast done")
+        sys.stdout.flush()
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
+        print("barrier done")
+        sys.stdout.flush()
         metrics = pl_module.all_gather(metrics)
+        print("gather done")
+        sys.stdout.flush()
         if trainer.is_global_zero:
             max_score, mean_score = metrics[0].max().item(), metrics[1].mean().item()
             # TODO: Test the above line and if it works, then remove the commented out code below
