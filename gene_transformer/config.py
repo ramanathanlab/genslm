@@ -42,7 +42,7 @@ class ModelSettings(BaseSettings):
     """Whether to use wandb for logging."""
     wandb_project_name: str = "codon_transformer"
     """Wandb project name to log to."""
-    checkpoint_dir: Path = Path("codon_transformer")
+    checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
     node_local_path: Optional[Path] = None
     """A node local storage option to write temporary files to."""

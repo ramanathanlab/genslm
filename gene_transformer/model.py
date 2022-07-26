@@ -152,14 +152,16 @@ def train(cfg: ModelSettings) -> None:
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
 
     callbacks: List[Callback] = []
-    callbacks.append(
-        ModelCheckpoint(dirpath=cfg.checkpoint_dir, save_last=True, verbose=True)
-    )
+    if cfg.checkpoint_dir is not None:
+        callbacks.append(
+            ModelCheckpoint(dirpath=cfg.checkpoint_dir, save_last=True, verbose=True)
+        )
 
     if cfg.wandb_active:
         callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     if cfg.enable_blast:
+        assert cfg.checkpoint_dir is not None
         callbacks.append(
             BLASTCallback(
                 block_size=cfg.block_size,
@@ -172,6 +174,7 @@ def train(cfg: ModelSettings) -> None:
         )
 
     if cfg.num_test_seqs_per_gpu:
+        assert cfg.checkpoint_dir is not None
         callbacks.append(
             SequenceGenerationCallback(
                 block_size=cfg.block_size,
