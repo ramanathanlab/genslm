@@ -1,10 +1,12 @@
 """Model configuration."""
 import json
+import os
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
 import yaml
 from pydantic import BaseSettings as _BaseSettings
+from pydantic import validator
 
 _T = TypeVar("_T")
 
@@ -118,6 +120,12 @@ class ModelSettings(BaseSettings):
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
     persistent_workers: bool = True
     """If True, the data loader will not shutdown the worker processes after a dataset has been consumed once."""
+
+    @validator("node_local_path")
+    def resolve_node_local_path(cls, v: Optional[Path]) -> Optional[Path]:
+        # Check if node local path is stored in environment variable
+        # Example: v = Path("$PSCRATCH") => str(v)[1:] == "PSCRATCH"
+        return None if v is None else Path(os.environ.get(str(v)[1:], v))
 
 
 def throughput_config(cfg: ModelSettings) -> ModelSettings:

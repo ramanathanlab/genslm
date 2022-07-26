@@ -1,5 +1,5 @@
 """Defining blast utilities to monitor training"""
-
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -144,6 +144,10 @@ class BLASTCallback(Callback):
             self.temp_dir = self.node_local_path / "blast"
             self.temp_dir.mkdir(exist_ok=True)
 
+            # Copy other files to node local storage
+            blast_exe_path = self._copy_to_node_local(blast_exe_path)
+            database_file = self._copy_to_node_local(database_file)
+
         self.output_dir.mkdir(exist_ok=True, parents=True)
 
         self.blast = ParallelBLAST(
@@ -152,6 +156,11 @@ class BLASTCallback(Callback):
             blast_exe_path=blast_exe_path,
             num_workers=num_blast_seqs_per_gpu,
         )
+
+    def _copy_to_node_local(self, file: Path) -> Path:
+        assert self.node_local_path is not None
+        dst = self.node_local_path / file.name
+        return dst if dst.exists() else shutil.copy(file, dst)
 
     def _backup_results(self) -> None:
         """Move node local files to :obj:`output_dir`."""
