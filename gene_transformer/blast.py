@@ -81,6 +81,7 @@ class ParallelBLAST:
             scores = pd.read_csv(temp_csv, header=None)[11].values
         except pd.errors.EmptyDataError:
             print(f"WARNING: blast did not find a match {temp_csv}")
+            sys.stdout.flush()
             # Remove files, no need to backup empty files
             temp_fasta.unlink()
             temp_csv.unlink()
