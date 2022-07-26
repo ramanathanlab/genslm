@@ -245,14 +245,20 @@ def train(cfg: ModelSettings) -> None:
         print("Completed training.")
 
 
-def generate_embeddings(model: DNATransformer, dataloader: DataLoader) -> np.ndarray:
+def generate_embeddings(
+    model: DNATransformer, dataloader: DataLoader, compute_mean: bool = False
+) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     embeddings = []
     for batch in tqdm(dataloader):
         batch = batch.cuda()
         outputs = model(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        embeddings.append(outputs.hidden_states[0].detach().cpu().numpy())
+        emb = outputs.hidden_states[0].detach().cpu().numpy()
+        if compute_mean:
+            # Compute average over sequence length
+            emb = np.mean(emb, axis=1)
+        embeddings.append(emb)
 
     embeddings = np.concatenate(embeddings)  # type: ignore
     return embeddings
@@ -263,6 +269,7 @@ def inference(
     model_load_strategy: ModelLoadStrategy,
     fasta_file: str,
     output_path: Optional[PathLike] = None,
+    compute_mean: bool = False,
 ) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
@@ -270,7 +277,7 @@ def inference(
     dataset = model.get_dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False)
     print(f"Running inference with dataset length {len(dataloader)}")
-    embeddings = generate_embeddings(model, dataloader)
+    embeddings = generate_embeddings(model, dataloader, compute_mean)
     print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
         assert Path(output_path).suffix == ".npy"
@@ -312,6 +319,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("--mode", default="train")
     parser.add_argument("--inference_fasta", default="")
+    parser.add_argument("--inference_mean", action="store_true")
     parser.add_argument("--inference_model_load", default="pt", help="deepspeed or pt")
     parser.add_argument(
         "--inference_pt_file",
@@ -364,4 +372,9 @@ if __name__ == "__main__":
             raise ValueError(
                 f"Invalid inference_model_load {args.inference_model_load}"
             )
-        inference(model_strategy, args.inference_fasta, args.inference_output_path)
+        inference(
+            model_strategy,
+            args.inference_fasta,
+            args.inference_output_path,
+            args.inference_mean,
+        )
