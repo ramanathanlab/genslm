@@ -26,17 +26,17 @@ def main() -> None:
     args.config_dir.mkdir(exist_ok=True)
     args.checkpoint_dir.mkdir(exist_ok=True)
 
-    model_names = ["reformer", "gpt-neox"]
+    model_names = ["reformer"]  # "gpt-neox"]
     num_nodes = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     num_params = ["25M", "250M", "2.5B", "20B"]
     block_sizes = [2048, 10240]  # protein vs genome scale
 
     model_architectures = {
         "reformer": {
-            "25M": "/path/to/model.json",
-            "250M": "/path/to/model.json",
-            "2.5B": "/path/to/model.json",
-            "20B": "/path/to/model.json",
+            "25M": "architectures/reformer_24,313,413.json",
+            "250M": "architectures/reformer_243,038,277.json",
+            "2.5B": "architectures/reformer_2,551,869,509.json",
+            "20B": "architectures/reformer_20,405,579,845.json",
         },
         "gpt-neox": {
             "25M": "/path/to/model.json",
@@ -49,6 +49,7 @@ def main() -> None:
     experiment_combinations = list(
         product(model_names, num_nodes, num_params, block_sizes)
     )
+
     for experiment in experiment_combinations:
         model_name, nodes, params, block_size = experiment
         experiment_name = f"{model_name}_{nodes}nodes_{params}_{block_size}"
@@ -67,7 +68,7 @@ def main() -> None:
             batch_size=4,  # TODO: Set based on max size possible
             block_size=block_size,
         )
-        config_path = args.config_dir / f"{experiment_name}.yaml"
+        config_path = args.config_dir / f"{experiqment_name}.yaml"
         config.dump_yaml(config_path)
 
 
