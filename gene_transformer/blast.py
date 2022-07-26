@@ -1,6 +1,7 @@
 """Defining blast utilities to monitor training"""
 
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -172,6 +173,7 @@ class BLASTCallback(Callback):
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
         print("generating dna")
+        sys.stdout.flush()
         tokens = generate_dna(
             pl_module.model,
             pl_module.tokenizer,
@@ -179,6 +181,7 @@ class BLASTCallback(Callback):
             max_length=self.block_size,
         )
         print("dna generated")
+        sys.stdout.flush()
         sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
 
         prefix = f"globalstep{pl_module.global_step}"
