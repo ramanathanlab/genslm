@@ -146,9 +146,9 @@ class BLASTCallback(Callback):
 
             # Copy other files to node local storage
             database_file = self._copy_to_node_local(database_file)
-            blast_exe_path = self._copy_to_node_local(blast_exe_path)
             # Copy shared object file for blast
             self._copy_to_node_local(blast_exe_path.parent / "libblastinput.so")
+            blast_exe_path = self._copy_to_node_local(blast_exe_path)
 
         self.output_dir.mkdir(exist_ok=True, parents=True)
 
