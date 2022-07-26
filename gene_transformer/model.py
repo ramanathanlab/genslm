@@ -227,9 +227,14 @@ def train(cfg: ModelSettings) -> None:
         precision=cfg.precision,
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
-        check_val_every_n_epoch=cfg.check_val_every_n_epoch
+        check_val_every_n_epoch=cfg.check_val_every_n_epoch,
+        auto_scale_batch_size="power"
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
+
+    # needed line if we're auto scaling batch size
+    trainer.tune(model)
+
     trainer.fit(model)
     if cfg.compute_throughput:
         return
