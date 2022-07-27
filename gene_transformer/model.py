@@ -315,7 +315,8 @@ def test(cfg: ModelSettings) -> None:
         num_nodes=cfg.num_nodes,
     )
 
-    trainer.test(model)
+    output = trainer.test(model)
+    print(output)
 
 
 if __name__ == "__main__":
