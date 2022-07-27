@@ -164,6 +164,7 @@ def non_redundant_generation(
             num_seqs=1,
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
+        print(len(seq))
         if seq not in known_sequences and len(seq) > length_cutoff:
             all_generated_seqs.append(seq)
             unique_seqs.add(seq)
