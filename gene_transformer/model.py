@@ -291,10 +291,18 @@ def inference(
 
 def test(cfg: ModelSettings) -> None:
     """Run test dataset after loading from checkpoint"""
-    if cfg.load_from_checkpoint_dir is None:
-        raise ValueError("load_from_checkpoint_dir must be set in the config file")
-    load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
-    model = load_strategy.get_model(DNATransformer)
+    if cfg.load_from_checkpoint_pt is not None:
+        load_strategy = LoadPTCheckpointStrategy(cfg.load_from_checkpoint_pt, cfg=cfg)
+        model = load_strategy.get_model(DNATransformer)
+    elif cfg.load_from_checkpoint_dir is not None:
+        # Check if loading from checkpoint - this assumes that you're
+        # loading from a sharded DeepSpeed checkpoint!!!
+        load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
+        model = load_strategy.get_model(DNATransformer)
+        print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
+    else:
+        raise ValueError("load_from_checkpoint_dir or load_from_checkpoint_pt must be set in the config file")
+
     model.cuda()
 
     trainer = pl.Trainer(
