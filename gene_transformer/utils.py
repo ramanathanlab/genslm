@@ -63,6 +63,7 @@ def generate_dna(
     return model.generate(  # type: ignore[no-any-return]
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
+        min_length=max_length,
         do_sample=True,
         top_k=top_k,
         top_p=top_p,
