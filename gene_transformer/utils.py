@@ -158,6 +158,7 @@ def non_redundant_generation(
 
     # begin generation loop
     while len(unique_seqs) < num_seqs:
+        print("Current number of unique sequences meeting criteria: {}".format(len(unique_seqs)))
         tokens = generate_dna(
             model,
             tokenizer,
