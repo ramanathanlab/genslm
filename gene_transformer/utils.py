@@ -93,6 +93,7 @@ def tokens_to_sequences(
     for s in seqs:
         # Break into codons
         print(s)
+        print(len(s))
         codons = s.split()
         if to_stop_codon:
             # Get the open reading frame
