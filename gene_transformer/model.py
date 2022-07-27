@@ -304,18 +304,12 @@ def test(cfg: ModelSettings) -> None:
         raise ValueError("load_from_checkpoint_dir or load_from_checkpoint_pt must be set in the config file")
 
     model.cuda()
-    model.test_dataset.cuda()
 
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
         strategy=DeepSpeedPlugin(
             stage=3,
-            offload_optimizer=True,
-            offload_parameters=True,
-            remote_device="cpu",
-            offload_params_device="cpu",
-            logging_batch_size_per_gpu=cfg.batch_size,
         ),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
