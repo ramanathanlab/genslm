@@ -4,6 +4,6 @@ pydantic
 biopython
 pandas
 aitextgen
-deepspeed
 natsort
+triton==1.0.0
 git+https://github.com/maxzvyagin/transformers
