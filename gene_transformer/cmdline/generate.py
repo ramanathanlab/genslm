@@ -5,6 +5,7 @@ from gene_transformer.config import ModelSettings
 from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
+    LoadPTCheckpointStrategy,
     non_redundant_generation,
     seqs_to_fasta,
 )
@@ -20,17 +21,30 @@ if __name__ == "__main__":
     # Load the model settings file
     config = ModelSettings.from_yaml(args.config)
 
-    if config.load_from_checkpoint_dir is None:
+    # check to make sure we have a valid thing to load from
+    if (
+        config.load_from_checkpoint_pt is None
+        and config.load_from_checkpoint_dir is None
+    ):
         raise ValueError("load_from_checkpoint_dir must be set in the config file")
 
-    # Load the model into GPU memory
-    load_strategy = LoadDeepSpeedStrategy(config.load_from_checkpoint_dir, cfg=config)
+    if config.load_from_checkpoint_dir is not None:
+        load_strategy = LoadDeepSpeedStrategy(
+            config.load_from_checkpoint_dir, cfg=config
+        )
+
+    elif config.load_from_checkpoint_pt is not None:
+        load_strategy = LoadPTCheckpointStrategy(config.load_from_checkpoint_pt)
+
     model = load_strategy.get_model(DNATransformer)
     model.cuda()
+    # need to make sure we're in inference mode
     model.eval()
 
     # Generate sequences using the model
-    results = non_redundant_generation(model.model, model.tokenizer, num_seqs=args.num_seqs)
+    results = non_redundant_generation(
+        model.model, model.tokenizer, num_seqs=args.num_seqs
+    )
     unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
     print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
 

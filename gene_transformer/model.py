@@ -150,8 +150,15 @@ def train(cfg: ModelSettings) -> None:
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
         callbacks.append(
-            ModelCheckpoint(dirpath=cfg.checkpoint_dir, save_last=True, verbose=True, monitor="val/loss", auto_insert_metric_name=False,
-                            filename='model-epoch{epoch:02d}-val_loss{val/loss:.2f}', save_top_k=3)
+            ModelCheckpoint(
+                dirpath=cfg.checkpoint_dir,
+                save_last=True,
+                verbose=True,
+                monitor="val/loss",
+                auto_insert_metric_name=False,
+                filename="model-epoch{epoch:02d}-val_loss{val/loss:.2f}",
+                save_top_k=3,
+            )
         )
 
     if cfg.wandb_active:

@@ -218,7 +218,12 @@ class LoadDeepSpeedStrategy(ModelLoadStrategy):
         model = pl_module.load_from_checkpoint(output_path, strict=False, **kwargs)
         return model
 
-    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+    def get_model(
+        self,
+        pl_module: "Type[pl.LightningModule]",
+        checkpoint_name: Path = Path("last.ckpt"),
+        weights_save_name: Path = Path("last.pt"),
+    ) -> "pl.LightningModule":
         model = self.load_from_deepspeed(pl_module, self.checkpoint_dir, **self.kwargs)
         return model
 
