@@ -15,7 +15,7 @@ cmd_template = """
 """
 
 
-def run_single(filename: Path, gpu: str, output_dir: Path):
+def run_single(filename: Path, gpu: str, output_dir: Path) -> None:
     output_dir = output_dir / filename.with_suffix("").name
     output_dir.mkdir(parents=True)
     logfile = output_dir / filename.with_suffix(".log").name
@@ -26,7 +26,9 @@ def run_single(filename: Path, gpu: str, output_dir: Path):
         time.sleep(30)
 
 
-def process(input_dir: Path, output_dir: Path):
+def process(input_dir: Path, output_dir: Path) -> None:
+    if not input_dir.is_dir():
+        raise ValueError("input_dir must be a directory containing .fasta files")
     gpus = os.environ.get("CUDA_VISIBLE_DEVICES")
     if gpus is None:
         raise ValueError("Please set CUDA_VISIBLE_DEVICES")
@@ -59,7 +61,7 @@ def process(input_dir: Path, output_dir: Path):
                 #        available_gpus.add(gpu)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # take in directory, number of process to use
     # get a list of files to process
     parser = ArgumentParser()
