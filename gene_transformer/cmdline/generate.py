@@ -46,6 +46,9 @@ if __name__ == "__main__":
     # need to make sure we're in inference mode
     model.eval()
 
+    if args.known_sequence_files is not None:
+        print("Using known sequence files: {}".format(args.known_sequence_files))
+
     # Generate sequences using the model
     results = non_redundant_generation(
         model.model,

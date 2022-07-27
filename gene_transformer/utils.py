@@ -150,6 +150,8 @@ def non_redundant_generation(
     else:
         length_cutoff = 0
 
+    print("Using length cutoff of {}.".format(length_cutoff))
+
     # begin generation loop
     while len(unique_seqs) < num_seqs:
         tokens = generate_dna(
