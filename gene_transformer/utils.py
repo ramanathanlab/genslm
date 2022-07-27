@@ -10,8 +10,9 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
-from pytorch_lightning.utilities.deepspeed import \
-    convert_zero_checkpoint_to_fp32_state_dict
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
