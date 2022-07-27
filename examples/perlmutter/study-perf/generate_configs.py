@@ -37,10 +37,10 @@ def main() -> None:
             "20B": "architectures/reformer_20,405,579,845.json",
         },
         "gpt-neox": {
-            "25M": "/path/to/model.json",
-            "250M": "/path/to/model.json",
-            "2.5B": "/path/to/model.json",
-            "20B": "/path/to/model.json",
+            "25M": "architectures/neox_25,351,168.json",
+            "250M": "architectures/neox_260,668,800.json",
+            "2.5B": "architectures/neox_2,417,053,728.json",
+            "20B": "architectures/neox_9,558,835,200.json",  # TODO: Update to 20B
         },
     }
 
