@@ -151,7 +151,7 @@ def non_redundant_generation(
     else:
         length_cutoff = 0
 
-    print("Using length cutoff of {}.".format(length_cutoff))
+    print("Using length cutoff of {} - {} tokens.".format(length_cutoff, length_cutoff//3))
 
     # begin generation loop
     while len(unique_seqs) < num_seqs:
