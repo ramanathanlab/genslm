@@ -301,7 +301,9 @@ def test(cfg: ModelSettings) -> None:
         model = load_strategy.get_model(DNATransformer)
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
     else:
-        raise ValueError("load_from_checkpoint_dir or load_from_checkpoint_pt must be set in the config file")
+        print("WARNING: running test on randomly initialized architecture")
+        model = DNATransformer(cfg)
+        # raise ValueError("load_from_checkpoint_dir or load_from_checkpoint_pt must be set in the config file")
 
     model.cuda()
 
