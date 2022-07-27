@@ -36,7 +36,7 @@ if __name__ == "__main__":
     elif config.load_from_checkpoint_pt is not None:
         load_strategy = LoadPTCheckpointStrategy(config.load_from_checkpoint_pt)
 
-    model = load_strategy.get_model(DNATransformer)
+    model = load_strategy.get_model(DNATransformer(config))
     model.cuda()
     # need to make sure we're in inference mode
     model.eval()

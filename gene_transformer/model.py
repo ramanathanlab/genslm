@@ -40,7 +40,7 @@ class DNATransformer(pl.LightningModule):
 
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
-        self.save_hyperparameters(cfg)
+        self.save_hyperparameters(cfg.dict())
         self.cfg = cfg
         self.tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(str(self.cfg.tokenizer_file))
