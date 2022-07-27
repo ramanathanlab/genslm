@@ -129,9 +129,12 @@ class DNATransformer(pl.LightningModule):
 
 
 def train(cfg: ModelSettings) -> None:
-    # Check if loading from checkpoint - this assumes that you're
-    # loading from a sharded DeepSpeed checkpoint!!!
-    if cfg.load_from_checkpoint_dir is not None:
+    if cfg.load_from_checkpoint_pt is not None:
+        load_strategy = LoadPTCheckpointStrategy(cfg.load_from_checkpoint_pt, cfg=cfg)
+        model = load_strategy.get_model(DNATransformer)
+    elif cfg.load_from_checkpoint_dir is not None:
+        # Check if loading from checkpoint - this assumes that you're
+        # loading from a sharded DeepSpeed checkpoint!!!
         load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
         print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")

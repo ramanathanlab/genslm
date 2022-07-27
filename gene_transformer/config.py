@@ -1,12 +1,13 @@
 """Model configuration."""
 import json
 import os
+import warnings
 from pathlib import Path
-from typing import Optional, Type, TypeVar, Union
+from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 import yaml
 from pydantic import BaseSettings as _BaseSettings
-from pydantic import validator
+from pydantic import root_validator, validator
 
 _T = TypeVar("_T")
 
@@ -46,6 +47,10 @@ class ModelSettings(BaseSettings):
     """Wandb project name to log to."""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
+    load_from_checkpoint_pt: Optional[Path] = None
+    """Checkpoint pt file to initialze model weights."""
+    load_from_checkpoint_dir: Optional[Path] = None
+    """Deepspeed checkpoint directory to initialze model weights."""
     node_local_path: Optional[Path] = None
     """A node local storage option to write temporary files to."""
     num_nodes: int = 1
@@ -96,8 +101,6 @@ class ModelSettings(BaseSettings):
     """Training precision."""
     warm_up_lr: Optional[WarmupLRSettings] = None
     """If specified, will use a learning rate warmup scheduler."""
-    load_from_checkpoint_dir: Optional[Path] = None
-    """If specified, will load a model weight checkpoint to resume training from."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
     check_val_every_n_epoch: int = 1
@@ -124,6 +127,17 @@ class ModelSettings(BaseSettings):
         # Check if node local path is stored in environment variable
         # Example: v = Path("$PSCRATCH") => str(v)[1:] == "PSCRATCH"
         return None if v is None else Path(os.environ.get(str(v)[1:], v))
+
+    @root_validator
+    def warn_checkpoint_load(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        load_from_checkpoint_pt = values.get("load_from_checkpoint_pt")
+        load_from_checkpoint_dir = values.get("load_from_checkpoint_dir")
+        if load_from_checkpoint_pt is not None and load_from_checkpoint_dir is not None:
+            warnings.warn(
+                "Both load_from_checkpoint_pt and load_from_checkpoint_dir are "
+                "specified in the configuration. Loading from load_from_checkpoint_pt."
+            )
+        return values
 
 
 def throughput_config(cfg: ModelSettings) -> ModelSettings:
