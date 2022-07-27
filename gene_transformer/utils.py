@@ -167,6 +167,7 @@ def non_redundant_generation(
         if seq not in known_sequences and len(seq) > length_cutoff:
             all_generated_seqs.append(seq)
             unique_seqs.add(seq)
+            print("Unique Sequence Length: {}".format(len(unique_seqs)))
 
     # create dictionary of results
     results = {
