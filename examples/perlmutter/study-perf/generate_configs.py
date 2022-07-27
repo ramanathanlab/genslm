@@ -61,7 +61,6 @@ def main() -> None:
             train_file=args.train_file,
             val_file=args.val_file,
             test_file=args.test_file,
-            genome_level=True,
             model_config_json=Path(model_architectures[model_name][params]),
             batch_size=4,  # TODO: Set based on max size possible
             block_size=block_size,
@@ -73,4 +72,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    # TODO: Set json files to specify model architectures
