@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import List
 
 from gene_transformer.config import ModelSettings
 from gene_transformer.model import DNATransformer
