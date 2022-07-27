@@ -34,7 +34,7 @@ if __name__ == "__main__":
         )
 
     elif config.load_from_checkpoint_pt is not None:
-        load_strategy = LoadPTCheckpointStrategy(config.load_from_checkpoint_pt)
+        load_strategy = LoadPTCheckpointStrategy(config.load_from_checkpoint_pt, cfg=config)
 
     model = load_strategy.get_model(DNATransformer(config))
     model.cuda()
