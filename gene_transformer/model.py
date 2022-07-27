@@ -304,6 +304,7 @@ def test(cfg: ModelSettings) -> None:
         raise ValueError("load_from_checkpoint_dir or load_from_checkpoint_pt must be set in the config file")
 
     model.cuda()
+    model.test_dataset.cuda()
 
     trainer = pl.Trainer(
         gpus=-1,
