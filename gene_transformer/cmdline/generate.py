@@ -27,9 +27,10 @@ if __name__ == "__main__":
     load_strategy = LoadDeepSpeedStrategy(config.load_from_checkpoint_dir, cfg=config)
     model = load_strategy.get_model(DNATransformer)
     model.cuda()
+    model.eval()
 
     # Generate sequences using the model
-    results = non_redundant_generation(model, model.tokenizer, num_seqs=args.num_seqs)
+    results = non_redundant_generation(model.model, model.tokenizer, num_seqs=args.num_seqs)
     unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
     print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
 
