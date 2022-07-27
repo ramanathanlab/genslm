@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num_seqs", type=int, required=True)
     parser.add_argument("-s", "--name_prefix", type=str, default="SyntheticSeq")
     parser.add_argument(
-        "-k", "--known_sequence_file_paths", type=List[str], required=False, nargs="+"
+        "-k", "--known_sequence_file_paths", required=False, nargs="+"
     )
     args = parser.parse_args()
 
