@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num_seqs", type=int, required=True)
     parser.add_argument("-s", "--name_prefix", type=str, default="SyntheticSeq")
     parser.add_argument(
-        "-k", "--known_sequence_file_paths", required=False, nargs="+"
+        "-k", "--known_sequence_files", required=False, nargs="+"
     )
     args = parser.parse_args()
 
@@ -48,6 +48,8 @@ if __name__ == "__main__":
     model.eval()
 
     if args.known_sequence_files is not None:
+        for i in args.known_sequence_files:
+            print(i)
         print("Using known sequence files: {}".format(args.known_sequence_files))
 
     # Generate sequences using the model
