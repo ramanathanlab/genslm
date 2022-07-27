@@ -16,6 +16,9 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_fasta", type=Path, required=True)
     parser.add_argument("-n", "--num_seqs", type=int, required=True)
     parser.add_argument("-s", "--name_prefix", type=str, default="SyntheticSeq")
+    parser.add_argument(
+        "-k", "--known_sequence_file_paths", type=List[str], required=False
+    )
     args = parser.parse_args()
 
     # Load the model settings file
@@ -34,7 +37,9 @@ if __name__ == "__main__":
         )
 
     elif config.load_from_checkpoint_pt is not None:
-        load_strategy = LoadPTCheckpointStrategy(config.load_from_checkpoint_pt, cfg=config)
+        load_strategy = LoadPTCheckpointStrategy(
+            config.load_from_checkpoint_pt, cfg=config
+        )
 
     model = load_strategy.get_model(DNATransformer(config))
     model.cuda()
@@ -43,7 +48,10 @@ if __name__ == "__main__":
 
     # Generate sequences using the model
     results = non_redundant_generation(
-        model.model, model.tokenizer, num_seqs=args.num_seqs
+        model.model,
+        model.tokenizer,
+        num_seqs=args.num_seqs,
+        known_sequence_files=args.known_sequence_files,
     )
     unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
     print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")

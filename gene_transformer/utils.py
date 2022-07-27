@@ -10,9 +10,8 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
-from pytorch_lightning.utilities.deepspeed import (
-    convert_zero_checkpoint_to_fp32_state_dict,
-)
+from pytorch_lightning.utilities.deepspeed import \
+    convert_zero_checkpoint_to_fp32_state_dict
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
@@ -145,6 +144,12 @@ def non_redundant_generation(
     if known_sequence_files is not None:
         known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
+    if len(known_sequences) > 1:
+        lengths = [len(s) for s in known_sequences]
+        length_cutoff = min(lengths)
+    else:
+        length_cutoff = 0
+
     # begin generation loop
     while len(unique_seqs) < num_seqs:
         tokens = generate_dna(
@@ -156,7 +161,7 @@ def non_redundant_generation(
             num_seqs=1,
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
-        if seq not in known_sequences:
+        if seq not in known_sequences and len(seq) > length_cutoff:
             all_generated_seqs.append(seq)
             unique_seqs.add(seq)
 
