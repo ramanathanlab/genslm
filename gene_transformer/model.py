@@ -52,10 +52,6 @@ class DNATransformer(pl.LightningModule):
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
-        # save the model config json
-        if self.cfg.wandb_active:
-            self.logger.log_image("model_architecture", self.cfg.model_config_json)
-
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
 
@@ -151,6 +147,7 @@ def train(cfg: ModelSettings) -> None:
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
+        wandb_logger.log_image(key="model_architecture", images=cfg.model_config_json)
 
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
