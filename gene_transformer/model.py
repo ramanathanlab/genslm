@@ -8,7 +8,6 @@ from typing import Any, List, Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import wandb
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
@@ -42,7 +41,13 @@ class DNATransformer(pl.LightningModule):
 
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
-        self.save_hyperparameters(cfg.dict())
+
+        settings_dict = cfg.dict()
+        with open(cfg.model_config_json, "r") as f:
+            architecture = json.load(f)
+            settings_dict["model_architecture"] = architecture
+        self.save_hyperparameters(settings_dict)
+
         self.cfg = cfg
         self.tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(str(self.cfg.tokenizer_file))
@@ -148,10 +153,6 @@ def train(cfg: ModelSettings) -> None:
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
-        # load in the architecture json and add that to the config
-        with open(cfg.model_config_json, "r") as f:
-            architecture = json.load(f)
-        wandb_logger.experiment.config.update({"model_architecture": architecture})
 
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
