@@ -154,12 +154,22 @@ def non_redundant_generation(
     else:
         length_cutoff = 0
 
-    print("Using length cutoff of {} - {} tokens.".format(length_cutoff, length_cutoff//3))
+    print(
+        "Using length cutoff of {} - {} tokens.".format(
+            length_cutoff, length_cutoff // 3
+        )
+    )
 
     # begin generation loop
     while len(unique_seqs) < num_seqs:
-        print("Current number of unique sequences meeting criteria: {}".format(len(unique_seqs)))
-        print("Current number of sequences generated: {}".format(len(all_generated_seqs)))
+        print(
+            "Current number of unique sequences meeting criteria: {}".format(
+                len(unique_seqs)
+            )
+        )
+        print(
+            "Current number of sequences generated: {}".format(len(all_generated_seqs))
+        )
         tokens = generate_dna(
             model,
             tokenizer,

@@ -52,10 +52,6 @@ class DNATransformer(pl.LightningModule):
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
-        # if wandb is active, save the model architecture config to wandb
-        if self.cfg.wandb_active:
-            wandb.save(self.cfg.model_config_json)
-
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
 
@@ -242,6 +238,10 @@ def train(cfg: ModelSettings) -> None:
         check_val_every_n_epoch=cfg.check_val_every_n_epoch,
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
+
+    # if wandb is active, save the model architecture config to wandb
+    if cfg.wandb_active:
+        wandb.save(cfg.model_config_json)
 
     trainer.fit(model)
     if cfg.compute_throughput:
