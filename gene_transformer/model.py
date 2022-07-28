@@ -129,15 +129,15 @@ class DNATransformer(pl.LightningModule):
 
 
 def train(cfg: ModelSettings) -> None:
-    if cfg.load_from_checkpoint_pt is not None:
-        load_strategy = LoadPTCheckpointStrategy(cfg.load_from_checkpoint_pt, cfg=cfg)
+    if cfg.load_pt_checkpoint is not None:
+        load_strategy = LoadPTCheckpointStrategy(cfg.load_pt_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
-    elif cfg.load_from_checkpoint_dir is not None:
+    elif cfg.load_ds_checkpoint is not None:
         # Check if loading from checkpoint - this assumes that you're
         # loading from a sharded DeepSpeed checkpoint!!!
-        load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
+        load_strategy = LoadDeepSpeedStrategy(cfg.load_ds_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
-        print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
+        print(f"Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....")
     else:
         model = DNATransformer(cfg)
 
@@ -291,19 +291,18 @@ def inference(
 
 def test(cfg: ModelSettings) -> None:
     """Run test dataset after loading from checkpoint"""
-    if cfg.load_from_checkpoint_pt is not None:
-        load_strategy = LoadPTCheckpointStrategy(cfg.load_from_checkpoint_pt, cfg=cfg)
+    if cfg.load_pt_checkpoint is not None:
+        load_strategy = LoadPTCheckpointStrategy(cfg.load_pt_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
-    elif cfg.load_from_checkpoint_dir is not None:
+    elif cfg.load_ds_checkpoint is not None:
         # Check if loading from checkpoint - this assumes that you're
         # loading from a sharded DeepSpeed checkpoint!!!
-        load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
+        load_strategy = LoadDeepSpeedStrategy(cfg.load_ds_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
-        print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
+        print(f"Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....")
     else:
         print("WARNING: running test on randomly initialized architecture")
         model = DNATransformer(cfg)
-        # raise ValueError("load_from_checkpoint_dir or load_from_checkpoint_pt must be set in the config file")
 
     model.cuda()
 
@@ -371,12 +370,12 @@ if __name__ == "__main__":
         if args.inference_model_load == "pt":
             model_strategy = LoadPTCheckpointStrategy(args.pt_file, cfg=config)
         elif args.inference_model_load == "deepspeed":
-            if config.load_from_checkpoint_dir is None:
+            if config.load_ds_checkpoint is None:
                 raise ValueError(
                     "load_from_checkpoint_dir must be set in the config file"
                 )
             model_strategy = LoadDeepSpeedStrategy(
-                config.load_from_checkpoint_dir, cfg=config
+                config.load_ds_checkpoint, cfg=config
             )
         else:
             raise ValueError(

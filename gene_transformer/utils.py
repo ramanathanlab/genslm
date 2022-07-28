@@ -154,12 +154,14 @@ def non_redundant_generation(
     else:
         length_cutoff = 0
 
-    print("Using length cutoff of {} - {} tokens.".format(length_cutoff, length_cutoff//3))
+    print(f"Using length cutoff of {length_cutoff} - {length_cutoff // 3} tokens.")
 
     # begin generation loop
     while len(unique_seqs) < num_seqs:
-        print("Current number of unique sequences meeting criteria: {}".format(len(unique_seqs)))
-        print("Current number of sequences generated: {}".format(len(all_generated_seqs)))
+        print(
+            f"Current number of unique sequences meeting criteria: {len(unique_seqs)}"
+        )
+        print(f"Current number of sequences generated: {len(all_generated_seqs)}")
         tokens = generate_dna(
             model,
             tokenizer,
@@ -211,46 +213,49 @@ class ModelLoadStrategy(ABC):
 
 
 class LoadDeepSpeedStrategy(ModelLoadStrategy):
-    def __init__(self, checkpoint_dir: Path, **kwargs: Any) -> None:
-        self.checkpoint_dir = checkpoint_dir
+    def __init__(self, weight_path: Path, **kwargs: Any) -> None:
+        """Load DeepSpeed checkpoint path.
+
+        Parameters
+        ----------
+        weight_path : Path
+            DeepSpeed checkpoint directory.
+        """
+        self.weight_path = weight_path
         self.kwargs = kwargs
 
-    @staticmethod
-    def load_from_deepspeed(
-        pl_module: "Type[pl.LightningModule]",
-        checkpoint_dir: Path,
-        checkpoint: str = "last.ckpt",
-        model_weights: str = "last.pt",
-        **kwargs: Any,
-    ) -> "pl.LightningModule":
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
         """Utility function for deepspeed conversion"""
-        # first convert the weights
-        save_path = str(checkpoint_dir / checkpoint)
-        output_path = str(checkpoint_dir / model_weights)
-        # perform the conversion
-        convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
+        pt_file = str(self.weight_path.with_suffix(".pt"))
+        # perform the conversion from deepspeed to pt weights
+        convert_zero_checkpoint_to_fp32_state_dict(str(self.weight_path), pt_file)
         # load model
-        model = pl_module.load_from_checkpoint(output_path, strict=False, **kwargs)
-        return model
-
-    def get_model(
-        self,
-        pl_module: "Type[pl.LightningModule]",
-        checkpoint_name: Path = Path("last.ckpt"),
-        weights_save_name: Path = Path("last.pt"),
-    ) -> "pl.LightningModule":
-        model = self.load_from_deepspeed(pl_module, self.checkpoint_dir, **self.kwargs)
+        model = pl_module.load_from_checkpoint(pt_file, strict=False, **self.kwargs)
         return model
 
 
 class LoadPTCheckpointStrategy(ModelLoadStrategy):
-    def __init__(self, pt_file: str, **kwargs: Any) -> None:
-        self.pt_file = pt_file
+    def __init__(self, weight_path: Path, **kwargs: Any) -> None:
+        """Load a PyTorch model weight file.
+
+        Parameters
+        ----------
+        weight_path : Path
+            PyTorch model weight file.
+
+        Raises
+        ------
+        ValueError
+            If the `weight_path` does not have the `.pt` extension.
+        """
+        if weight_path.suffix != ".pt":
+            raise ValueError("weight_path must be a .pt file")
+        self.weight_path = weight_path
         self.kwargs = kwargs
 
     def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
         model = pl_module.load_from_checkpoint(
-            self.pt_file, strict=False, **self.kwargs
+            str(self.weight_path), strict=False, **self.kwargs
         )
         return model
 

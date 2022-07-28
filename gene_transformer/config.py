@@ -47,10 +47,10 @@ class ModelSettings(BaseSettings):
     """Wandb project name to log to."""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
-    load_from_checkpoint_pt: Optional[Path] = None
+    load_pt_checkpoint: Optional[Path] = None
     """Checkpoint pt file to initialze model weights."""
-    load_from_checkpoint_dir: Optional[Path] = None
-    """Deepspeed checkpoint directory to initialze model weights."""
+    load_ds_checkpoint: Optional[Path] = None
+    """DeepSpeed checkpoint file to initialze model weights."""
     node_local_path: Optional[Path] = None
     """A node local storage option to write temporary files to."""
     num_nodes: int = 1
@@ -130,12 +130,12 @@ class ModelSettings(BaseSettings):
 
     @root_validator
     def warn_checkpoint_load(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        load_from_checkpoint_pt = values.get("load_from_checkpoint_pt")
+        load_pt_checkpoint = values.get("load_pt_checkpoint")
         load_from_checkpoint_dir = values.get("load_from_checkpoint_dir")
-        if load_from_checkpoint_pt is not None and load_from_checkpoint_dir is not None:
+        if load_pt_checkpoint is not None and load_from_checkpoint_dir is not None:
             warnings.warn(
-                "Both load_from_checkpoint_pt and load_from_checkpoint_dir are "
-                "specified in the configuration. Loading from load_from_checkpoint_pt."
+                "Both load_pt_checkpoint and load_from_checkpoint_dir are "
+                "specified in the configuration. Loading from load_pt_checkpoint."
             )
         return values
 
