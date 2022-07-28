@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import List
 
 from gene_transformer.config import ModelSettings
 from gene_transformer.model import DNATransformer
@@ -23,24 +22,17 @@ if __name__ == "__main__":
     # Load the model settings file
     config = ModelSettings.from_yaml(args.config)
 
-    # check to make sure we have a valid thing to load from
-    if (
-        config.load_from_checkpoint_pt is None
-        and config.load_from_checkpoint_dir is None
-    ):
-        raise ValueError("load_from_checkpoint_dir must be set in the config file")
-
-    if config.load_from_checkpoint_dir is not None:
-        load_strategy = LoadDeepSpeedStrategy(
-            config.load_from_checkpoint_dir, cfg=config
+    # Check to make sure we have a valid checkpoint file to load from
+    if config.load_pt_checkpoint is not None:
+        load_strategy = LoadPTCheckpointStrategy(config.load_pt_checkpoint, cfg=config)
+    elif config.load_ds_checkpoint is not None:
+        load_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
+    else:
+        raise ValueError(
+            "load_ds_checkpoint or load_pt_checkpoint must be set in the config file"
         )
 
-    elif config.load_from_checkpoint_pt is not None:
-        load_strategy = LoadPTCheckpointStrategy(
-            config.load_from_checkpoint_pt, cfg=config
-        )
-
-    model = load_strategy.get_model(DNATransformer(config))
+    model = load_strategy.get_model(DNATransformer)
     model.cuda()
     # need to make sure we're in inference mode
     model.eval()
