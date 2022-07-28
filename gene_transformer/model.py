@@ -147,7 +147,10 @@ def train(cfg: ModelSettings) -> None:
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
-        wandb_logger.log_image(key="model_architecture", images=[cfg.model_config_json])
+        # load in the architecture json and add that to the config
+        with open(cfg.model_config_json, "r") as f:
+            architecture = json.load(f)
+        wandb_logger.experiment.config.update({"model_architecture": architecture})
 
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
