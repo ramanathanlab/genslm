@@ -52,7 +52,9 @@ class DNATransformer(pl.LightningModule):
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
-        self.saved_model_config = False
+        # save the model config json
+        if self.cfg.wandb_active:
+            self.logger.log_image("model_architecture", self.cfg.model_config_json)
 
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
@@ -96,10 +98,6 @@ class DNATransformer(pl.LightningModule):
         return self.model(x, labels=x, **kwargs)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
-        # save the model architecture json if we haven't yet and wandb is active
-        if self.cfg.wandb_active and not self.saved_model_config:
-            wandb.save(self.cfg.model_config_json)
-            self.saved_model_config = True
         outputs = self(batch)
         loss = outputs.loss
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
