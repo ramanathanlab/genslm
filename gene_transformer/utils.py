@@ -369,6 +369,7 @@ class SequenceGenerationCallback(Callback):
         num_test_seqs_per_gpu: int,
         output_dir: Path,
         custom_seq_name: str = "SyntheticSeq",
+        known_sequence_files: Optional[List[str]] = None,
     ) -> None:
         super().__init__()
 
@@ -376,6 +377,7 @@ class SequenceGenerationCallback(Callback):
         self.num_test_seqs_per_gpu = num_test_seqs_per_gpu
         self.output_dir = output_dir
         self.custom_seq_name = custom_seq_name
+        self.known_sequence_files = known_sequence_files
 
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
@@ -384,24 +386,28 @@ class SequenceGenerationCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
 
-        tokens = generate_dna(
+        # Generate sequences using the model
+        results = non_redundant_generation(
             pl_module.model,
             pl_module.tokenizer,
             num_seqs=self.num_test_seqs_per_gpu,
             max_length=self.block_size,
+            known_sequence_files=self.known_sequence_files,
         )
+        unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
+        print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
 
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
         # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
-        tokens = pl_module.all_gather(tokens)
+        unique_seqs = pl_module.all_gather(unique_seqs)
 
         if trainer.is_global_zero:  # type: ignore[attr-defined]
             # Concatenate over world size
-            tokens = tokens.view(-1, self.block_size)
-            sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
-            print(f"sequences {len(sequences)}")
-            self.final_sequences[f"globalstep-{pl_module.global_step}"] = sequences
+            # tokens = tokens.view(-1, self.block_size)
+            # sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
+            print(f"sequences {len(unique_seqs)}")
+            self.final_sequences[f"globalstep-{pl_module.global_step}"] = unique_seqs
 
     def on_test_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
