@@ -396,7 +396,7 @@ class SequenceGenerationCallback(Callback):
         # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
         tokens = pl_module.all_gather(tokens)
 
-        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
+        if trainer.is_global_zero:  # type: ignore[attr-defined]
             # Concatenate over world size
             tokens = tokens.view(-1, self.block_size)
             sequences = tokens_to_sequences(tokens, pl_module.tokenizer)

@@ -16,7 +16,13 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_fasta", type=Path, required=True)
     parser.add_argument("-n", "--num_seqs", type=int, required=True)
     parser.add_argument("-s", "--name_prefix", type=str, default="SyntheticSeq")
-    parser.add_argument("-k", "--known_sequence_files", required=False, nargs="+")
+    parser.add_argument(
+        "-k",
+        "--known_sequence_files",
+        required=False,
+        nargs="+",
+        help="Space seperated list of known sequence files.",
+    )
     args = parser.parse_args()
 
     # Load the model settings file
