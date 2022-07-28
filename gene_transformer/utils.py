@@ -399,13 +399,9 @@ class SequenceGenerationCallback(Callback):
 
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
-        # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
         unique_seqs = pl_module.all_gather(unique_seqs)
 
         if trainer.is_global_zero:  # type: ignore[attr-defined]
-            # Concatenate over world size
-            # tokens = tokens.view(-1, self.block_size)
-            # sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
             print(f"sequences {len(unique_seqs)}")
             self.final_sequences[f"globalstep-{pl_module.global_step}"] = unique_seqs
 
