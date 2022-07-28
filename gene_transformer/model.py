@@ -1,3 +1,4 @@
+import json
 import os
 import warnings
 from argparse import ArgumentParser
@@ -7,7 +8,6 @@ from typing import Any, List, Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import wandb
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
@@ -41,7 +41,13 @@ class DNATransformer(pl.LightningModule):
 
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
-        self.save_hyperparameters(cfg.dict())
+
+        settings_dict = cfg.dict()
+        with open(cfg.model_config_json, "r") as f:
+            architecture = json.load(f)
+            settings_dict["model_architecture"] = architecture
+        self.save_hyperparameters(settings_dict)
+
         self.cfg = cfg
         self.tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(str(self.cfg.tokenizer_file))
@@ -51,10 +57,6 @@ class DNATransformer(pl.LightningModule):
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(self.base_config)
-
-        # if wandb is active, save the model architecture config to wandb
-        if self.cfg.wandb_active:
-            wandb.save(self.cfg.model_config_json)
 
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
