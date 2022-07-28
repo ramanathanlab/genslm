@@ -7,6 +7,7 @@ from typing import Any, List, Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch
+import wandb
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
@@ -50,6 +51,10 @@ class DNATransformer(pl.LightningModule):
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(self.base_config)
+
+        # if wandb is active, save the model architecture config to wandb
+        if self.cfg.wandb_active:
+            wandb.save(self.cfg.model_config_json)
 
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
