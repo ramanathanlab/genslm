@@ -149,6 +149,8 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
         new_config.small_subset = 1600
     elif cfg.num_nodes == 4:
         new_config.small_subset = 3200
+    elif cfg.num_nodes == 8:
+        new_config.small_subset = 6400
     else:
         new_config.small_subset = 16000
     new_config.profiling_path = None
