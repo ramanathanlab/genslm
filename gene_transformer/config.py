@@ -147,6 +147,8 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.num_test_seqs_per_gpu = 0
     if cfg.num_nodes == 1 or cfg.num_nodes == 2:
         new_config.small_subset = 1600
+    elif cfg.num_nodes == 4:
+        new_config.small_subset = 3200
     else:
         new_config.small_subset = 16000
     new_config.profiling_path = None
