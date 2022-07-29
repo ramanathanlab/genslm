@@ -145,7 +145,7 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
     new_config.num_test_seqs_per_gpu = 0
-    if cfg.num_nodes == 1:
+    if cfg.num_nodes == 1 or cfg.num_nodes == 2:
         new_config.small_subset = 1600
     else:
         new_config.small_subset = 16000
