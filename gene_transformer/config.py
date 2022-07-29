@@ -14,7 +14,7 @@ _T = TypeVar("_T")
 PathLike = Union[str, Path]
 
 
-class BaseSettings(_BaseSettings):
+class BaseSettings(_BaseSettings, extra="ignore"):
     """Base settings to provide an easier interface to read/write YAML files."""
 
     def dump_yaml(self, cfg_path: PathLike) -> None:
@@ -145,7 +145,12 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
     new_config.num_test_seqs_per_gpu = 0
-    new_config.small_subset = 16000
+    if cfg.num_nodes == 1 or cfg.num_nodes == 2:
+        new_config.small_subset = 1600
+    elif cfg.num_nodes == 4:
+        new_config.small_subset = 3200
+    else:
+        new_config.small_subset = 16000
     new_config.profiling_path = None
     return new_config
 
