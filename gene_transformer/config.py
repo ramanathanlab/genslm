@@ -14,7 +14,7 @@ _T = TypeVar("_T")
 PathLike = Union[str, Path]
 
 
-class BaseSettings(_BaseSettings):
+class BaseSettings(_BaseSettings, extra="ignore"):
     """Base settings to provide an easier interface to read/write YAML files."""
 
     def dump_yaml(self, cfg_path: PathLike) -> None:
@@ -47,10 +47,10 @@ class ModelSettings(BaseSettings):
     """Wandb project name to log to."""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
-    load_from_checkpoint_pt: Optional[Path] = None
+    load_pt_checkpoint: Optional[Path] = None
     """Checkpoint pt file to initialze model weights."""
-    load_from_checkpoint_dir: Optional[Path] = None
-    """Deepspeed checkpoint directory to initialze model weights."""
+    load_ds_checkpoint: Optional[Path] = None
+    """DeepSpeed checkpoint file to initialze model weights."""
     node_local_path: Optional[Path] = None
     """A node local storage option to write temporary files to."""
     num_nodes: int = 1
@@ -130,12 +130,12 @@ class ModelSettings(BaseSettings):
 
     @root_validator
     def warn_checkpoint_load(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        load_from_checkpoint_pt = values.get("load_from_checkpoint_pt")
+        load_pt_checkpoint = values.get("load_pt_checkpoint")
         load_from_checkpoint_dir = values.get("load_from_checkpoint_dir")
-        if load_from_checkpoint_pt is not None and load_from_checkpoint_dir is not None:
+        if load_pt_checkpoint is not None and load_from_checkpoint_dir is not None:
             warnings.warn(
-                "Both load_from_checkpoint_pt and load_from_checkpoint_dir are "
-                "specified in the configuration. Loading from load_from_checkpoint_pt."
+                "Both load_pt_checkpoint and load_from_checkpoint_dir are "
+                "specified in the configuration. Loading from load_pt_checkpoint."
             )
         return values
 
@@ -145,7 +145,14 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
     new_config.num_test_seqs_per_gpu = 0
-    new_config.small_subset = 16000
+    if cfg.num_nodes == 1 or cfg.num_nodes == 2:
+        new_config.small_subset = 1600
+    elif cfg.num_nodes == 4:
+        new_config.small_subset = 3200
+    elif cfg.num_nodes == 8:
+        new_config.small_subset = 6400
+    else:
+        new_config.small_subset = 16000
     new_config.profiling_path = None
     return new_config
 

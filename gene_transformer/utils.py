@@ -63,6 +63,7 @@ def generate_dna(
     return model.generate(  # type: ignore[no-any-return]
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
+        min_length=max_length,
         do_sample=True,
         top_k=top_k,
         top_p=top_p,
@@ -91,6 +92,8 @@ def tokens_to_sequences(
     seq_strings = []
     for s in seqs:
         # Break into codons
+        print(s)
+        print(len(s))
         codons = s.split()
         if to_stop_codon:
             # Get the open reading frame
@@ -145,8 +148,20 @@ def non_redundant_generation(
     if known_sequence_files is not None:
         known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
+    if len(known_sequences) > 1:
+        lengths = [len(s) for s in known_sequences]
+        length_cutoff = min(lengths)
+    else:
+        length_cutoff = 0
+
+    print(f"Using length cutoff of {length_cutoff} - {length_cutoff // 3} tokens.")
+
     # begin generation loop
     while len(unique_seqs) < num_seqs:
+        print(
+            f"Current number of unique sequences meeting criteria: {len(unique_seqs)}"
+        )
+        print(f"Current number of sequences generated: {len(all_generated_seqs)}")
         tokens = generate_dna(
             model,
             tokenizer,
@@ -156,9 +171,11 @@ def non_redundant_generation(
             num_seqs=1,
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
-        if seq not in known_sequences:
-            all_generated_seqs.append(seq)
+        print(len(seq))
+        all_generated_seqs.append(seq)
+        if seq not in known_sequences and len(seq) > length_cutoff:
             unique_seqs.add(seq)
+            print("Unique Sequence Length: {}".format(len(unique_seqs)))
 
     # create dictionary of results
     results = {
@@ -196,41 +213,49 @@ class ModelLoadStrategy(ABC):
 
 
 class LoadDeepSpeedStrategy(ModelLoadStrategy):
-    def __init__(self, checkpoint_dir: Path, **kwargs: Any) -> None:
-        self.checkpoint_dir = checkpoint_dir
+    def __init__(self, weight_path: Path, **kwargs: Any) -> None:
+        """Load DeepSpeed checkpoint path.
+
+        Parameters
+        ----------
+        weight_path : Path
+            DeepSpeed checkpoint directory.
+        """
+        self.weight_path = weight_path
         self.kwargs = kwargs
 
-    @staticmethod
-    def load_from_deepspeed(
-        pl_module: "Type[pl.LightningModule]",
-        checkpoint_dir: Path,
-        checkpoint: str = "last.ckpt",
-        model_weights: str = "last.pt",
-        **kwargs: Any,
-    ) -> "pl.LightningModule":
-        """Utility function for deepspeed conversion"""
-        # first convert the weights
-        save_path = str(checkpoint_dir / checkpoint)
-        output_path = str(checkpoint_dir / model_weights)
-        # perform the conversion
-        convert_zero_checkpoint_to_fp32_state_dict(save_path, output_path)
-        # load model
-        model = pl_module.load_from_checkpoint(output_path, strict=False, **kwargs)
-        return model
-
     def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
-        model = self.load_from_deepspeed(pl_module, self.checkpoint_dir, **self.kwargs)
+        """Utility function for deepspeed conversion"""
+        pt_file = str(self.weight_path.with_suffix(".pt"))
+        # perform the conversion from deepspeed to pt weights
+        convert_zero_checkpoint_to_fp32_state_dict(str(self.weight_path), pt_file)
+        # load model
+        model = pl_module.load_from_checkpoint(pt_file, strict=False, **self.kwargs)
         return model
 
 
 class LoadPTCheckpointStrategy(ModelLoadStrategy):
-    def __init__(self, pt_file: str, **kwargs: Any) -> None:
-        self.pt_file = pt_file
+    def __init__(self, weight_path: Path, **kwargs: Any) -> None:
+        """Load a PyTorch model weight file.
+
+        Parameters
+        ----------
+        weight_path : Path
+            PyTorch model weight file.
+
+        Raises
+        ------
+        ValueError
+            If the `weight_path` does not have the `.pt` extension.
+        """
+        if weight_path.suffix != ".pt":
+            raise ValueError("weight_path must be a .pt file")
+        self.weight_path = weight_path
         self.kwargs = kwargs
 
     def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
         model = pl_module.load_from_checkpoint(
-            self.pt_file, strict=False, **self.kwargs
+            str(self.weight_path), strict=False, **self.kwargs
         )
         return model
 
@@ -344,6 +369,7 @@ class SequenceGenerationCallback(Callback):
         num_test_seqs_per_gpu: int,
         output_dir: Path,
         custom_seq_name: str = "SyntheticSeq",
+        known_sequence_files: Optional[List[str]] = None,
     ) -> None:
         super().__init__()
 
@@ -351,6 +377,7 @@ class SequenceGenerationCallback(Callback):
         self.num_test_seqs_per_gpu = num_test_seqs_per_gpu
         self.output_dir = output_dir
         self.custom_seq_name = custom_seq_name
+        self.known_sequence_files = known_sequence_files
 
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
@@ -359,24 +386,24 @@ class SequenceGenerationCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
 
-        tokens = generate_dna(
+        # Generate sequences using the model
+        results = non_redundant_generation(
             pl_module.model,
             pl_module.tokenizer,
             num_seqs=self.num_test_seqs_per_gpu,
             max_length=self.block_size,
+            known_sequence_files=self.known_sequence_files,
         )
+        unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
+        print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
 
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
-        # sequences after all_gather is shape (world_size, num_test_seqs_per_gpu, block_size)
-        tokens = pl_module.all_gather(tokens)
+        unique_seqs = pl_module.all_gather(unique_seqs)
 
-        if self.trainer.is_global_zero:  # type: ignore[attr-defined]
-            # Concatenate over world size
-            tokens = tokens.view(-1, self.block_size)
-            sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
-            print(f"sequences {len(sequences)}")
-            self.final_sequences[f"globalstep-{pl_module.global_step}"] = sequences
+        if trainer.is_global_zero:  # type: ignore[attr-defined]
+            print(f"sequences {len(unique_seqs)}")
+            self.final_sequences[f"globalstep-{pl_module.global_step}"] = unique_seqs
 
     def on_test_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"

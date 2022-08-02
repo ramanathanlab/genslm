@@ -1,3 +1,4 @@
+import json
 import os
 import warnings
 from argparse import ArgumentParser
@@ -40,7 +41,13 @@ class DNATransformer(pl.LightningModule):
 
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
-        self.save_hyperparameters(cfg.dict())
+
+        settings_dict = cfg.dict()
+        with open(cfg.model_config_json, "r") as f:
+            architecture = json.load(f)
+            settings_dict["model_architecture"] = architecture
+        self.save_hyperparameters(settings_dict)
+
         self.cfg = cfg
         self.tokenizer = PreTrainedTokenizerFast(
             tokenizer_object=Tokenizer.from_file(str(self.cfg.tokenizer_file))
@@ -129,15 +136,15 @@ class DNATransformer(pl.LightningModule):
 
 
 def train(cfg: ModelSettings) -> None:
-    if cfg.load_from_checkpoint_pt is not None:
-        load_strategy = LoadPTCheckpointStrategy(cfg.load_from_checkpoint_pt, cfg=cfg)
+    if cfg.load_pt_checkpoint is not None:
+        load_strategy = LoadPTCheckpointStrategy(cfg.load_pt_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
-    elif cfg.load_from_checkpoint_dir is not None:
+    elif cfg.load_ds_checkpoint is not None:
         # Check if loading from checkpoint - this assumes that you're
         # loading from a sharded DeepSpeed checkpoint!!!
-        load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
+        load_strategy = LoadDeepSpeedStrategy(cfg.load_ds_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
-        print(f"Loaded existing model at checkpoint {cfg.load_from_checkpoint_dir}....")
+        print(f"Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....")
     else:
         model = DNATransformer(cfg)
 
@@ -150,8 +157,15 @@ def train(cfg: ModelSettings) -> None:
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
         callbacks.append(
-            ModelCheckpoint(dirpath=cfg.checkpoint_dir, save_last=True, verbose=True, monitor="val/loss", auto_insert_metric_name=False,
-                            filename='model-epoch{epoch:02d}-val_loss{val/loss:.2f}', save_top_k=3)
+            ModelCheckpoint(
+                dirpath=cfg.checkpoint_dir,
+                save_last=True,
+                verbose=True,
+                monitor="val/loss",
+                auto_insert_metric_name=False,
+                filename="model-epoch{epoch:02d}-val_loss{val/loss:.2f}",
+                save_top_k=3,
+            )
         )
 
     if cfg.wandb_active:
@@ -284,10 +298,19 @@ def inference(
 
 def test(cfg: ModelSettings) -> None:
     """Run test dataset after loading from checkpoint"""
-    if cfg.load_from_checkpoint_dir is None:
-        raise ValueError("load_from_checkpoint_dir must be set in the config file")
-    load_strategy = LoadDeepSpeedStrategy(cfg.load_from_checkpoint_dir, cfg=cfg)
-    model = load_strategy.get_model(DNATransformer)
+    if cfg.load_pt_checkpoint is not None:
+        load_strategy = LoadPTCheckpointStrategy(cfg.load_pt_checkpoint, cfg=cfg)
+        model = load_strategy.get_model(DNATransformer)
+    elif cfg.load_ds_checkpoint is not None:
+        # Check if loading from checkpoint - this assumes that you're
+        # loading from a sharded DeepSpeed checkpoint!!!
+        load_strategy = LoadDeepSpeedStrategy(cfg.load_ds_checkpoint, cfg=cfg)
+        model = load_strategy.get_model(DNATransformer)
+        print(f"Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....")
+    else:
+        print("WARNING: running test on randomly initialized architecture")
+        model = DNATransformer(cfg)
+
     model.cuda()
 
     trainer = pl.Trainer(
@@ -295,11 +318,6 @@ def test(cfg: ModelSettings) -> None:
         default_root_dir=str(cfg.checkpoint_dir),
         strategy=DeepSpeedPlugin(
             stage=3,
-            offload_optimizer=True,
-            offload_parameters=True,
-            remote_device="cpu",
-            offload_params_device="cpu",
-            logging_batch_size_per_gpu=cfg.batch_size,
         ),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
@@ -308,7 +326,8 @@ def test(cfg: ModelSettings) -> None:
         num_nodes=cfg.num_nodes,
     )
 
-    trainer.test(model)
+    output = trainer.test(model)
+    print(output)
 
 
 if __name__ == "__main__":
@@ -358,12 +377,12 @@ if __name__ == "__main__":
         if args.inference_model_load == "pt":
             model_strategy = LoadPTCheckpointStrategy(args.pt_file, cfg=config)
         elif args.inference_model_load == "deepspeed":
-            if config.load_from_checkpoint_dir is None:
+            if config.load_ds_checkpoint is None:
                 raise ValueError(
                     "load_from_checkpoint_dir must be set in the config file"
                 )
             model_strategy = LoadDeepSpeedStrategy(
-                config.load_from_checkpoint_dir, cfg=config
+                config.load_ds_checkpoint, cfg=config
             )
         else:
             raise ValueError(
