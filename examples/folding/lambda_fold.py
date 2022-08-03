@@ -42,18 +42,23 @@ def process(input_dir: Path, output_dir: Path) -> None:
     futures = []
     with cf.ProcessPoolExecutor(max_workers=num_workers) as executor:
         for file in tqdm(files):
-            print("Available gpus: ", available_gpus)
-            gpu = available_gpus.pop()
-            future = executor.submit(run_single, file, gpu, output_dir)
-            futures.append(future)
-            if not available_gpus:
-                # Process fasta files in batches
-                finished = cf.wait(futures, return_when=cf.ALL_COMPLETED)
-                print("No available, available: ", available_gpus)
-                for future in finished.done:
-                    print("Finished, available: ", available_gpus)
-                    gpu = future.result()  # Return gpu when finished with it
-                    available_gpus.add(gpu)
+            # check if directory exists - if it does then skip
+            alphafold_output_path = output_dir / file.with_suffix("").name
+            if not alphafold_output_path.is_dir():
+                print("Available gpus: ", available_gpus)
+                gpu = available_gpus.pop()
+                future = executor.submit(run_single, file, gpu, output_dir)
+                futures.append(future)
+                if not available_gpus:
+                    # Process fasta files in batches
+                    finished = cf.wait(futures, return_when=cf.ALL_COMPLETED)
+                    print("No available, available: ", available_gpus)
+                    for future in finished.done:
+                        print("Finished, available: ", available_gpus)
+                        gpu = future.result()  # Return gpu when finished with it
+                        available_gpus.add(gpu)
+            else:
+                print("{} already exists, skipping {}...".format(alphafold_output_path, file))
 
                 # while future in futures:
                 #    if future.done():
