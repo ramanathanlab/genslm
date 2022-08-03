@@ -131,10 +131,10 @@ class ModelSettings(BaseSettings):
     @root_validator
     def warn_checkpoint_load(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         load_pt_checkpoint = values.get("load_pt_checkpoint")
-        load_from_checkpoint_dir = values.get("load_from_checkpoint_dir")
-        if load_pt_checkpoint is not None and load_from_checkpoint_dir is not None:
+        load_ds_checkpoint = values.get("load_ds_checkpoint")
+        if load_pt_checkpoint is not None and load_ds_checkpoint is not None:
             warnings.warn(
-                "Both load_pt_checkpoint and load_from_checkpoint_dir are "
+                "Both load_pt_checkpoint and load_ds_checkpoint are "
                 "specified in the configuration. Loading from load_pt_checkpoint."
             )
         return values
