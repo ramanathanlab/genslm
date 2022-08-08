@@ -118,11 +118,3 @@ Test the installation:
 ```
 /opt/conda/bin/python -c "import gene_transformer; print(gene_transformer.__version__)"
 ```
-
-## Sequence Validation
-
-- MSA construction
-```
-conda install -c bioconda clustalo
-nohup clustalo --in=val.fasta --out=output.aln --force --outfmt=clustal --wrap=80 --threads=40 -v &> mdh_val_msa.out &
-```
