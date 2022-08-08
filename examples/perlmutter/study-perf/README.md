@@ -1,3 +1,5 @@
+# Experiments
+
 Models: Reformer, GPT-2, GPT-NeoX
 
 We need to test the following for each model:
@@ -10,3 +12,13 @@ We need to test the following for each model:
 Note: Many of these experiments will not fit into memory.
 Total possible experiments: 3 models * 4 params * 9 nodes * 2 blockSizes = 216
 
+# Organization
+
+- Model architecture JSON files are stored in `architectures/`.
+- Performance results for different models stored in `results/`.
+- To generate a configuration file for each experiment, run: `generate_configs.py`.
+- Figures stored in `figures/` and produced by `perf_scaling.ipynb`.
+
+# Results
+
+![Reformer Scaling](figures/scaling.png)
