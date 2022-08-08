@@ -92,8 +92,6 @@ def tokens_to_sequences(
     seq_strings = []
     for s in seqs:
         # Break into codons
-        print(s)
-        print(len(s))
         codons = s.split()
         if to_stop_codon:
             # Get the open reading frame
@@ -171,7 +169,6 @@ def non_redundant_generation(
             num_seqs=1,
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
-        print(len(seq))
         all_generated_seqs.append(seq)
         if seq not in known_sequences and len(seq) > length_cutoff:
             unique_seqs.add(seq)
