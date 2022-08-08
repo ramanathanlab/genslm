@@ -21,4 +21,4 @@ Total possible experiments: 3 models * 4 params * 9 nodes * 2 blockSizes = 216
 
 # Results
 
-![Reformer Scaling](figures/scaling.png)
+![Reformer Scaling](figures/reformer-scaling.png)
