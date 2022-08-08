@@ -145,15 +145,10 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
     new_config.num_test_seqs_per_gpu = 0
-    if cfg.num_nodes == 1 or cfg.num_nodes == 2:
-        new_config.small_subset = 1600
-    elif cfg.num_nodes == 4:
-        new_config.small_subset = 3200
-    elif cfg.num_nodes == 8:
-        new_config.small_subset = 6400
-    else:
-        new_config.small_subset = 16000
     new_config.profiling_path = None
+    # Select size of subset to use, more ranks require more data to compute stats.
+    nodes_to_sample_size = {1: 1600, 2: 1600, 4: 3200, 8: 6400}
+    new_config.small_subset = nodes_to_sample_size.get(cfg.num_nodes, 16000)
     return new_config
 
 
