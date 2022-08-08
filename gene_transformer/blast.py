@@ -1,7 +1,7 @@
 """Defining blast utilities to monitor training"""
 import shutil
 import subprocess
-import sys
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -68,7 +68,6 @@ class ParallelBLAST:
         temp_fasta = self.output_dir / f"{prefix}-seq-{seq_hash}.fasta"
         temp_csv = self.output_dir / f"{prefix}-blast-{seq_hash}.csv"
         SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
-        print("running blast...")
         # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
         command = "{} -query {} -subject {} -out {} -outfmt 10".format(
             self.blast_exe_path, temp_fasta, self.database_file, temp_csv
@@ -81,7 +80,6 @@ class ParallelBLAST:
             scores = pd.read_csv(temp_csv, header=None)[11].values
         except pd.errors.EmptyDataError:
             print(f"WARNING: blast did not find a match {temp_csv}")
-            sys.stdout.flush()
             # Remove files, no need to backup empty files
             temp_fasta.unlink()
             temp_csv.unlink()
@@ -132,6 +130,8 @@ class BLASTCallback(Callback):
             directory.
         """
         super().__init__()
+
+        warnings.warn("BLASTCallback may stall for multi-node runs.")
 
         self.block_size = block_size
         self.num_blast_seqs_per_gpu = num_blast_seqs_per_gpu
@@ -184,8 +184,6 @@ class BLASTCallback(Callback):
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
-        print("generating dna")
-        sys.stdout.flush()
         tokens = generate_dna(
             pl_module.model,
             pl_module.tokenizer,
@@ -195,19 +193,11 @@ class BLASTCallback(Callback):
         sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
 
         prefix = f"globalstep{pl_module.global_step}"
-        print("dna generated")
-        sys.stdout.flush()
         max_scores, mean_scores = self.blast.run(sequences, prefix)
         metrics = np.max(max_scores), np.mean(mean_scores)
-        print("blast done")
-        sys.stdout.flush()
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
-        print("barrier done")
-        sys.stdout.flush()
         metrics = pl_module.all_gather(metrics)
-        print("gather done")
-        sys.stdout.flush()
         if trainer.is_global_zero:
             max_score, mean_score = metrics[0].max().item(), metrics[1].mean().item()
             # TODO: Test the above line and if it works, then remove the commented out code below
