@@ -14,7 +14,7 @@ _T = TypeVar("_T")
 PathLike = Union[str, Path]
 
 
-class BaseSettings(_BaseSettings, extra="ignore"):
+class BaseSettings(_BaseSettings):
     """Base settings to provide an easier interface to read/write YAML files."""
 
     def dump_yaml(self, cfg_path: PathLike) -> None:
