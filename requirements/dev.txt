@@ -1,6 +1,6 @@
 # As well as these dev tools:
 mypy==0.910 # workaround https://github.com/samuelcolvin/pydantic/issues/3562
-black
+black[jupyter]
 flake8
 pytest
 isort

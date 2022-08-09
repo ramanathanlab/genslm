@@ -1,7 +1,8 @@
 import time
+from abc import ABC, abstractmethod
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Type
 
 import pytorch_lightning as pl
 import torch
@@ -9,6 +10,9 @@ from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
+from pytorch_lightning.utilities.deepspeed import (
+    convert_zero_checkpoint_to_fp32_state_dict,
+)
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
@@ -43,29 +47,44 @@ class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
         return len(self.stop_set) == batch_size
 
 
-def generate_dna_to_stop(
+def generate_dna(
     model: torch.nn.Module,  # type: ignore[name-defined]
     tokenizer: PreTrainedTokenizerFast,
     max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
     num_seqs: int = 5,
+    remove_invalid_values: bool = True,
 ) -> torch.Tensor:
+    # remove_invalid_values slows down the calculation
+    # but is more robust for the reformer model.
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
     return model.generate(  # type: ignore[no-any-return]
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
+        min_length=max_length,
         do_sample=True,
         top_k=top_k,
         top_p=top_p,
         num_return_sequences=num_seqs,
+        remove_invalid_values=remove_invalid_values,
+        use_cache=True
         #        stopping_criteria=stopping_criteria,
     )
 
 
+def find_stop_codon(codons: List[str]) -> int:
+    # Iterate through until you reach a stop codon
+    # and return the index
+    for i, codon in enumerate(codons):
+        if codon in STOP_CODONS:
+            return i
+    return len(codons) - 1
+
+
 def tokens_to_sequences(
-    tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast
+    tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast, to_stop_codon: bool = True
 ) -> List[str]:
     # Decode tokens to codon strings
     seqs = tokenizer.batch_decode(tokens, skip_special_tokens=True)
@@ -73,15 +92,13 @@ def tokens_to_sequences(
     seq_strings = []
     for s in seqs:
         # Break into codons
-        dna = s.split()
-        # Iterate through until you reach a stop codon
-        for i, codon in enumerate(dna):
-            if codon in STOP_CODONS:
-                break
-        # Get the open reading frame
-        to_stop = dna[: i + 1]
-        # Create the string and append to list
-        seq_strings.append("".join(to_stop))
+        codons = s.split()
+        if to_stop_codon:
+            # Get the open reading frame
+            ind = find_stop_codon(codons)
+            codons = codons[: ind + 1]
+        # Create the DNA string and append to list
+        seq_strings.append("".join(codons))
     return seq_strings
 
 
@@ -129,9 +146,21 @@ def non_redundant_generation(
     if known_sequence_files is not None:
         known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
+    if len(known_sequences) > 1:
+        lengths = [len(s) for s in known_sequences]
+        length_cutoff = min(lengths)
+    else:
+        length_cutoff = 0
+
+    print(f"Using length cutoff of {length_cutoff} - {length_cutoff // 3} tokens.")
+
     # begin generation loop
     while len(unique_seqs) < num_seqs:
-        tokens = generate_dna_to_stop(
+        print(
+            f"Current number of unique sequences meeting criteria: {len(unique_seqs)}"
+        )
+        print(f"Current number of sequences generated: {len(all_generated_seqs)}")
+        tokens = generate_dna(
             model,
             tokenizer,
             max_length=max_length,
@@ -140,9 +169,10 @@ def non_redundant_generation(
             num_seqs=1,
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
-        if seq not in known_sequences:
-            all_generated_seqs.append(seq)
+        all_generated_seqs.append(seq)
+        if seq not in known_sequences and len(seq) > length_cutoff:
             unique_seqs.add(seq)
+            print("Unique Sequence Length: {}".format(len(unique_seqs)))
 
     # create dictionary of results
     results = {
@@ -171,6 +201,60 @@ def redundancy_check(
             return False
     # no redundancies found
     return True
+
+
+class ModelLoadStrategy(ABC):
+    @abstractmethod
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+        """Load and return a module object."""
+
+
+class LoadDeepSpeedStrategy(ModelLoadStrategy):
+    def __init__(self, weight_path: Path, **kwargs: Any) -> None:
+        """Load DeepSpeed checkpoint path.
+
+        Parameters
+        ----------
+        weight_path : Path
+            DeepSpeed checkpoint directory.
+        """
+        self.weight_path = weight_path
+        self.kwargs = kwargs
+
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+        """Utility function for deepspeed conversion"""
+        pt_file = str(self.weight_path.with_suffix(".pt"))
+        # perform the conversion from deepspeed to pt weights
+        convert_zero_checkpoint_to_fp32_state_dict(str(self.weight_path), pt_file)
+        # load model
+        model = pl_module.load_from_checkpoint(pt_file, strict=False, **self.kwargs)
+        return model
+
+
+class LoadPTCheckpointStrategy(ModelLoadStrategy):
+    def __init__(self, weight_path: Path, **kwargs: Any) -> None:
+        """Load a PyTorch model weight file.
+
+        Parameters
+        ----------
+        weight_path : Path
+            PyTorch model weight file.
+
+        Raises
+        ------
+        ValueError
+            If the `weight_path` does not have the `.pt` extension.
+        """
+        if weight_path.suffix != ".pt":
+            raise ValueError("weight_path must be a .pt file")
+        self.weight_path = weight_path
+        self.kwargs = kwargs
+
+    def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
+        model = pl_module.load_from_checkpoint(
+            str(self.weight_path), strict=False, **self.kwargs
+        )
+        return model
 
 
 class ThroughputMonitor(Callback):
@@ -271,3 +355,62 @@ class ThroughputMonitor(Callback):
                     ]
                 ],
             )
+
+
+class SequenceGenerationCallback(Callback):
+    """Custom callback to generate sequences at the end of epoch."""
+
+    def __init__(
+        self,
+        block_size: int,
+        num_test_seqs_per_gpu: int,
+        output_dir: Path,
+        custom_seq_name: str = "SyntheticSeq",
+        known_sequence_files: Optional[List[str]] = None,
+    ) -> None:
+        super().__init__()
+
+        self.block_size = block_size
+        self.num_test_seqs_per_gpu = num_test_seqs_per_gpu
+        self.output_dir = output_dir
+        self.custom_seq_name = custom_seq_name
+        self.known_sequence_files = known_sequence_files
+
+        # Collect generated sequences at each epoch end
+        self.final_sequences: Dict[str, List[str]] = {}
+
+    def on_test_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+
+        # Generate sequences using the model
+        results = non_redundant_generation(
+            pl_module.model,
+            pl_module.tokenizer,
+            num_seqs=self.num_test_seqs_per_gpu,
+            max_length=self.block_size,
+            known_sequence_files=self.known_sequence_files,
+        )
+        unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
+        print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
+
+        # Wait until all ranks meet up here
+        trainer._accelerator_connector.strategy.barrier()
+        unique_seqs = pl_module.all_gather(unique_seqs)
+
+        if trainer.is_global_zero:  # type: ignore[attr-defined]
+            print(f"sequences {len(unique_seqs)}")
+            self.final_sequences[f"globalstep-{pl_module.global_step}"] = unique_seqs
+
+    def on_test_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        if trainer.is_global_zero:
+            self.output_dir.mkdir(exist_ok=True, parents=True)
+            for name, seqs in self.final_sequences.items():
+                seqs_to_fasta(
+                    seqs,
+                    self.output_dir / f"{name}.fasta",
+                    custom_seq_name=self.custom_seq_name,
+                )
+            print(f"Saved final generated sequences to {self.output_dir}")
