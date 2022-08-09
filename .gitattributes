@@ -1,0 +1,4 @@
+# Ignore jupyter line counts
+*.ipynb linguist-generated
+# Ignore fasta line counts
+*.fasta linguist-generated
