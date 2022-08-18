@@ -49,6 +49,7 @@ def mmseqs2_easy_cluster(
     temp_dir = output_dir / "temp"
     command = f"{mmseqs_exe} easy-cluster {fasta} {out_dir_and_files} {temp_dir} --min-seq-id {similarity}"
     proc = subprocess.run(command.split(), capture_output=True)  # ignore verbose output
+    temp_dir.unlink()
 
     if proc.returncode == 0:
         print(f"\n\nSuccesfully clustered input fasta file to: {output_dir}")
