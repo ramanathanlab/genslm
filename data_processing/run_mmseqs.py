@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
+from typing import List, Tuple
 
 
 def _compute_number_of_clusters(tsv_path: Path) -> int:
@@ -58,7 +59,42 @@ def mmseqs2_easy_cluster(
     return _compute_number_of_clusters(tsv_file)
 
 
-if __name__ == "__main__":
+def sequence_identity_thresholding(
+    fasta: Path,
+    output_dir: Path,
+    mmseqs_exe: str = "mmseqs",
+    start: int = 10,
+    stop: int = 100,
+    step: int = 5,
+) -> Tuple[List[float], List[int]]:
+    """Compute number of clusters for different similarity thresholds.
+
+    Parameters
+    ----------
+    fasta : Path
+        Path to fasta file.
+    output_dir : Path
+        Output directory for mmseqs2 executable.
+    similarity : float
+        min-seq-id similarity for mmseqs2.
+    mmseqs_exe : str
+        mmseqs executable path.
+    start : int, optional
+        Starting threshold as percentage, by default 10
+    stop : int, optional
+        Stoping threshold as percentage, by default 100
+    step : int, optional
+        Threshold step to increment by as percentage, by default 5
+    """
+    similarities = list(i / 100 for i in range(start, stop, step))
+    num_clusters = [
+        mmseqs2_easy_cluster(fasta, output_dir, similarity, mmseqs_exe)
+        for similarity in similarities
+    ]
+    return similarities, num_clusters
+
+
+def mmseqs2_parse_args() -> Namespace:
     parser = ArgumentParser()
     parser.add_argument(
         "--fasta", type=Path, required=True, help="Path to the fasta file input"
@@ -89,4 +125,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    return args
+
+
+if __name__ == "__main__":
+    args = mmseqs2_parse_args()
     mmseqs2_easy_cluster(args.fasta, args.output_dir, args.similarity, args.mmseqs)
