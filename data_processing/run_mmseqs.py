@@ -106,12 +106,6 @@ def mmseqs2_parse_args() -> Namespace:
         help="Path to the output directory, will be made if it does not exist",
     )
     parser.add_argument(
-        "--out_ext",
-        type=str,
-        help="Extension to give the output files names, defaults to 'res'",
-        default="res",
-    )
-    parser.add_argument(
         "--mmseqs",
         type=str,
         help="Path to MMSEQS program",
