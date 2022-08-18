@@ -3,9 +3,23 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 
-def mmseqs2_easy_cluster(
-    fasta: Path, output_dir: Path, similarity: float, mmseqs_exe: str = "mmseqs"
-):
+def parse_tsv(tsv_path: Path) -> int:
+
+    raw_data = tsv_path.read_text()
+    cluster_centers = []
+    cluster_members = []
+    for line in raw_data.strip().split("\n"):
+        cluster_center, cluster_member = line.split()
+        cluster_centers.append(cluster_center)
+        cluster_members.append(cluster_member)
+
+    cluster_centers = set(cluster_centers)
+    cluster_members = set(cluster_members)
+
+    return len(cluster_centers)
+
+
+def mmseqs2_easy_cluster(fasta: Path, output_dir: Path, similarity: float, mmseqs_exe: str = "mmseqs") -> int:
     """Run easy-cluster mmseqs2 executable and return the number of non redundant sequences.
 
     Parameters
@@ -33,14 +47,14 @@ def mmseqs2_easy_cluster(
         raise RuntimeError("MMSEQS did not sucessfully complete")
 
     # Determine number of clusters in data
-    raise NotImplementedError
+
+    tsv_file = list(output_dir.glob("*.tsv"))[0]
+    return parse_tsv(tsv_file)
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--fasta", type=Path, required=True, help="Path to the fasta file input"
-    )
+    parser.add_argument("--fasta", type=Path, required=True, help="Path to the fasta file input")
     parser.add_argument(
         "--output_dir",
         type=Path,
