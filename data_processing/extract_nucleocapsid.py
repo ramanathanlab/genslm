@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
-
-
 import os
 import Bio
 import time
+import numpy as np
 from Bio import pairwise2
 from Bio import Seq
 from Bio import SeqIO
 from Bio.Align import substitution_matrices
-import numpy as np
-# blosum62 = substitution_matrices.load("BLOSUM62")
 
 
-# In[4]:
 
 
 def OutlierClose(v, target=1280, perc = 50):
@@ -65,7 +60,7 @@ def OutlierClose(v, target=1280, perc = 50):
 
 
 
-def find_orfs_with_trans(seq, trans_table=11, min_protein_length):
+def find_orfs_with_trans(seq, trans_table, min_protein_length):
     r"""Locate the ORFs within the sequence of a minimum protein length.
 
     Find open-reading frames in a given sequence (seq) according to the translation
@@ -92,9 +87,9 @@ def find_orfs_with_trans(seq, trans_table=11, min_protein_length):
     Examples
     --------
     These are written in doctest format, and should illustrate how to
-    use the function."""
+    use the function.
     
-    """>>> orf_list = find_orfs_with_trans(record.seq, table, min_pro_len)
+    >>> orf_list = find_orfs_with_trans(record.seq, table, min_pro_len)
     >>> for start, end, strand, pro in orf_list:
         print(
             "%s...%s - length %i, strand %i, %i:%i"
@@ -113,7 +108,8 @@ def find_orfs_with_trans(seq, trans_table=11, min_protein_length):
     IYSTSEHTGEQVMRTLDEVIASRSPESQTR...FHV - length 111, strand -1, 7788:8124
     WGKLQVIGLSMWMVLFSQRFDDWLNEQEDA...ESK - length 125, strand -1, 8087:8465
     TGKQNSCQMSAIWQLRQNTATKTRQNRARI...AIK - length 100, strand 1, 8741:9044
-    QGSGYAFPHASILSGIAMSHFYFLVLHAVK...CSD - length 114, strand -1, 9264:9609""""
+    QGSGYAFPHASILSGIAMSHFYFLVLHAVK...CSD - length 114, strand -1, 9264:9609
+    """
     
     answer = []
     seq_len = len(seq)
@@ -242,200 +238,6 @@ def getBestMatchORF(seq, target_protein, min_pro_len=800, table = 11, max_pro_le
     answer['Timings'] = timing
     return answer
 
-
-# In[7]:
-
-
-[k for k in os.listdir('Max_RL_Fold') if 'fasta' in k.lower()]
-
-
-# In[8]:
-
-
-file = 'Max_RL_Fold/sarscov2.fasta'
-f = open(file, 'r')
-
-
-# In[9]:
-
-
-k = 0
-seqs = []
-seq = ''
-while k <= 25:
-    line = f.readline()
-    if line[0]=='>':
-        seqs += [seq]
-        seq = line
-        k+=1
-    else:
-        seq += line        
-
-if seqs[0] == '':
-    seqs=seqs[1:]
-else:
-    print('Check if file correctly read.')
-f.close()
-
-
-# In[15]:
-
-
-seqs
-
-
-# In[10]:
-
-
-# Nucleocapsid
-table = 11
-target = """>NC_045512.2:28274-29533 N [organism=Severe acute respiratory syndrome coronavirus 2] [GeneID=43740575] [chromosome=]
-ATGTCTGATAATGGACCCCAAAATCAGCGAAATGCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAA
-CTGGCAGTAACCAGAATGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTACCCAA
-TAATACTGCGTCTTGGTTCACCGCTCTCACTCAACATGGCAAGGAAGACCTTAAATTCCCTCGAGGACAA
-GGCGTTCCAATTAACACCAATAGCAGTCCAGATGACCAAATTGGCTACTACCGAAGAGCTACCAGACGAA
-TTCGTGGTGGTGACGGTAAAATGAAAGATCTCAGTCCAAGATGGTATTTCTACTACCTAGGAACTGGGCC
-AGAAGCTGGACTTCCCTATGGTGCTAACAAAGACGGCATCATATGGGTTGCAACTGAGGGAGCCTTGAAT
-ACACCAAAAGATCACATTGGCACCCGCAATCCTGCTAACAATGCTGCAATCGTGCTACAACTTCCTCAAG
-GAACAACATTGCCAAAAGGCTTCTACGCAGAAGGGAGCAGAGGCGGCAGTCAAGCCTCTTCTCGTTCCTC
-ATCACGTAGTCGCAACAGTTCAAGAAATTCAACTCCAGGCAGCAGTAGGGGAACTTCTCCTGCTAGAATG
-GCTGGCAATGGCGGTGATGCTGCTCTTGCTTTGCTGCTGCTTGACAGATTGAACCAGCTTGAGAGCAAAA
-TGTCTGGTAAAGGCCAACAACAACAAGGCCAAACTGTCACTAAGAAATCTGCTGCTGAGGCTTCTAAGAA
-GCCTCGGCAAAAACGTACTGCCACTAAAGCATACAATGTAACACAAGCTTTCGGCAGACGTGGTCCAGAA
-CAAACCCAAGGAAATTTTGGGGACCAGGAACTAATCAGACAAGGAACTGATTACAAACATTGGCCGCAAA
-TTGCACAATTTGCCCCCAGCGCTTCAGCGTTCTTCGGAATGTCGCGCATTGGCATGGAAGTCACACCTTC
-GGGAACGTGGTTGACCTACACAGGTGCCATCAAATTGGATGACAAAGATCCAAATTTCAAAGATCAAGTC
-ATTTTGCTGAATAAGCATATTGACGCATACAAAACATTCCCACCAACAGAGCCTAAAAAGGACAAAAAGA
-AGAAGGCTGATGAAACTCAAGCCTTACCGCAGAGACAGAAGAAACAGCAAACTGTGACTCTTCTTCCTGC
-TGCAGATTTGGATGATTTCTCCAAACAATTGCAACAATCCATGAGCAGTGCTGACTCAACTCAGGCCTAA
-"""
-
-target_seq=''.join(target.split('\n')[1:])
-f = open('test_target.fna', 'w')
-f.write(target)
-f.close()
-
-nucleo_record = SeqIO.read('test_target.fna',"fasta")
-nucleocapsid = nucleo_record.seq.translate(table)
-
-print(nucleocapsid)
-
-
-# In[13]:
-
-
-1+1
-
-
-# In[ ]:
-
-
-table = 11 # Codon table to use
-min_pro_len = 310 # Minimum Protein Length
-max_pro_len = 1024
-answers = []
-output_file = 'RL-fold_Project/dperezjr/sars_cov_2_NucleoCapsid_ORFs_output_speed_up.tsv'
-new_file = True
-if new_file:
-    with open(output_file, 'w') as fd:
-        fd.write('Name\tStrand\tStart\tEnd\tGene_Sequence\tProtein_Sequence\tScore\tMetadata')
-
-file = 'Max_RL_Fold/sarscov2.fasta'
-f = open(file, 'r')
-line = f.readline()
-seq = ''
-k = 0 
-timing = {}
-timings = []
-# while k <= 5:
-last = time.perf_counter()
-while line != '':
-    if k < -5:
-        if line[0]=='>':
-            k+=1
-        line = f.readline()
-    else:
-        if line[0]=='>':
-            if seq != '':
-                try:
-                    timing['Finish_Read'] = time.perf_counter()
-                    timing['Start_Detection'] = time.perf_counter()   
-                    answer = getBestMatchORF(seq, nucleocapsid, min_pro_len=min_pro_len, max_pro_len=max_pro_len)
-#                     timing['Finish_Detection'] = time.perf_counter() 
-#                     timing = dict(timing, **answer['Timings'])
-#                     timing['Start_Writing'] = time.perf_counter()   
-                    with open(output_file, 'a') as fd:
-                        fd.write(f'\n{answer["Name"]}\t{answer["Strand"]}\t{answer["Start"]}\t{answer["End"]}\t{answer["Gene_Sequence"]}\t{answer["Protein_Sequence"]}\t{answer["Score"]}\t{answer["Metadata"]}')
-                except:                    
-                    with open(output_file, 'a') as fd:
-                        brokename = seq.split("\n")[0]
-                        fd.write(f'\n{brokename} \t {0} \t {-1} \t {-1} \t {"X"} \t {"X"} \t {-1}\t{"X"}')
-#             timing['Finish_Writing'] = time.perf_counter()
-            seq = line
-#             timings += [timing]
-#             timing = {}
-#             timing['Start_Read'] = time.perf_counter()
-            k+=1
-            if k % 250 == 0:
-                print(k, last-time.perf_counter(), 'since last 250.')
-                last = time.perf_counter()                
-#             if k > 40:
-#                 break
-        else:
-            seq += line
-        line = f.readline()
-    
-
-
-# In[ ]:
-
-
-import numpy as np
-
-def read_tsv_outputs(tsvfile):
-    r"""Read in TSV format output from ORF preprocessing for splitting.
-
-    Parameters
-    ----------
-    tsvfile : str
-        Path to tsvfile to be read.
-    Returns
-    -------
-    seqs : list of str
-        Gene sequences in base pairs.
-    prots : list of str
-        Protein sequences in aminoacids.
-    names : list of str
-        Names of each sequence.
-    scores : list of int
-        Scoring according to preprocessing function.
-    """" 
-    f = open(tsvfile, 'r')
-    cols = f.readline()[:-1].split('\t')
-    k = 0
-    names = []
-    seqs = []
-    prots = []
-    scores = []
-    line = 0
-    while line != ['']:
-        line = f.readline().split('\t')
-        try:
-            if line[-2] != 0:
-                seqs += [line[4]]
-                prots += [line[5]]
-                names += [line[-1][:-1]]
-                scores += [line[-2]]
-            k+=1
-            if k % 10000 ==0:
-                print(k)
-        except:
-            print(k)
-            print(line)
-            print('Error Triggered. Check if finished processing.')
-    return seqs, prots, names, scores
-
-
 def fastify(seqstring, l = 70):
     r"""Format string sequence into FASTA format with line length l.
 
@@ -449,76 +251,69 @@ def fastify(seqstring, l = 70):
     -------
     fasta : str
         Gene sequence split according to FASTA format.
-    """" 
-  k = 0
-  fasta = ''
-  while k < len(seqstring):
-    fasta += seqstring[k:(k+l)]+'\n'
-    k += l
-  return fasta
+    """ 
+    k = 0
+    fasta = ''
+    while k < len(seqstring):
+        fasta += seqstring[k:(k+l)]+'\n'
+        k += l
+    return fasta
 
+def main(args):
+    file = args.fasta
+    seqs = list(SeqIO.parse(p / file, "fasta"))
 
-def split_tts(N, train = 80, test = 10, validation = 10):
-    r"""Assort N indexes randomly to train, test and validation portions.
+    # Nucleocapsid
+    table = args.table
+    target = args.target
+    target_seq=''.join(target.split('\n')[1:])
+    targ_record = Seq.Seq(target_seq)
+    targ_protein = targ_record.seq.translate(table)
+    min_pro_len = args.min_pro_len # Minimum Protein Length
+    max_pro_len = args.max_pro_len # Maximum Protein Length
+    output = ''
+    for seq in seqs:
+        answer = getBestMatchORF(seq, targ_protein, min_pro_len=min_pro_len, max_pro_len=max_pro_len)
+        output += fastify(answer["Metadata"]+'\n'+answer['Gene_Sequence'])
+    f = open(args.output_dir, 'w')
+    f.write(output)
+    return 0
 
-    Parameters
-    ----------
-    N : int
-        Amount of indexes to be shuffled.
-    train : int
-        Proportion of indexes to be assigned to the training set.
-    test : int
-        Proportion of indexes to be assigned to the test set.
-    validation : int
-        Proportion of indexes to be assigned to the validation set.
-        
-    Returns
-    -------
-    answer : list, contains arrays of indexes to be assigned to each set.
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--fasta", type=Path, required=True, help="Path to the fasta file input.")
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        required=True,
+        help="Path to the output directory, will be made if it does not exist",
+    )
+    parser.add_argument(
+        "--min_pro_len",
+        type=int,
+        help="Length of shortest open-reading frame to consider.",
+        default=0,
+    )
+    parser.add_argument(
+        "--max_pro_len",
+        type=int,
+        help="Length of longest open-reading frame to consider.",
+        default=1000**3,
+    )
+
+    parser.add_argument(
+        "--table",
+        type=int,
+        help="Codon table to be utilized by Biopython dependant on organism.",
+        default=11,
+    )
     
-    Example
-    -------
-    
-    >>> seqs, prots, names, scores = read_tsv_outputs(tsvfile)
-    >>> splits = split_tts(len(names))
-    >>> train = open('spike_ORFs_training.fasta', 'w')
-    >>> p = 0
-    >>> for k in splits[0]:
-            train.write('>'+fixed_names[k]+fastify(seqs[k]))
-            p+=1
-            if p % 10000 == 1:
-                print(p)
-    >>> train.close()
-    >>> test = open('spike_ORFs_testing.fasta', 'w')
-    >>> for k in splits[1]:
-            test.write('>'+fixed_names[k]+fastify(seqs[k]))
-            p+=1
-            if p % 10000 == 1:
-                print(p)
-    >>> test.close()
-    >>> valid = open('spike_ORFs_validating.fasta', 'w')
-    >>> for k in splits[2]:
-            valid.write('>'+fixed_names[k]+fastify(seqs[k]))
-            p+=1
-            if p % 10000 == 1:
-                print(p)
-    >>> valid.close()
-    """"
-    
-    master = np.arange(N)
-    np.random.shuffle(master)
-    trainN = int(N*train/100)
-    testN = int(N*test/100)
-    validationN = int(N*validation/100)
-    return [master[:trainN],master[(trainN):(trainN+testN)],master[(trainN+testN):(trainN+testN+validationN)]]
-    
-
-
-# In[ ]:
-
-
-seqs, prots, names, scores = readtsvoutputs(output_file)
-    
-
-
+    parser.add_argument(
+        "--target",
+        type=Path,
+        required=True,
+        help="Representative ORF to be identified in each sequence.",
+    )
+    args = parser.parse_args()
+    main(args)
 
