@@ -17,22 +17,23 @@ def mmseqs2_easy_cluster(
     similarity : float
         min-seq-id similarity for mmseqs2.
     mmseqs_exe : str
-        mmseqs executable.
+        mmseqs executable path.
     """
-    output_dir.mkdir(exist_ok=True)
 
+    # Setup up and run mmseqs2 executable
+    output_dir.mkdir(exist_ok=True)
     out_dir_and_files = output_dir / f"sim{similarity}"
     temp_dir = output_dir / "temp"
     command = f"{mmseqs_exe} easy-cluster {fasta} {out_dir_and_files} {temp_dir} --min-seq-id {similarity}"
-
     proc = subprocess.run(command.split())
 
     if proc.returncode == 0:
-        print("\n\n")
-        print(f"Succesfully clustered input fasta file to: {output_dir}")
+        print(f"\n\nSuccesfully clustered input fasta file to: {output_dir}")
     else:
-        print("\n\n")
-        print("MMSEQS did not sucessfully complete, see above output")
+        raise RuntimeError("MMSEQS did not sucessfully complete")
+
+    # Determine number of clusters in data
+    raise NotImplementedError
 
 
 if __name__ == "__main__":
@@ -41,7 +42,7 @@ if __name__ == "__main__":
         "--fasta", type=Path, required=True, help="Path to the fasta file input"
     )
     parser.add_argument(
-        "--out_dir",
+        "--output_dir",
         type=Path,
         required=True,
         help="Path to the output directory, will be made if it does not exist",
@@ -56,11 +57,14 @@ if __name__ == "__main__":
         "--mmseqs",
         type=str,
         help="Path to MMSEQS program",
-        default="/home/kyle/anaconda3/envs/gat_go/bin/mmseqs",
+        default="mmseqs",
     )
     parser.add_argument(
-        "--sim", type=float, default=0.5, help="Similarity threshold to run mmseqs with"
+        "--similarity",
+        type=float,
+        default=0.5,
+        help="Similarity threshold to run mmseqs with",
     )
 
     args = parser.parse_args()
-    main(args)
+    mmseqs2_easy_cluster(args.fasta, args.output_dir, args.similarity, args.mmseqs)
