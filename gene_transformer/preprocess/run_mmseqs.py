@@ -29,7 +29,11 @@ def _compute_number_of_clusters(tsv_path: Path) -> int:
 
 
 def mmseqs2_easy_cluster(
-    fasta: Path, output_dir: Path, similarity: float, mmseqs_exe: str = "mmseqs"
+    fasta: Path,
+    output_dir: Path,
+    similarity: float,
+    mmseqs_exe: str = "mmseqs",
+    mmseqs_threads: int = 10,
 ) -> int:
     """Run easy-cluster mmseqs2 executable and return the number of non redundant sequences.
 
@@ -43,15 +47,19 @@ def mmseqs2_easy_cluster(
         min-seq-id similarity for mmseqs2.
     mmseqs_exe : str
         mmseqs executable path.
+    mmseqs_threads : int
+        How many cores in mmseqs.
     """
 
     # Setup up and run mmseqs2 executable
     output_dir.mkdir(exist_ok=True)
     out_dir_and_files = output_dir / f"sim{similarity}"
     temp_dir = output_dir / "temp"
-    command = f"{mmseqs_exe} easy-cluster {fasta} {out_dir_and_files} {temp_dir} --min-seq-id {similarity}"
+    command = (
+        f"{mmseqs_exe} easy-cluster {fasta} {out_dir_and_files} {temp_dir}"
+        f" --min-seq-id {similarity} --threads {mmseqs_threads} --remove-tmp-files"
+    )
     proc = subprocess.run(command.split(), capture_output=True)  # ignore verbose output
-    temp_dir.unlink()
 
     if proc.returncode == 0:
         print(f"\n\nSuccesfully clustered input fasta file to: {output_dir}")
@@ -71,6 +79,7 @@ def sequence_identity_thresholding(
     stop: int = 100,
     step: int = 5,
     num_workers: int = 1,
+    mmseqs_threads: int = 10,
 ) -> Tuple[List[float], List[int]]:
     """Compute number of clusters for different similarity thresholds.
 
@@ -98,7 +107,11 @@ def sequence_identity_thresholding(
     # ]
 
     func = functools.partial(
-        mmseqs2_easy_cluster, fasta=fasta, output_dir=output_dir, mmseqs_exe=mmseqs_exe
+        mmseqs2_easy_cluster,
+        fasta=fasta,
+        output_dir=output_dir,
+        mmseqs_exe=mmseqs_exe,
+        mmseqs_threads=mmseqs_threads,
     )
 
     num_clusters = []
