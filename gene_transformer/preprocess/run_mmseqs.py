@@ -2,6 +2,7 @@ import subprocess
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 from typing import List, Tuple
+from tqdm import tqdm
 
 
 def _compute_number_of_clusters(tsv_path: Path) -> int:
@@ -47,7 +48,7 @@ def mmseqs2_easy_cluster(
     out_dir_and_files = output_dir / f"sim{similarity}"
     temp_dir = output_dir / "temp"
     command = f"{mmseqs_exe} easy-cluster {fasta} {out_dir_and_files} {temp_dir} --min-seq-id {similarity}"
-    proc = subprocess.run(command.split())
+    proc = subprocess.run(command.split(), capture_output=True)  # ignore verbose output
 
     if proc.returncode == 0:
         print(f"\n\nSuccesfully clustered input fasta file to: {output_dir}")
@@ -89,7 +90,7 @@ def sequence_identity_thresholding(
     similarities = list(i / 100 for i in range(start, stop, step))
     num_clusters = [
         mmseqs2_easy_cluster(fasta, output_dir, similarity, mmseqs_exe)
-        for similarity in similarities
+        for similarity in tqdm(similarities)
     ]
     return similarities, num_clusters
 
