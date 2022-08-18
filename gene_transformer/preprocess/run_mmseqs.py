@@ -29,9 +29,9 @@ def _compute_number_of_clusters(tsv_path: Path) -> int:
 
 
 def mmseqs2_easy_cluster(
+    similarity: float,
     fasta: Path,
     output_dir: Path,
-    similarity: float,
     mmseqs_exe: str = "mmseqs",
     mmseqs_threads: int = 10,
 ) -> int:
@@ -39,12 +39,12 @@ def mmseqs2_easy_cluster(
 
     Parameters
     ----------
+    similarity : float
+        min-seq-id similarity for mmseqs2.
     fasta : Path
         Path to fasta file.
     output_dir : Path
         Output directory for mmseqs2 executable.
-    similarity : float
-        min-seq-id similarity for mmseqs2.
     mmseqs_exe : str
         mmseqs executable path.
     mmseqs_threads : int
