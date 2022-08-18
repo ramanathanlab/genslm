@@ -3,23 +3,30 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 
-def parse_tsv(tsv_path: Path) -> int:
+def _compute_number_of_clusters(tsv_path: Path) -> int:
+    """Parse TSV output file from mmseqs2 and compute number of clusters.
 
-    raw_data = tsv_path.read_text()
-    cluster_centers = []
-    cluster_members = []
-    for line in raw_data.strip().split("\n"):
-        cluster_center, cluster_member = line.split()
-        cluster_centers.append(cluster_center)
-        cluster_members.append(cluster_member)
+    Parameters
+    ----------
+    tsv_path : Path
+        Path to output TSV file.
 
-    cluster_centers = set(cluster_centers)
-    cluster_members = set(cluster_members)
-
+    Returns
+    -------
+    int
+        The number of sequence clusters.
+    """
+    # Collect each line of the TSV file in a list.
+    lines = tsv_path.read_text().strip().split("\n")
+    # Get the sequences in the first column.
+    cluster_centers = set(line.split()[0] for line in lines)
+    # Return the number of unique sequences in the first column.
     return len(cluster_centers)
 
 
-def mmseqs2_easy_cluster(fasta: Path, output_dir: Path, similarity: float, mmseqs_exe: str = "mmseqs") -> int:
+def mmseqs2_easy_cluster(
+    fasta: Path, output_dir: Path, similarity: float, mmseqs_exe: str = "mmseqs"
+) -> int:
     """Run easy-cluster mmseqs2 executable and return the number of non redundant sequences.
 
     Parameters
@@ -47,14 +54,15 @@ def mmseqs2_easy_cluster(fasta: Path, output_dir: Path, similarity: float, mmseq
         raise RuntimeError("MMSEQS did not sucessfully complete")
 
     # Determine number of clusters in data
-
     tsv_file = list(output_dir.glob("*.tsv"))[0]
-    return parse_tsv(tsv_file)
+    return _compute_number_of_clusters(tsv_file)
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--fasta", type=Path, required=True, help="Path to the fasta file input")
+    parser.add_argument(
+        "--fasta", type=Path, required=True, help="Path to the fasta file input"
+    )
     parser.add_argument(
         "--output_dir",
         type=Path,
