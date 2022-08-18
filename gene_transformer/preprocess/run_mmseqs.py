@@ -1,8 +1,10 @@
 import subprocess
+import functools
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 from typing import List, Tuple
 from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor
 
 
 def _compute_number_of_clusters(tsv_path: Path) -> int:
@@ -68,6 +70,7 @@ def sequence_identity_thresholding(
     start: int = 10,
     stop: int = 100,
     step: int = 5,
+    num_workers: int = 1,
 ) -> Tuple[List[float], List[int]]:
     """Compute number of clusters for different similarity thresholds.
 
@@ -89,10 +92,21 @@ def sequence_identity_thresholding(
         Threshold step to increment by as percentage, by default 5
     """
     similarities = list(i / 100 for i in range(start, stop, step))
-    num_clusters = [
-        mmseqs2_easy_cluster(fasta, output_dir, similarity, mmseqs_exe)
-        for similarity in tqdm(similarities)
-    ]
+    # num_clusters = [
+    #     mmseqs2_easy_cluster(fasta, output_dir, similarity, mmseqs_exe)
+    #     for similarity in tqdm(similarities)
+    # ]
+
+    func = functools.partial(
+        mmseqs2_easy_cluster, fasta=fasta, output_dir=output_dir, mmseqs_exe=mmseqs_exe
+    )
+
+    num_clusters = []
+    chunksize = max(1, len(similarities) // num_workers)
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for num_cluster in executor.map(func, similarities, chunksize=chunksize):
+            num_clusters.append(num_cluster)
+
     return similarities, num_clusters
 
 
