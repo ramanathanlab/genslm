@@ -189,7 +189,7 @@ def train(cfg: ModelSettings) -> None:
         callbacks.append(
             SequenceGenerationCallback(
                 block_size=cfg.block_size,
-                num_test_seqs_per_gpu=cfg.num_blast_seqs_per_gpu,
+                num_test_seqs_per_gpu=cfg.num_test_seqs_per_gpu,
                 output_dir=cfg.checkpoint_dir / "generated",
                 custom_seq_name=cfg.custom_seq_name,
             )
@@ -316,9 +316,7 @@ def test(cfg: ModelSettings) -> None:
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
-        strategy=DeepSpeedPlugin(
-            stage=3,
-        ),
+        strategy=DeepSpeedPlugin(stage=3),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
         precision=cfg.precision,
