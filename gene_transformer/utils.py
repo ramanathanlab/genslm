@@ -71,6 +71,7 @@ def generate_dna(
         num_return_sequences=num_seqs,
         remove_invalid_values=remove_invalid_values,
         use_cache=True,
+        pad_token_id=tokenizer.encode("[PAD]"),
         #        stopping_criteria=stopping_criteria,
     )
 
