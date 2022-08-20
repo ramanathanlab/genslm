@@ -70,9 +70,10 @@ def generate_dna(
     # Squeeze so that batched tensors end up with (batch_size, seq_length)
     # instead of (batch_size, 1, seq_length)
     batch_encoding["input_ids"] = batch_encoding["input_ids"].squeeze()
+    print(batch_encoding["input_ids"].shape)
 
     return model.generate(  # type: ignore[no-any-return]
-        inputs=batch_encoding["input_ids"].cuda().squueze(),
+        inputs=batch_encoding["input_ids"].cuda(),
         attention_mask=batch_encoding["attention_mask"].cuda(),
         max_length=max_length,
         min_length=max_length,
