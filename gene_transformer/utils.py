@@ -72,7 +72,7 @@ def generate_dna(
     batch_encoding["input_ids"] = batch_encoding["input_ids"].squeeze()
 
     return model.generate(  # type: ignore[no-any-return]
-        inputs=batch_encoding["input_ids"].cuda(),
+        inputs=batch_encoding["input_ids"].cuda().squueze(),
         attention_mask=batch_encoding["attention_mask"].cuda(),
         max_length=max_length,
         min_length=max_length,
@@ -81,7 +81,8 @@ def generate_dna(
         top_p=top_p,
         num_return_sequences=num_seqs,
         remove_invalid_values=remove_invalid_values,
-        use_cache=True
+        use_cache=True,
+        synced_gpus=True,
         #        stopping_criteria=stopping_criteria,
     )
 
