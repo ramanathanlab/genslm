@@ -12,7 +12,9 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.plugins import DeepSpeedPlugin
+from pytorch_lightning.strategies import DeepSpeedStrategy
+
+# from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.profiler import PyTorchProfiler
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
@@ -230,7 +232,7 @@ def train(cfg: ModelSettings) -> None:
         default_root_dir=str(cfg.checkpoint_dir),
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
-        strategy=DeepSpeedPlugin(
+        strategy=DeepSpeedStrategy(
             stage=3,
             # offload_optimizer=True,
             # offload_parameters=True,
