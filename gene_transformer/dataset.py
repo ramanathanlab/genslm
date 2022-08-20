@@ -69,7 +69,10 @@ class FastaDataset(Dataset):
                 group_by_kmer(sequence, self.kmer_size),
                 max_length=self.block_size,
                 padding="max_length",
+                return_tensors="pt",
             )
-            # encoded_sequence = torch.Tensor(batch_encoding["input_ids"]).long()
+            # Squeeze so that batched tensors end up with (batch_size, seq_length)
+            # instead of (batch_size, 1, seq_length)
+            batch_encoding["input_ids"] = batch_encoding["input_ids"].squeeze()
             self.samples[idx] = batch_encoding
             return batch_encoding

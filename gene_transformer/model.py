@@ -3,7 +3,7 @@ import os
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -101,12 +101,11 @@ class DNATransformer(pl.LightningModule):
         self.test_dataset = self.get_dataset(self.cfg.test_file)
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
-    def forward(self, batch: BatchEncoding, **kwargs: Any) -> ModelOutput:  # type: ignore[override]
+    def forward(self, batch: BatchEncoding) -> ModelOutput:  # type: ignore[override]
         return self.model(
             batch["input_ids"],
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
-            **kwargs,
         )
 
     def training_step(self, batch: BatchEncoding, batch_idx: int) -> torch.FloatTensor:
@@ -115,7 +114,9 @@ class DNATransformer(pl.LightningModule):
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
-    def validation_step(self, batch: BatchEncoding, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
+    def validation_step(
+        self, batch: BatchEncoding, batch_idx: int
+    ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
