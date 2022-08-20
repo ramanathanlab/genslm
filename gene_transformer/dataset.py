@@ -1,13 +1,11 @@
 from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 from pathlib import Path
 from typing import Dict
 
-import torch
 from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
 from torch.utils.data import Dataset
-from transformers import PreTrainedTokenizerFast
+from transformers import BatchEncoding, PreTrainedTokenizerFast
 
 from gene_transformer.config import PathLike
 
@@ -55,28 +53,23 @@ class FastaDataset(Dataset):
         if small_subset:
             self.files = self.files[:small_subset]
 
-        self.pad_sequence = partial(
-            torch.nn.functional.pad, value=tokenizer.pad_token_id
-        )
-
         # Cache the samples in memory
-        self.samples: Dict[int, torch.Tensor] = {}
+        self.samples: Dict[int, BatchEncoding] = {}
 
     def __len__(self) -> int:
         return len(self.files)
 
-    def __getitem__(self, idx: int) -> torch.Tensor:
+    def __getitem__(self, idx: int) -> BatchEncoding:
         # tokenize on the fly
         try:
             return self.samples[idx]
         except KeyError:
             sequence = list(SeqIO.parse(self.files[idx], "fasta"))[0]
-            encoded_sequence = torch.Tensor(
-                self.tokenizer.encode(
-                    group_by_kmer(sequence, self.kmer_size),
-                    max_length=self.block_size,
-                    padding="max_length",
-                )
-            ).long()
-            self.samples[idx] = encoded_sequence
-            return encoded_sequence
+            batch_encoding = self.tokenizer(
+                group_by_kmer(sequence, self.kmer_size),
+                max_length=self.block_size,
+                padding="max_length",
+            )
+            # encoded_sequence = torch.Tensor(batch_encoding["input_ids"]).long()
+            self.samples[idx] = batch_encoding
+            return batch_encoding
