@@ -107,7 +107,7 @@ class ModelSettings(BaseSettings):
     """Run validation every n number of epochs"""
 
     # generation settings
-    num_test_seqs_per_gpu: int = 8
+    num_test_seqs_per_gpu: int = 0
     """Number of sequences to generate per GPU when testing."""
     custom_seq_name: str = "SyntheticSeq"
     """Custum sequence name to write into fasta files for generate sequences."""
