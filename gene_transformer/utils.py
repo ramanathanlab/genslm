@@ -62,7 +62,7 @@ def generate_dna(
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
 
     batch_encoding = tokenizer(
-        "ATG",
+        ["ATG"],
         max_length=max_length,
         padding="max_length",
         return_tensors="pt",
