@@ -73,7 +73,7 @@ def generate_dna(
 
     return model.generate(  # type: ignore[no-any-return]
         inputs=batch_encoding["input_ids"],
-        attention_mask=batch_encoding["attention_mask"],
+        attention_mask=batch_encoding["attention_mask"].cuda(),
         max_length=max_length,
         min_length=max_length,
         do_sample=True,
