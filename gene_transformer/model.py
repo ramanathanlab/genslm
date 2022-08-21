@@ -78,12 +78,14 @@ class DNATransformer(pl.LightningModule):
             small_subset=self.cfg.small_subset,
         )
 
-    def get_dataloader(self, dataset: FastaDataset, shuffle: bool) -> DataLoader:
+    def get_dataloader(
+        self, dataset: FastaDataset, shuffle: bool, drop_last: bool = True
+    ) -> DataLoader:
         """Helper function to generate dataloader."""
         return DataLoader(
             dataset,
             shuffle=shuffle,
-            drop_last=True,
+            drop_last=drop_last,
             batch_size=self.cfg.batch_size,
             num_workers=self.cfg.num_data_workers,
             prefetch_factor=self.cfg.prefetch_factor,
@@ -301,7 +303,7 @@ def inference(
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
     model.cuda()
     dataset = model.get_dataset(fasta_file)
-    dataloader = model.get_dataloader(dataset, shuffle=False)
+    dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
     embeddings = generate_embeddings(model, dataloader, compute_mean)
     print(f"Embeddings shape: {embeddings.shape}")
