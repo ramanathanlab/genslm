@@ -3,7 +3,7 @@ import os
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -12,10 +12,10 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.strategies import DeepSpeedStrategy
 
 # from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.profiler import PyTorchProfiler
+from pytorch_lightning.strategies import DeepSpeedStrategy
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
