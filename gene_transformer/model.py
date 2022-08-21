@@ -333,7 +333,7 @@ def test(cfg: ModelSettings) -> None:
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
-        strategy=DeepSpeedPlugin(stage=3),
+        strategy=DeepSpeedStrategy(stage=3),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
         precision=cfg.precision,
