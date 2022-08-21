@@ -262,9 +262,12 @@ class LoadPTCheckpointStrategy(ModelLoadStrategy):
 class ThroughputMonitor(Callback):
     """Custom callback in order to monitor the throughput and log to weights and biases."""
 
-    def __init__(self, batch_size: int, num_nodes: int = 1) -> None:
+    def __init__(
+        self, batch_size: int, num_nodes: int = 1, wandb_active: bool = False
+    ) -> None:
         """Logs throughput statistics starting at the 2nd epoch."""
         super().__init__()
+        self.wandb_active = wandb_active
         self.start_time = 0.0
         self.average_throughput = 0.0
         self.average_sample_time = 0.0
@@ -336,27 +339,28 @@ class ThroughputMonitor(Callback):
                 f"seconds/sample over {self.num_ranks} ranks"
             )
 
-            pl_module.logger.log_text(
-                key="stats/performance",
-                columns=[
-                    "throughput_avg",
-                    "throughput_stdev",
-                    "sample_time_avg",
-                    "sample_time_stdev",
-                    "macro_batch_size",
-                    "ranks",
-                ],
-                data=[
-                    [
-                        thru_avg,
-                        thru_stdev,
-                        sample_time_avg,
-                        sample_time_stdev,
-                        self.macro_batch_size,
-                        self.num_ranks,
-                    ]
-                ],
-            )
+            if self.wandb_active:
+                pl_module.logger.log_text(
+                    key="stats/performance",
+                    columns=[
+                        "throughput_avg",
+                        "throughput_stdev",
+                        "sample_time_avg",
+                        "sample_time_stdev",
+                        "macro_batch_size",
+                        "ranks",
+                    ],
+                    data=[
+                        [
+                            thru_avg,
+                            thru_stdev,
+                            sample_time_avg,
+                            sample_time_stdev,
+                            self.macro_batch_size,
+                            self.num_ranks,
+                        ]
+                    ],
+                )
 
 
 class SequenceGenerationCallback(Callback):

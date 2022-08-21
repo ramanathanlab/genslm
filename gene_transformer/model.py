@@ -210,7 +210,7 @@ def train(cfg: ModelSettings) -> None:
 
     if cfg.compute_throughput:
         # Remove other callbacks
-        callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes)]
+        callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes, cfg.wandb_active)]
 
     profiler = None
     if cfg.profiling_path:
