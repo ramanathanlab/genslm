@@ -3,7 +3,7 @@ import os
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import numpy as np
 import pytorch_lightning as pl
@@ -103,11 +103,12 @@ class DNATransformer(pl.LightningModule):
         self.test_dataset = self.get_dataset(self.cfg.test_file)
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
-    def forward(self, batch: BatchEncoding) -> ModelOutput:  # type: ignore[override]
+    def forward(self, batch: BatchEncoding, **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
         return self.model(
             batch["input_ids"],
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
+            **kwargs,
         )
 
     def training_step(self, batch: BatchEncoding, batch_idx: int) -> torch.FloatTensor:
@@ -275,7 +276,8 @@ def generate_embeddings(
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     embeddings = []
     for batch in tqdm(dataloader):
-        batch = batch.cuda()
+        for key in ["input_ids", "attention_mask"]:
+            batch[key] = batch[key].cuda()
         outputs = model(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
