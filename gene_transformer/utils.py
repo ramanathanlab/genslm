@@ -4,6 +4,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, List, Optional, Set, Type
 
+import numpy as np
 import pytorch_lightning as pl
 import torch
 from Bio import SeqIO  # type: ignore[import]
@@ -18,8 +19,6 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
 from transformers import StoppingCriteria
 
-import numpy as np
-
 STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
@@ -33,7 +32,9 @@ class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
         #       codon in each batch. That way we can avoid a loop
         #       of post processing.
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs: Any) -> bool:
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs: Any
+    ) -> bool:
         codons = self.tokenizer.batch_decode(input_ids[:, -1], skip_special_tokens=True)
 
         batch_size = input_ids.shape[0]
@@ -158,7 +159,9 @@ def non_redundant_generation(
 
     # begin generation loop
     while len(unique_seqs) < num_seqs:
-        print(f"Current number of unique sequences meeting criteria: {len(unique_seqs)}")
+        print(
+            f"Current number of unique sequences meeting criteria: {len(unique_seqs)}"
+        )
         print(f"Current number of sequences generated: {len(all_generated_seqs)}")
         tokens = generate_dna(
             model,
@@ -192,7 +195,9 @@ def get_known_sequences(files: List[str]) -> List[Seq]:
     return known_sequences
 
 
-def redundancy_check(generated: str, known_sequences: List[Seq], verbose: bool = False) -> bool:
+def redundancy_check(
+    generated: str, known_sequences: List[Seq], verbose: bool = False
+) -> bool:
     """Check if a sequence appears in a list of known sequence"""
     for gen_seq in tqdm(generated, disable=verbose):
         if gen_seq in known_sequences:
@@ -249,14 +254,18 @@ class LoadPTCheckpointStrategy(ModelLoadStrategy):
         self.kwargs = kwargs
 
     def get_model(self, pl_module: "Type[pl.LightningModule]") -> "pl.LightningModule":
-        model = pl_module.load_from_checkpoint(str(self.weight_path), strict=False, **self.kwargs)
+        model = pl_module.load_from_checkpoint(
+            str(self.weight_path), strict=False, **self.kwargs
+        )
         return model
 
 
 class ThroughputMonitor(Callback):
     """Custom callback in order to monitor the throughput and log to weights and biases."""
 
-    def __init__(self, batch_size: int, num_nodes: int = 1, wandb_active: bool = False) -> None:
+    def __init__(
+        self, batch_size: int, num_nodes: int = 1, wandb_active: bool = False
+    ) -> None:
         """Logs throughput statistics starting at the 2nd epoch."""
         super().__init__()
         self.wandb_active = wandb_active
@@ -291,7 +300,9 @@ class ThroughputMonitor(Callback):
             batch_time = time.time() - self.start_time
             self.batch_times.append(batch_time)
 
-    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         if pl_module.current_epoch > 0:
             # compute average epoch throughput
             avg_batch_time = mean(self.batch_times)
@@ -303,7 +314,9 @@ class ThroughputMonitor(Callback):
             self.epoch_sample_times.append(avg_secs_per_sample)
             self.batch_times = []  # Reset for next epoch
 
-    def on_train_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    def on_train_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         self.average_throughput = mean(self.epoch_throughputs)
         self.average_sample_time = mean(self.epoch_sample_times)
 
@@ -314,7 +327,10 @@ class ThroughputMonitor(Callback):
         throughputs, sample_times = metrics[0], metrics[1]
         if trainer.is_global_zero:
             thru_avg, thru_stdev = throughputs.mean().item(), throughputs.std().item()
-            print(f"\nAVERAGE THROUGHPUT: {thru_avg} +- {thru_stdev} " f" samples/second over {self.num_ranks} ranks")
+            print(
+                f"\nAVERAGE THROUGHPUT: {thru_avg} +- {thru_stdev} "
+                f" samples/second over {self.num_ranks} ranks"
+            )
 
             sample_time_avg = sample_times.mean().item()
             sample_time_stdev = sample_times.std().item()
@@ -370,7 +386,9 @@ class SequenceGenerationCallback(Callback):
         # Collect generated sequences at each epoch end
         self.final_sequences: Dict[str, List[str]] = {}
 
-    def on_test_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    def on_test_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
 
         # Generate sequences using the model
         results = non_redundant_generation(
@@ -391,7 +409,9 @@ class SequenceGenerationCallback(Callback):
             print(f"sequences {len(unique_seqs)}")
             self.final_sequences[f"globalstep-{pl_module.global_step}"] = unique_seqs
 
-    def on_test_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    def on_test_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         if trainer.is_global_zero:
             self.output_dir.mkdir(exist_ok=True, parents=True)
             for name, seqs in self.final_sequences.items():
@@ -408,10 +428,15 @@ class PerplexityCallback(Callback):
         super().__init__()
         self.perplexities = []
 
-    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+    def on_validation_batch_end(
+        self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
+    ):
         self.perplexities.append(torch.exp(outputs.cpu().long()).tolist())
 
     def on_validation_end(self, trainer, pl_module):
-        metrics = {"batch_perplexities": self.perplexities, "mean_perplexity": np.mean(self.perplexities)}
+        metrics = {
+            "batch_perplexities": self.perplexities,
+            "mean_perplexity": np.mean(self.perplexities),
+        }
         print(metrics)
         # TODO: how to send this to the loggers?
