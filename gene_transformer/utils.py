@@ -404,53 +404,14 @@ class SequenceGenerationCallback(Callback):
 
 
 class PerplexityCallback(Callback):
-    def __init__(self, max_length: int, stride: int = 512) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.max_length = max_length
-        self.stride = stride
-        self.loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
-
         self.perplexities = []
-        self.logits = []
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-
-        self._perplexity_on_batch(batch, pl_module)
+        self.perplexities.append(torch.exp(outputs.cpu().long()).tolist())
 
     def on_validation_end(self, trainer, pl_module):
-        # perplexity = torch.exp(torch.stack(self.logits).sum() / len(self.logits))
-        # print(perplexity)
-        # metrics = {"perplexities": perplexity, "mean_perplexity": np.mean(perplexity)}
-        # print(metrics)
-        metrics = {"perplexities": self.perplexities, "mean_perplexity": np.mean(self.perplexities)}
+        metrics = {"batch_perplexities": self.perplexities, "mean_perplexity": np.mean(self.perplexities)}
         print(metrics)
-        exit()
-
-    def _perplexity_on_batch(self, batch, pl_module) -> None:
-        labels = batch["input_ids"]
-        attn_mask = batch["attention_mask"]
-
-        outputs = pl_module.model(
-            batch["input_ids"],
-            labels=labels,
-            attention_mask=attn_mask,
-        )
-
-        out_logits = outputs.logits
-
-        shift_logits = out_logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        shift_attention_mask_batch = attn_mask[..., 1:].contiguous()
-
-        perplexity_batch = torch.exp(
-            (self.loss_fct(shift_logits.transpose(1, 2), shift_labels) * shift_attention_mask_batch).sum(1)
-            / shift_attention_mask_batch.sum(1)
-        )
-        print(perplexity_batch)
-        # # print(out_logits)
-        # print((self.loss_fct(shift_logits.transpose(1, 2), shift_labels) * shift_attention_mask_batch).sum(1))
-        # print(shift_attention_mask_batch.sum(1))
-        # exit()
-
-        self.logits += out_logits
-        self.perplexities += perplexity_batch.tolist()
+        # TODO: how to send this to the loggers?

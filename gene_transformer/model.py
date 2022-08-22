@@ -166,7 +166,6 @@ def train(cfg: ModelSettings) -> None:
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
 
     callbacks: List[Callback] = []
-    callbacks.append(PerplexityCallback(max_length=model.cfg.block_size))
     if cfg.checkpoint_dir is not None:
         callbacks.append(
             ModelCheckpoint(
