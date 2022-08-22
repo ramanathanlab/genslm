@@ -34,6 +34,7 @@ from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
+    PerplexityCallback,
     SequenceGenerationCallback,
     ThroughputMonitor,
 )
@@ -56,9 +57,7 @@ class DNATransformer(pl.LightningModule):
         self.save_hyperparameters(settings_dict)
 
         self.cfg = cfg
-        self.tokenizer = PreTrainedTokenizerFast(
-            tokenizer_object=Tokenizer.from_file(str(self.cfg.tokenizer_file))
-        )
+        self.tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(self.cfg.tokenizer_file)))
         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
@@ -78,9 +77,7 @@ class DNATransformer(pl.LightningModule):
             small_subset=self.cfg.small_subset,
         )
 
-    def get_dataloader(
-        self, dataset: FastaDataset, shuffle: bool, drop_last: bool = True
-    ) -> DataLoader:
+    def get_dataloader(self, dataset: FastaDataset, shuffle: bool, drop_last: bool = True) -> DataLoader:
         """Helper function to generate dataloader."""
         return DataLoader(
             dataset,
@@ -119,9 +116,7 @@ class DNATransformer(pl.LightningModule):
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
-    def validation_step(
-        self, batch: BatchEncoding, batch_idx: int
-    ) -> torch.FloatTensor:
+    def validation_step(self, batch: BatchEncoding, batch_idx: int) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -171,6 +166,7 @@ def train(cfg: ModelSettings) -> None:
         wandb_logger = WandbLogger(project=cfg.wandb_project_name)
 
     callbacks: List[Callback] = []
+    callbacks.append(PerplexityCallback(max_length=model.cfg.block_size))
     if cfg.checkpoint_dir is not None:
         callbacks.append(
             ModelCheckpoint(
@@ -272,9 +268,7 @@ def train(cfg: ModelSettings) -> None:
         print("Completed training.")
 
 
-def generate_embeddings(
-    model: DNATransformer, dataloader: DataLoader, compute_mean: bool = False
-) -> np.ndarray:
+def generate_embeddings(model: DNATransformer, dataloader: DataLoader, compute_mean: bool = False) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     embeddings = []
     for batch in tqdm(dataloader):
@@ -356,9 +350,7 @@ if __name__ == "__main__":
         "--inference_pt_file",
         help="Path to pytorch model weights if inference_model_load==pt",
     )
-    parser.add_argument(
-        "--inference_output_path", default="./embeddings.npy", type=Path
-    )
+    parser.add_argument("--inference_output_path", default="./embeddings.npy", type=Path)
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
 
@@ -385,24 +377,16 @@ if __name__ == "__main__":
             raise ValueError("Must provide a fasta file to run inference on.")
 
         if args.inference_output_path.exists():
-            raise FileExistsError(
-                f"inference_output_path: {args.inference_output_path} already exists!"
-            )
+            raise FileExistsError(f"inference_output_path: {args.inference_output_path} already exists!")
 
         if args.inference_model_load == "pt":
             model_strategy = LoadPTCheckpointStrategy(args.pt_file, cfg=config)
         elif args.inference_model_load == "deepspeed":
             if config.load_ds_checkpoint is None:
-                raise ValueError(
-                    "load_from_checkpoint_dir must be set in the config file"
-                )
-            model_strategy = LoadDeepSpeedStrategy(
-                config.load_ds_checkpoint, cfg=config
-            )
+                raise ValueError("load_from_checkpoint_dir must be set in the config file")
+            model_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
         else:
-            raise ValueError(
-                f"Invalid inference_model_load {args.inference_model_load}"
-            )
+            raise ValueError(f"Invalid inference_model_load {args.inference_model_load}")
         inference(
             model_strategy,
             args.inference_fasta,
