@@ -450,7 +450,7 @@ class PerplexityCallback(Callback):
         mean_ppl = np.mean(perplexities)
         perplexities = []
         # print(f"\nlogging perplexity: {log_name}:{mean_ppl}")
-        pl_module.log(log_name, mean_ppl, on_step=True, on_epoch=True, prog_bar=True)
+        pl_module.log(log_name, mean_ppl, prog_bar=True)
 
     def _on_batch_end(
         self,
