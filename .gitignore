@@ -349,6 +349,7 @@ GitHub.sublime-settings
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+*-workspace
 
 # Local History for Visual Studio Code
 .history/

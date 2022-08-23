@@ -29,6 +29,7 @@ from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
+    PerplexityCallback,
     SequenceGenerationCallback,
     ThroughputMonitor,
 )
@@ -210,6 +211,9 @@ def train(cfg: ModelSettings) -> None:
             )
         )
 
+    if cfg.enable_perplexity:
+        callbacks.append(PerplexityCallback(log_steps=cfg.perplexity_log_steps))
+
     if cfg.compute_throughput:
         # Remove other callbacks
         callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes, cfg.wandb_active)]
@@ -227,7 +231,6 @@ def train(cfg: ModelSettings) -> None:
                 "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
             },
         )
-
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,

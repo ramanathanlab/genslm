@@ -44,10 +44,4 @@ conda activate gene_transformer
 # IMPORTANT NOTE: This requires having a conda environment called gene_transformer
 
 # For applications that internally handle binding MPI/OpenMP processes to GPUs
-mpiexec -n ${NTOTRANKS} \ 
-    --ppn ${NRANKS_PER_NODE} \
-    --depth=${NDEPTH} \
-    --cpu-bind depth \
-    --env OMP_NUM_THREADS=${NTHREADS} \
-    -env OMP_PLACES=threads \
-    python -m gene_transformer.model -c {{ config }}
+mpiexec -n ${NTOTRANKS} --ppn ${NRANKS_PER_NODE} --depth=${NDEPTH} --cpu-bind depth --env OMP_NUM_THREADS=${NTHREADS} -env OMP_PLACES=threads python -m gene_transformer.model -c {{ config }}
