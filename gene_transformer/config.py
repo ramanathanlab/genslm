@@ -61,7 +61,7 @@ class ModelSettings(BaseSettings):
     """Set to path if we want to run pytorch profiler"""
     enable_perplexity: bool = True
     """Enable logging of model perplexity"""
-    perplexity_steps: int = 0
+    perplexity_log_steps: int = 0
     """Number of training steps to log perplexity on, default logging to end of epoch"""
 
     # data settings
