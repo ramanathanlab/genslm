@@ -47,8 +47,8 @@ class ModelSettings(BaseSettings):
     """Wandb project name to log to."""
     wandb_entity_name: Optional[str] = None
     """Team name for wandb logging."""
-    model_tag: Optional[str] = None
-    """Model tag for wandb labeling."""
+    wandb_model_tag: Optional[str] = None
+    """Model tag for wandb labeling and resuming."""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None
