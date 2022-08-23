@@ -231,7 +231,7 @@ def train(cfg: ModelSettings) -> None:
                 "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
             },
         )
-
+    print(callbacks)
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
