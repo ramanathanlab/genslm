@@ -459,6 +459,7 @@ class PerplexityCallback(Callback):
         log_name: str,
         train: bool,
     ) -> None:
+        print(type(outputs), outputs.keys())
         self._get_perplexities(train).append(torch.exp(outputs.cpu().long()).item())
         if self.log_steps and self.log_steps % batch_idx == 0:
             self._log_perplexity(trainer, log_name, train)
