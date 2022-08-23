@@ -444,17 +444,16 @@ class PerplexityCallback(Callback):
         return self.train_perplexities if train else self.val_perplexities
 
     def _log_perplexity(
-        self, trainer: "pl.Trainer", log_name: str, train: bool
+        self, pl_module: "pl.LightningModule", log_name: str, train: bool
     ) -> None:
-        print(trainer.__dict__)
         perplexities = self._get_perplexities(train)
         mean_ppl = np.mean(perplexities)
         perplexities = []
-        trainer.log(log_name, mean_ppl)
+        pl_module.log(log_name, mean_ppl)
 
     def _on_batch_end(
         self,
-        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
         loss: torch.Tensor,
         batch_idx: int,
         log_name: str,
@@ -462,7 +461,7 @@ class PerplexityCallback(Callback):
     ) -> None:
         self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
         if self.log_steps and self.log_steps % batch_idx == 0:
-            self._log_perplexity(trainer, log_name, train)
+            self._log_perplexity(pl_module, log_name, train)
 
     def on_train_batch_end(
         self,
@@ -473,7 +472,7 @@ class PerplexityCallback(Callback):
         batch_idx,
     ) -> None:
         self._on_batch_end(
-            trainer, outputs["loss"], batch_idx, self.train_name, train=True
+            pl_module, outputs["loss"], batch_idx, self.train_name, train=True
         )
 
     def on_validation_batch_end(
@@ -485,9 +484,9 @@ class PerplexityCallback(Callback):
         batch_idx: int,
         dataloader_idx: int,
     ) -> None:
-        self._on_batch_end(trainer, outputs, batch_idx, self.val_name, train=False)
+        self._on_batch_end(pl_module, outputs, batch_idx, self.val_name, train=False)
 
     def on_validation_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        self._log_perplexity(trainer, self.val_name, train=False)
+        self._log_perplexity(pl_module, self.val_name, train=False)
