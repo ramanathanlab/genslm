@@ -426,7 +426,6 @@ class SequenceGenerationCallback(Callback):
 class PerplexityCallback(Callback):
     """Model perplexity calculation"""
 
-    # TODO: Perplexity in training
     def __init__(
         self,
         log_steps: int = 0,
