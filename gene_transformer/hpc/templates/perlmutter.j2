@@ -8,8 +8,8 @@
 #SBATCH --gres=gpu:4
 #SBATCH --ntasks-per-node=4
 #SBATCH -c 32
-#SBATCH --output={{ job_name }}.out
-#SBATCH --error={{ job_name }}.err
+#SBATCH --output={{ workdir / job_name }}.out
+#SBATCH --error={{ workdir / job_name }}.err
 export MASTER_PORT=1234
 export WORLD_SIZE={{ nodes * 4 }}
 {% raw %}echo "NODELIST="${{SLURM_NODELIST}}{% endraw %}
@@ -21,4 +21,5 @@ export NCCL_DEBUG=INFO
 export PYTHONFAULTHANDLER=1
 
 shifter /bin/bash
+cd {{ workdir }}
 srun /opt/conda/bin/python -m gene_transformer.model -c {{ config }}
