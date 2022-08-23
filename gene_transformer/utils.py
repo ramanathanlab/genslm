@@ -486,7 +486,7 @@ class PerplexityCallback(Callback):
     ) -> None:
         self._on_batch_end(pl_module, outputs, batch_idx, self.val_name, train=False)
 
-    def on_validation_end(
+    def on_validation_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         self._log_perplexity(pl_module, self.val_name, train=False)
