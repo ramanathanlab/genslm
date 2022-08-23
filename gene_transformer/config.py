@@ -59,6 +59,8 @@ class ModelSettings(BaseSettings):
     """Flag for profiling - uses small subset to compute average throughput over 5 epochs after pinning."""
     profiling_path: Optional[Path] = None
     """Set to path if we want to run pytorch profiler"""
+    enable_perplexity: bool = True
+    """Enable logging of model perplexity"""
 
     # data settings
     tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
