@@ -450,7 +450,7 @@ class PerplexityCallback(Callback):
         mean_ppl = np.mean(perplexities)
         perplexities = []
         # print(f"\nlogging perplexity: {log_name}:{mean_ppl}")
-        pl_module.log(log_name, mean_ppl, on_epoch=True, prog_bar=True, on_step=train)
+        pl_module.log(log_name, mean_ppl, on_epoch=True, on_step=train, prog_bar=True)
 
     def _on_batch_end(
         self,
@@ -462,6 +462,7 @@ class PerplexityCallback(Callback):
     ) -> None:
         self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
         if self.log_steps and self.log_steps % (batch_idx + 1) == 0:
+            print("inside train logging")
             self._log_perplexity(pl_module, log_name, train)
 
     def on_train_batch_end(
