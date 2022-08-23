@@ -429,7 +429,7 @@ class PerplexityCallback(Callback):
     # TODO: Perplexity in training
     def __init__(
         self,
-        log_steps: int = 1,
+        log_steps: int = 0,
         train_name: str = "train/ppl",
         val_name: str = "val/ppl",
     ) -> None:
@@ -461,7 +461,7 @@ class PerplexityCallback(Callback):
         train: bool,
     ) -> None:
         self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
-        if self.log_steps and self.log_steps % batch_idx == 0:
+        if self.log_steps and self.log_steps % (batch_idx + 1) == 0:
             self._log_perplexity(pl_module, log_name, train)
 
     def on_train_batch_end(

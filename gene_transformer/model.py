@@ -212,7 +212,7 @@ def train(cfg: ModelSettings) -> None:
         )
 
     if cfg.enable_perplexity:
-        callbacks.append(PerplexityCallback())
+        callbacks.append(PerplexityCallback(log_steps=0))
 
     if cfg.compute_throughput:
         # Remove other callbacks
