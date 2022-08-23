@@ -74,10 +74,9 @@ class FastaDataset(Dataset):
             )
             # Squeeze so that batched tensors end up with (batch_size, seq_length)
             # instead of (batch_size, 1, seq_length)
-            batch_encoding["input_ids"] = batch_encoding["input_ids"].squeeze()
-            data = {
-                "input_ids": batch_encoding["input_ids"],
+            sample = {
+                "input_ids": batch_encoding["input_ids"].squeeze(),
                 "attention_mask": batch_encoding["attention_mask"],
             }
-            self.samples[idx] = data
-            return data
+            self.samples[idx] = sample
+            return sample
