@@ -454,13 +454,13 @@ class PerplexityCallback(Callback):
     def _on_batch_end(
         self,
         trainer: "pl.Trainer",
-        outputs: torch.Tensor,
+        outputs: Dict[str, torch.Tensor],
         batch_idx: int,
         log_name: str,
         train: bool,
     ) -> None:
-        print(type(outputs), outputs.keys())
-        self._get_perplexities(train).append(torch.exp(outputs.cpu().long()).item())
+        loss = outputs["loss"]
+        self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
         if self.log_steps and self.log_steps % batch_idx == 0:
             self._log_perplexity(trainer, log_name, train)
 
@@ -468,7 +468,7 @@ class PerplexityCallback(Callback):
         self,
         trainer: "pl.Trainer",
         pl_module: "pl.LightningModule",
-        outputs: torch.Tensor,
+        outputs: Dict[str, torch.Tensor],
         batch: Dict[str, torch.Tensor],
         batch_idx,
     ) -> None:
@@ -478,7 +478,7 @@ class PerplexityCallback(Callback):
         self,
         trainer: "pl.Trainer",
         pl_module: "pl.LightningModule",
-        outputs: torch.Tensor,
+        outputs: Dict[str, torch.Tensor],
         batch: Dict[str, torch.Tensor],
         batch_idx: int,
         dataloader_idx: int,
