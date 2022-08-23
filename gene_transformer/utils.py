@@ -446,6 +446,7 @@ class PerplexityCallback(Callback):
     def _log_perplexity(
         self, trainer: "pl.Trainer", log_name: str, train: bool
     ) -> None:
+        print(trainer.__dict__)
         perplexities = self._get_perplexities(train)
         mean_ppl = np.mean(perplexities)
         perplexities = []
