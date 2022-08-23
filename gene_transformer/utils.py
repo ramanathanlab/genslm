@@ -429,7 +429,7 @@ class PerplexityCallback(Callback):
     # TODO: Perplexity in training
     def __init__(
         self,
-        log_steps: int = 0,
+        log_steps: int = 1,
         train_name: str = "train/ppl",
         val_name: str = "val/ppl",
     ) -> None:
@@ -449,8 +449,8 @@ class PerplexityCallback(Callback):
         perplexities = self._get_perplexities(train)
         mean_ppl = np.mean(perplexities)
         perplexities = []
-        print(f"\nlogging perplexity: {log_name}:{mean_ppl}")
-        pl_module.log(log_name, mean_ppl)
+        # print(f"\nlogging perplexity: {log_name}:{mean_ppl}")
+        pl_module.log(log_name, mean_ppl, on_step=True, on_epoch=True, prog_bar=True)
 
     def _on_batch_end(
         self,
