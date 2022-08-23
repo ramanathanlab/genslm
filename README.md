@@ -164,5 +164,5 @@ Please run `python -m gene_transformer.hpc.submit --help` for more information.
 ```
 module load conda/2022-07-19
 conda activate gene_transformer
-python -m gene_transformer.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -c config.yaml
+python -m gene_transformer.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -c /path/to/config.yaml
 ```
