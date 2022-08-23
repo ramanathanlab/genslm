@@ -444,13 +444,13 @@ class PerplexityCallback(Callback):
         return self.train_perplexities if train else self.val_perplexities
 
     def _log_perplexity(
-        self, pl_module: "pl.LightningModule", log_name: str, train: bool
+        self, pl_module: "pl.LightningModule", log_name: str, train: bool, **kwargs
     ) -> None:
         perplexities = self._get_perplexities(train)
         mean_ppl = np.mean(perplexities)
         perplexities = []
         # print(f"\nlogging perplexity: {log_name}:{mean_ppl}")
-        pl_module.log(log_name, mean_ppl, on_epoch=True, on_step=train, prog_bar=True)
+        pl_module.log(log_name, mean_ppl, prog_bar=True, **kwargs)
 
     def _on_batch_end(
         self,
@@ -473,7 +473,13 @@ class PerplexityCallback(Callback):
         batch_idx,
     ) -> None:
         self._on_batch_end(
-            pl_module, outputs["loss"], batch_idx, self.train_name, train=True
+            pl_module,
+            outputs["loss"],
+            batch_idx,
+            self.train_name,
+            train=True,
+            on_step=True,
+            on_epoch=True,
         )
 
     def on_validation_batch_end(
@@ -490,7 +496,9 @@ class PerplexityCallback(Callback):
     def on_train_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        self._log_perplexity(pl_module, self.train_name, train=True)
+        self._log_perplexity(
+            pl_module, self.train_name, train=True, on_step=False, on_epoch=True
+        )
 
     def on_validation_epoch_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
