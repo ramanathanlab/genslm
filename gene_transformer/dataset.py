@@ -2,10 +2,11 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict
 
+import torch
 from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
 from torch.utils.data import Dataset
-from transformers import BatchEncoding, PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast
 
 from gene_transformer.config import PathLike
 
@@ -54,12 +55,12 @@ class FastaDataset(Dataset):
             self.files = self.files[:small_subset]
 
         # Cache the samples in memory
-        self.samples: Dict[int, BatchEncoding] = {}
+        self.samples: Dict[int, Dict[str, torch.Tensor]] = {}
 
     def __len__(self) -> int:
         return len(self.files)
 
-    def __getitem__(self, idx: int) -> BatchEncoding:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         # tokenize on the fly
         try:
             return self.samples[idx]
@@ -74,5 +75,9 @@ class FastaDataset(Dataset):
             # Squeeze so that batched tensors end up with (batch_size, seq_length)
             # instead of (batch_size, 1, seq_length)
             batch_encoding["input_ids"] = batch_encoding["input_ids"].squeeze()
-            self.samples[idx] = batch_encoding
-            return batch_encoding
+            data = {
+                "input_ids": batch_encoding["input_ids"],
+                "attention_mask": batch_encoding["attention_mask"],
+            }
+            self.samples[idx] = data
+            return data
