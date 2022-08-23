@@ -461,8 +461,7 @@ class PerplexityCallback(Callback):
         train: bool,
     ) -> None:
         self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
-        if self.log_steps and self.log_steps % (batch_idx + 1) == 0:
-            print("inside train logging")
+        if self.log_steps and batch_idx % self.log_steps == 0:
             self._log_perplexity(pl_module, log_name, train)
 
     def on_train_batch_end(
