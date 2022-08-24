@@ -3,9 +3,12 @@
 Transformer language models for the generation of synthetic sequences
 
 ## Important Note
-We are currently using a forked version of huggingface transformers library
-which fixes a problem with the Reformer model. Please clone our fork from:
-https://github.com/maxzvyagin/transformers
+If you intend to use the Reformer model, please uninstall the version of hugging
+face in our requirements.txt file and use our custom fork here which fixes a few bugs:
+```
+pip unintall transformers
+pip install git+https://github.com/maxzvyagin/transformers
+```
 
 ## DeepSpeed Setup 
 
@@ -117,4 +120,49 @@ Install BLAST:
 Test the installation:
 ```
 /opt/conda/bin/python -c "import gene_transformer; print(gene_transformer.__version__)"
+```
+
+## Polaris
+
+### Setup
+
+First, let's update the default conda environment location to be located on the performant `/lus/eagle` filesytem:
+Add these lines to your `~/.condarc` file, where `<project-id>` and `<username>` correspond to your project and account:
+```
+pkgs_dirs:
+  - /lus/eagle/projects/<project-id>/<username>/conda/pkgs
+envs_dirs:
+  - /lus/eagle/projects/<project-id>/<username>/conda/envs
+env_prompt: ({name})
+```
+The last line simplifies the conda path in your prompt.
+
+Then run the following commands in the directory your would like to store the project source code:
+```
+module load conda/2022-07-19
+conda activate
+conda create -n gene_transformer --clone base
+conda activate gene_transformer
+git clone https://github.com/ramanathanlab/gene_transformer.git
+cd gene_transformer/
+pip install -U pip wheel setuptools
+pip install -r requirements/requirements.txt
+pip install -r requirements/dev.txt
+pip install -e .
+```
+
+Test the installation:
+```
+python -c "import gene_transformer; print(gene_transformer.__version__)"
+```
+
+### Training
+
+Please see config.py for documentation on the yaml options. By default, submitted jobs will output results
+to the directory where the submit command was run, you can use the `-w` option to specifiy a different `workdir`.
+Please run `python -m gene_transformer.hpc.submit --help` for more information.
+```
+module load conda/2022-07-19
+conda activate gene_transformer
+python -m gene_transformer.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -c /path/to/config.yaml
 ```

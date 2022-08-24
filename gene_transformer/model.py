@@ -19,12 +19,7 @@ from pytorch_lightning.strategies import DeepSpeedStrategy
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import (
-    AutoConfig,
-    AutoModelForCausalLM,
-    BatchEncoding,
-    PreTrainedTokenizerFast,
-)
+from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
 
 from gene_transformer.blast import BLASTCallback
@@ -34,6 +29,7 @@ from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
+    PerplexityCallback,
     SequenceGenerationCallback,
     ThroughputMonitor,
 )
@@ -105,7 +101,7 @@ class DNATransformer(pl.LightningModule):
         self.test_dataset = self.get_dataset(self.cfg.test_file)
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
-    def forward(self, batch: BatchEncoding, **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
+    def forward(self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
         return self.model(
             batch["input_ids"],
             labels=batch["input_ids"],
@@ -113,21 +109,25 @@ class DNATransformer(pl.LightningModule):
             **kwargs,
         )
 
-    def training_step(self, batch: BatchEncoding, batch_idx: int) -> torch.FloatTensor:
+    def training_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(
-        self, batch: BatchEncoding, batch_idx: int
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
-    def test_step(self, batch: BatchEncoding, batch_idx: int) -> torch.FloatTensor:
+    def test_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -168,7 +168,13 @@ def train(cfg: ModelSettings) -> None:
     wandb_logger = None
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
-        wandb_logger = WandbLogger(project=cfg.wandb_project_name)
+        wandb_logger = WandbLogger(
+            project=cfg.wandb_project_name,
+            entity=cfg.wandb_entity_name,
+            name=cfg.wandb_model_tag,
+            id=cfg.wandb_model_tag,
+            resume="must",
+        )
 
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
@@ -211,6 +217,9 @@ def train(cfg: ModelSettings) -> None:
             )
         )
 
+    if cfg.enable_perplexity:
+        callbacks.append(PerplexityCallback(log_steps=cfg.perplexity_log_steps))
+
     if cfg.compute_throughput:
         # Remove other callbacks
         callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes, cfg.wandb_active)]
@@ -228,7 +237,6 @@ def train(cfg: ModelSettings) -> None:
                 "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
             },
         )
-
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,

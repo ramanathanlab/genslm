@@ -4,6 +4,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, List, Optional, Set, Type
 
+import numpy as np
 import pytorch_lightning as pl
 import torch
 from Bio import SeqIO  # type: ignore[import]
@@ -420,3 +421,87 @@ class SequenceGenerationCallback(Callback):
                     custom_seq_name=self.custom_seq_name,
                 )
             print(f"Saved final generated sequences to {self.output_dir}")
+
+
+class PerplexityCallback(Callback):
+    """Model perplexity calculation"""
+
+    def __init__(
+        self,
+        log_steps: int = 0,
+        train_name: str = "train/ppl",
+        val_name: str = "val/ppl",
+    ) -> None:
+        super().__init__()
+        self.log_steps = log_steps
+        self.train_name = train_name
+        self.val_name = val_name
+        self.train_perplexities: List[float] = []
+        self.val_perplexities: List[float] = []
+
+    def _get_perplexities(self, train: bool) -> List[float]:
+        return self.train_perplexities if train else self.val_perplexities
+
+    def _log_perplexity(
+        self, pl_module: "pl.LightningModule", log_name: str, train: bool, **kwargs: Any
+    ) -> None:
+        perplexities = self._get_perplexities(train)
+        mean_ppl = np.mean(perplexities)
+        perplexities = []
+        pl_module.log(log_name, mean_ppl, prog_bar=True, **kwargs)
+
+    def _on_batch_end(
+        self,
+        pl_module: "pl.LightningModule",
+        loss: torch.Tensor,
+        batch_idx: int,
+        log_name: str,
+        train: bool,
+        **kwargs: Any,
+    ) -> None:
+        self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
+        if self.log_steps and batch_idx % self.log_steps == 0:
+            self._log_perplexity(pl_module, log_name, train, **kwargs)
+
+    def on_train_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: Dict[str, torch.Tensor],
+        batch: Dict[str, torch.Tensor],
+        batch_idx: int,
+    ) -> None:
+        self._on_batch_end(
+            pl_module,
+            outputs["loss"],
+            batch_idx,
+            self.train_name,
+            train=True,
+            on_step=True,
+            on_epoch=True,
+        )
+
+    def on_validation_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: torch.Tensor,
+        batch: Dict[str, torch.Tensor],
+        batch_idx: int,
+        dataloader_idx: int,
+    ) -> None:
+        self._on_batch_end(
+            pl_module, outputs, batch_idx, self.val_name, train=False, on_epoch=True
+        )
+
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self._log_perplexity(
+            pl_module, self.train_name, train=True, on_step=False, on_epoch=True
+        )
+
+    def on_validation_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self._log_perplexity(pl_module, self.val_name, train=False, on_epoch=True)
