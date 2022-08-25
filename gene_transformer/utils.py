@@ -447,6 +447,7 @@ class PerplexityCallback(Callback):
     ) -> None:
         perplexities = self._get_perplexities(train)
         mean_ppl = np.mean(perplexities)
+        # This resets either self.train_perplexities or self.val_perplexities
         perplexities = []
         pl_module.log(log_name, mean_ppl, prog_bar=True, **kwargs)
 
