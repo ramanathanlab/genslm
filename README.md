@@ -37,7 +37,10 @@ Check that the container runs:
 docker run -it --rm abrace05/gene_transformer bash
 ```
 
-### Docker on Perlmutter
+## Perlmutter Setup
+
+---
+
 Perlmutter uses Shifter to manage software containers. You can bootstrap the Docker image above via:
 ```
 shifterimg -v pull abrace05/gene_transformer
@@ -113,9 +116,9 @@ Test the installation:
 /opt/conda/bin/python -c "import gene_transformer; print(gene_transformer.__version__)"
 ```
 
-## Polaris
+## Polaris Setup
 
-### Setup
+---
 
 First, let's update the default conda environment location to be located on the performant `/lus/eagle` filesytem:
 Add these lines to your `~/.condarc` file, where `<project-id>` and `<username>` correspond to your project and account:
@@ -147,11 +150,13 @@ Test the installation:
 python -c "import gene_transformer; print(gene_transformer.__version__)"
 ```
 
-### Training
+### Polaris Training
 
-Please see config.py for documentation on the yaml options. By default, submitted jobs will output results
-to the directory where the submit command was run, you can use the `-w` option to specifiy a different `workdir`.
-Please run `python -m gene_transformer.hpc.submit --help` for more information.
+We have a CLI tool to make it easier to launch training jobs on various HPC platforms. You can specify which system 
+you would like to submit to by specifiying the `-T, --template` option. We currently have templates for `polaris` 
+and `perlmutter`. By default, submitted jobs will output results to the directory where the submit command was run, 
+you can use the `-w` option to specifiy a different `workdir`. Please run `python -m gene_transformer.hpc.submit --help` 
+for more information. See config.py for documentation on the yaml options.
 ```
 module load conda/2022-07-19
 conda activate gene_transformer
