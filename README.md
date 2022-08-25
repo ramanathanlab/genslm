@@ -112,11 +112,6 @@ git clone https://github.com/ramanathanlab/gene_transformer.git
 /opt/conda/bin/pip install -e gene_transformer/
 ```
 
-Install BLAST:
-```
-/opt/conda/bin/conda install -c bioconda blast
-```
-
 Test the installation:
 ```
 /opt/conda/bin/python -c "import gene_transformer; print(gene_transformer.__version__)"
