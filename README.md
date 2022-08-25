@@ -1,6 +1,6 @@
 # Gene Transformer
 
-Transformer language models for the generation of synthetic sequences
+Transformer language models for the generation of synthetic sequences.
 
 ## Important Note
 If you intend to use the Reformer model, please uninstall the version of hugging
