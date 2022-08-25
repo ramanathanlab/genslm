@@ -10,10 +10,6 @@ pip unintall transformers
 pip install git+https://github.com/maxzvyagin/transformers
 ```
 
-## DeepSpeed Setup 
-
-See `examples/` folder for platform specific setup.
-
 ## Development
 Locally:
 ```
