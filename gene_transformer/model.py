@@ -3,7 +3,7 @@ import os
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -12,13 +12,13 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.plugins import DeepSpeedPlugin
 from pytorch_lightning.profiler import PyTorchProfiler
+from pytorch_lightning.strategies import DeepSpeedStrategy
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
-from transformers.models.gpt2.modeling_gpt2 import GPT2DoubleHeadsModelOutput
+from transformers.utils import ModelOutput
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
@@ -27,6 +27,7 @@ from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
+    PerplexityCallback,
     SequenceGenerationCallback,
     ThroughputMonitor,
 )
@@ -71,12 +72,14 @@ class DNATransformer(pl.LightningModule):
             small_subset=self.cfg.small_subset,
         )
 
-    def get_dataloader(self, dataset: FastaDataset, shuffle: bool) -> DataLoader:
+    def get_dataloader(
+        self, dataset: FastaDataset, shuffle: bool, drop_last: bool = True
+    ) -> DataLoader:
         """Helper function to generate dataloader."""
         return DataLoader(
             dataset,
             shuffle=shuffle,
-            drop_last=True,
+            drop_last=drop_last,
             batch_size=self.cfg.batch_size,
             num_workers=self.cfg.num_data_workers,
             prefetch_factor=self.cfg.prefetch_factor,
@@ -96,22 +99,33 @@ class DNATransformer(pl.LightningModule):
         self.test_dataset = self.get_dataset(self.cfg.test_file)
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
-    def forward(self, x: torch.Tensor, **kwargs: Any) -> GPT2DoubleHeadsModelOutput:  # type: ignore[override]
-        return self.model(x, labels=x, **kwargs)
+    def forward(self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
+        return self.model(
+            batch["input_ids"],
+            labels=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            **kwargs,
+        )
 
-    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
+    def training_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:  # type: ignore[override]
+    def validation_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
-    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.FloatTensor:
+    def test_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -152,7 +166,13 @@ def train(cfg: ModelSettings) -> None:
     wandb_logger = None
     if cfg.wandb_active:
         print("Using Weights and Biases for logging...")
-        wandb_logger = WandbLogger(project=cfg.wandb_project_name)
+        wandb_logger = WandbLogger(
+            project=cfg.wandb_project_name,
+            entity=cfg.wandb_entity_name,
+            name=cfg.wandb_model_tag,
+            id=cfg.wandb_model_tag,
+            resume="must",
+        )
 
     callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
@@ -189,15 +209,18 @@ def train(cfg: ModelSettings) -> None:
         callbacks.append(
             SequenceGenerationCallback(
                 block_size=cfg.block_size,
-                num_test_seqs_per_gpu=cfg.num_blast_seqs_per_gpu,
+                num_test_seqs_per_gpu=cfg.num_test_seqs_per_gpu,
                 output_dir=cfg.checkpoint_dir / "generated",
                 custom_seq_name=cfg.custom_seq_name,
             )
         )
 
+    if cfg.enable_perplexity:
+        callbacks.append(PerplexityCallback(log_steps=cfg.perplexity_log_steps))
+
     if cfg.compute_throughput:
         # Remove other callbacks
-        callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes)]
+        callbacks = [ThroughputMonitor(cfg.batch_size, cfg.num_nodes, cfg.wandb_active)]
 
     profiler = None
     if cfg.profiling_path:
@@ -212,14 +235,13 @@ def train(cfg: ModelSettings) -> None:
                 "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
             },
         )
-
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
-        strategy=DeepSpeedPlugin(
+        strategy=DeepSpeedStrategy(
             stage=3,
             # offload_optimizer=True,
             # offload_parameters=True,
@@ -262,7 +284,8 @@ def generate_embeddings(
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     embeddings = []
     for batch in tqdm(dataloader):
-        batch = batch.cuda()
+        for key in ["input_ids", "attention_mask"]:
+            batch[key] = batch[key].cuda()
         outputs = model(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
@@ -286,7 +309,7 @@ def inference(
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
     model.cuda()
     dataset = model.get_dataset(fasta_file)
-    dataloader = model.get_dataloader(dataset, shuffle=False)
+    dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
     embeddings = generate_embeddings(model, dataloader, compute_mean)
     print(f"Embeddings shape: {embeddings.shape}")
@@ -316,9 +339,7 @@ def test(cfg: ModelSettings) -> None:
     trainer = pl.Trainer(
         gpus=-1,
         default_root_dir=str(cfg.checkpoint_dir),
-        strategy=DeepSpeedPlugin(
-            stage=3,
-        ),
+        strategy=DeepSpeedStrategy(stage=3),
         accumulate_grad_batches=cfg.accumulate_grad_batches,
         num_sanity_val_steps=2,
         precision=cfg.precision,
