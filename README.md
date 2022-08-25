@@ -39,8 +39,6 @@ docker run -it --rm abrace05/gene_transformer bash
 
 ## Perlmutter Setup
 
----
-
 Perlmutter uses Shifter to manage software containers. You can bootstrap the Docker image above via:
 ```
 shifterimg -v pull abrace05/gene_transformer
@@ -117,8 +115,6 @@ Test the installation:
 ```
 
 ## Polaris Setup
-
----
 
 First, let's update the default conda environment location to be located on the performant `/lus/eagle` filesytem:
 Add these lines to your `~/.condarc` file, where `<project-id>` and `<username>` correspond to your project and account:
