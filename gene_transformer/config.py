@@ -45,6 +45,10 @@ class ModelSettings(BaseSettings):
     """Whether to use wandb for logging."""
     wandb_project_name: str = "codon_transformer"
     """Wandb project name to log to."""
+    wandb_entity_name: Optional[str] = None
+    """Team name for wandb logging."""
+    wandb_model_tag: Optional[str] = None
+    """Model tag for wandb labeling and resuming."""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None
@@ -59,6 +63,10 @@ class ModelSettings(BaseSettings):
     """Flag for profiling - uses small subset to compute average throughput over 5 epochs after pinning."""
     profiling_path: Optional[Path] = None
     """Set to path if we want to run pytorch profiler"""
+    enable_perplexity: bool = True
+    """Enable logging of model perplexity"""
+    perplexity_log_steps: int = 0
+    """Number of training steps to log perplexity on, default logging to end of epoch"""
 
     # data settings
     tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
@@ -107,7 +115,7 @@ class ModelSettings(BaseSettings):
     """Run validation every n number of epochs"""
 
     # generation settings
-    num_test_seqs_per_gpu: int = 8
+    num_test_seqs_per_gpu: int = 0
     """Number of sequences to generate per GPU when testing."""
     custom_seq_name: str = "SyntheticSeq"
     """Custum sequence name to write into fasta files for generate sequences."""

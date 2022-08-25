@@ -4,6 +4,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, List, Optional, Set, Type
 
+import numpy as np
 import pytorch_lightning as pl
 import torch
 from Bio import SeqIO  # type: ignore[import]
@@ -60,6 +61,7 @@ def generate_dna(
     # but is more robust for the reformer model.
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
+
     return model.generate(  # type: ignore[no-any-return]
         tokenizer.encode("ATG", return_tensors="pt").cuda(),
         max_length=max_length,
@@ -69,7 +71,8 @@ def generate_dna(
         top_p=top_p,
         num_return_sequences=num_seqs,
         remove_invalid_values=remove_invalid_values,
-        use_cache=True
+        use_cache=True,
+        pad_token_id=tokenizer.encode("[PAD]")[0],
         #        stopping_criteria=stopping_criteria,
     )
 
@@ -260,9 +263,12 @@ class LoadPTCheckpointStrategy(ModelLoadStrategy):
 class ThroughputMonitor(Callback):
     """Custom callback in order to monitor the throughput and log to weights and biases."""
 
-    def __init__(self, batch_size: int, num_nodes: int = 1) -> None:
+    def __init__(
+        self, batch_size: int, num_nodes: int = 1, wandb_active: bool = False
+    ) -> None:
         """Logs throughput statistics starting at the 2nd epoch."""
         super().__init__()
+        self.wandb_active = wandb_active
         self.start_time = 0.0
         self.average_throughput = 0.0
         self.average_sample_time = 0.0
@@ -334,27 +340,28 @@ class ThroughputMonitor(Callback):
                 f"seconds/sample over {self.num_ranks} ranks"
             )
 
-            pl_module.logger.log_text(
-                key="stats/performance",
-                columns=[
-                    "throughput_avg",
-                    "throughput_stdev",
-                    "sample_time_avg",
-                    "sample_time_stdev",
-                    "macro_batch_size",
-                    "ranks",
-                ],
-                data=[
-                    [
-                        thru_avg,
-                        thru_stdev,
-                        sample_time_avg,
-                        sample_time_stdev,
-                        self.macro_batch_size,
-                        self.num_ranks,
-                    ]
-                ],
-            )
+            if self.wandb_active:
+                pl_module.logger.log_text(
+                    key="stats/performance",
+                    columns=[
+                        "throughput_avg",
+                        "throughput_stdev",
+                        "sample_time_avg",
+                        "sample_time_stdev",
+                        "macro_batch_size",
+                        "ranks",
+                    ],
+                    data=[
+                        [
+                            thru_avg,
+                            thru_stdev,
+                            sample_time_avg,
+                            sample_time_stdev,
+                            self.macro_batch_size,
+                            self.num_ranks,
+                        ]
+                    ],
+                )
 
 
 class SequenceGenerationCallback(Callback):
@@ -414,3 +421,88 @@ class SequenceGenerationCallback(Callback):
                     custom_seq_name=self.custom_seq_name,
                 )
             print(f"Saved final generated sequences to {self.output_dir}")
+
+
+class PerplexityCallback(Callback):
+    """Model perplexity calculation"""
+
+    def __init__(
+        self,
+        log_steps: int = 0,
+        train_name: str = "train/ppl",
+        val_name: str = "val/ppl",
+    ) -> None:
+        super().__init__()
+        self.log_steps = log_steps
+        self.train_name = train_name
+        self.val_name = val_name
+        self.train_perplexities: List[float] = []
+        self.val_perplexities: List[float] = []
+
+    def _get_perplexities(self, train: bool) -> List[float]:
+        return self.train_perplexities if train else self.val_perplexities
+
+    def _log_perplexity(
+        self, pl_module: "pl.LightningModule", log_name: str, train: bool, **kwargs: Any
+    ) -> None:
+        perplexities = self._get_perplexities(train)
+        mean_ppl = np.mean(perplexities)
+        # This resets either self.train_perplexities or self.val_perplexities
+        perplexities = []
+        pl_module.log(log_name, mean_ppl, prog_bar=True, **kwargs)
+
+    def _on_batch_end(
+        self,
+        pl_module: "pl.LightningModule",
+        loss: torch.Tensor,
+        batch_idx: int,
+        log_name: str,
+        train: bool,
+        **kwargs: Any,
+    ) -> None:
+        self._get_perplexities(train).append(torch.exp(loss.cpu().long()).item())
+        if self.log_steps and batch_idx % self.log_steps == 0:
+            self._log_perplexity(pl_module, log_name, train, **kwargs)
+
+    def on_train_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: Dict[str, torch.Tensor],
+        batch: Dict[str, torch.Tensor],
+        batch_idx: int,
+    ) -> None:
+        self._on_batch_end(
+            pl_module,
+            outputs["loss"],
+            batch_idx,
+            self.train_name,
+            train=True,
+            on_step=True,
+            on_epoch=True,
+        )
+
+    def on_validation_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: torch.Tensor,
+        batch: Dict[str, torch.Tensor],
+        batch_idx: int,
+        dataloader_idx: int,
+    ) -> None:
+        self._on_batch_end(
+            pl_module, outputs, batch_idx, self.val_name, train=False, on_epoch=True
+        )
+
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self._log_perplexity(
+            pl_module, self.train_name, train=True, on_step=False, on_epoch=True
+        )
+
+    def on_validation_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self._log_perplexity(pl_module, self.val_name, train=False, on_epoch=True)

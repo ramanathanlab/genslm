@@ -1,5 +1,4 @@
 from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 from pathlib import Path
 from typing import Dict
 
@@ -55,28 +54,29 @@ class FastaDataset(Dataset):
         if small_subset:
             self.files = self.files[:small_subset]
 
-        self.pad_sequence = partial(
-            torch.nn.functional.pad, value=tokenizer.pad_token_id
-        )
-
         # Cache the samples in memory
-        self.samples: Dict[int, torch.Tensor] = {}
+        self.samples: Dict[int, Dict[str, torch.Tensor]] = {}
 
     def __len__(self) -> int:
         return len(self.files)
 
-    def __getitem__(self, idx: int) -> torch.Tensor:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         # tokenize on the fly
         try:
             return self.samples[idx]
         except KeyError:
             sequence = list(SeqIO.parse(self.files[idx], "fasta"))[0]
-            encoded_sequence = torch.Tensor(
-                self.tokenizer.encode(
-                    group_by_kmer(sequence, self.kmer_size),
-                    max_length=self.block_size,
-                    padding="max_length",
-                )
-            ).long()
-            self.samples[idx] = encoded_sequence
-            return encoded_sequence
+            batch_encoding = self.tokenizer(
+                group_by_kmer(sequence, self.kmer_size),
+                max_length=self.block_size,
+                padding="max_length",
+                return_tensors="pt",
+            )
+            # Squeeze so that batched tensors end up with (batch_size, seq_length)
+            # instead of (batch_size, 1, seq_length)
+            sample = {
+                "input_ids": batch_encoding["input_ids"].squeeze(),
+                "attention_mask": batch_encoding["attention_mask"],
+            }
+            self.samples[idx] = sample
+            return sample
