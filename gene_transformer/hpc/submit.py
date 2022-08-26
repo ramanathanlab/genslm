@@ -4,7 +4,9 @@ from pathlib import Path
 
 import jinja2
 from pydantic import BaseModel, validator
+
 import gene_transformer
+
 
 class HPCSettings(BaseModel):
     allocation: str
