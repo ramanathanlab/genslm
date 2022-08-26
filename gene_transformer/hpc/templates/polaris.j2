@@ -49,4 +49,12 @@ conda activate gene_transformer
 # IMPORTANT NOTE: This requires having a conda environment called gene_transformer
 
 # For applications that internally handle binding MPI/OpenMP processes to GPUs
-mpiexec -n ${NTOTRANKS} --ppn ${NRANKS_PER_NODE} --depth=${NDEPTH} --cpu-bind depth --hostfile $PBS_NODEFILE python -m gene_transformer.model -c {{ config }}
+mpiexec \
+  -n ${NTOTRANKS} \
+  --ppn ${NRANKS_PER_NODE} \
+  --depth=${NDEPTH} \
+  --cpu-bind depth \
+  --hostfile $PBS_NODEFILE  \
+  {{ gene_transformer_path / "hpc" / "templates" / "run-polaris.sh" }} \
+  python -m gene_transformer.model -c {{ config }}
+
