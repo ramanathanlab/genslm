@@ -5,6 +5,8 @@ from pathlib import Path
 import jinja2
 from pydantic import BaseModel, validator
 
+import gene_transformer
+
 
 class HPCSettings(BaseModel):
     allocation: str
@@ -14,6 +16,7 @@ class HPCSettings(BaseModel):
     job_name: str
     workdir: Path
     config: Path
+    gene_transformer_path: Path = Path(gene_transformer.__file__).parent
 
     @validator("config")
     def config_exists(cls, v: Path) -> Path:
@@ -45,11 +48,13 @@ def format_and_submit(template_name: str, settings: HPCSettings) -> None:
 
     submit_script = template.render(settings.dict())
 
-    sbatch_script = settings.workdir / f"{settings.job_name}.sbatch"
+    launchers = {"perlmutter": "sbatch", "polaris": "qsub"}
+    suffixs = {"perlmutter": "slurm", "polaris": "pbs"}
+
+    sbatch_script = settings.workdir / f"{settings.job_name}.{suffixs[template_name]}"
     with open(sbatch_script, "w") as f:
         f.write(submit_script)
 
-    launchers = {"perlmutter": "sbatch", "polaris": "qsub"}
     subprocess.run(f"{launchers[template_name]} {sbatch_script}".split())
 
 
