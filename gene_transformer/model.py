@@ -171,7 +171,7 @@ def train(cfg: ModelSettings) -> None:
             entity=cfg.wandb_entity_name,
             name=cfg.wandb_model_tag,
             id=cfg.wandb_model_tag,
-            resume="must",
+            # resume="must",
         )
 
     callbacks: List[Callback] = []
