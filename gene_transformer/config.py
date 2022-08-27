@@ -2,13 +2,14 @@
 import json
 import os
 import warnings
-import gene_transformer
 from pathlib import Path
 from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 import yaml
 from pydantic import BaseSettings as _BaseSettings
 from pydantic import root_validator, validator
+
+import gene_transformer
 
 _T = TypeVar("_T")
 
