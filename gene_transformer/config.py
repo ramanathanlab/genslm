@@ -41,7 +41,7 @@ class ModelSettings(BaseSettings):
     """Settings for the DNATransformer model."""
 
     # logging settings
-    wandb_active: bool = True
+    wandb_active: bool = False
     """Whether to use wandb for logging."""
     wandb_project_name: str = "codon_transformer"
     """Wandb project name to log to."""
@@ -152,8 +152,6 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config = cfg.copy()
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
-    new_config.num_test_seqs_per_gpu = 0
-    new_config.profiling_path = None
     # Select size of subset to use, more ranks require more data to compute stats.
     nodes_to_sample_size = {1: 1600, 2: 1600, 4: 3200, 8: 6400}
     new_config.small_subset = nodes_to_sample_size.get(cfg.num_nodes, 16000)
