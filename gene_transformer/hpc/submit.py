@@ -79,4 +79,5 @@ if __name__ == "__main__":
         workdir=args.workdir,
         config=args.config,
     )
+
     format_and_submit(args.template, settings)
