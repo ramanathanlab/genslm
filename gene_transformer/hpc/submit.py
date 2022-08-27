@@ -33,7 +33,7 @@ class HPCSettings(BaseModel):
 
 
 def format_and_submit(template_name: str, settings: HPCSettings) -> None:
-    """Add settings to a submit script, save to temp file, and submit to HPC scheduler"""
+    """Add settings to a submit script and submit to HPC scheduler"""
 
     env = jinja2.Environment(
         loader=jinja2.PackageLoader("gene_transformer.hpc"),
