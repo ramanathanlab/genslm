@@ -2,6 +2,7 @@
 import json
 import os
 import warnings
+import gene_transformer
 from pathlib import Path
 from typing import Any, Dict, Optional, Type, TypeVar, Union
 
@@ -69,7 +70,11 @@ class ModelSettings(BaseSettings):
     """Number of training steps to log perplexity on, default logging to end of epoch"""
 
     # data settings
-    tokenizer_file: Path = Path("tokenizer_files/codon_wordlevel_100vocab.json")
+    tokenizer_file: Path = (
+        Path(gene_transformer.__file__).parent
+        / "tokenizer_files"
+        / "codon_wordlevel_100vocab.json"
+    )
     """Path to the tokenizer file."""
     train_file: Path
     """Path to the training data."""
