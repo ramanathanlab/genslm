@@ -22,7 +22,7 @@ class HPCSettings(BaseModel):
     def config_exists(cls, v: Path) -> Path:
         if not v.exists():
             raise FileNotFoundError(f"Config file does not exist: {v}")
-        return v
+        return v.resolve()
 
     @validator("workdir")
     def workdir_exists(cls, v: Path) -> Path:
