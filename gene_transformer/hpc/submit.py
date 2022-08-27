@@ -1,3 +1,4 @@
+import sys
 import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
@@ -79,5 +80,9 @@ if __name__ == "__main__":
         workdir=args.workdir,
         config=args.config,
     )
+
+    # Log command for reproducibility
+    with open("command.log", "w") as f:
+        f.write(" ".join(sys.argv))
 
     format_and_submit(args.template, settings)
