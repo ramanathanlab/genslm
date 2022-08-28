@@ -1,3 +1,4 @@
+import sys
 import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
@@ -22,7 +23,7 @@ class HPCSettings(BaseModel):
     def config_exists(cls, v: Path) -> Path:
         if not v.exists():
             raise FileNotFoundError(f"Config file does not exist: {v}")
-        return v
+        return v.resolve()
 
     @validator("workdir")
     def workdir_exists(cls, v: Path) -> Path:
@@ -32,7 +33,7 @@ class HPCSettings(BaseModel):
 
 
 def format_and_submit(template_name: str, settings: HPCSettings) -> None:
-    """Add settings to a submit script, save to temp file, and submit to HPC scheduler"""
+    """Add settings to a submit script and submit to HPC scheduler"""
 
     env = jinja2.Environment(
         loader=jinja2.PackageLoader("gene_transformer.hpc"),
@@ -79,4 +80,9 @@ if __name__ == "__main__":
         workdir=args.workdir,
         config=args.config,
     )
+
+    # Log command for reproducibility
+    with open("command.log", "w") as f:
+        f.write(" ".join(sys.argv))
+
     format_and_submit(args.template, settings)
