@@ -343,8 +343,10 @@ def inference(
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
     embeddings = trainer.predict(model, dataloaders=dataloader)
-    pdb.set_trace()
     # embeddings = generate_embeddings(model, dataloader, compute_mean)
+    if compute_mean:
+        embeddings = [np.mean(emb, axis=1) for emb in embeddings]
+    embeddings = np.array(embeddings)
     print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
         assert Path(output_path).suffix == ".npy"
