@@ -63,8 +63,11 @@ def generate_dna(
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
 
+    if start_sequence is not None:
+        start_sequence = tokenizer.encode(start_sequence, return_tensors="pt").cuda()
+
     return model.generate(  # type: ignore[no-any-return]
-        tokenizer.encode(start_sequence, return_tensors="pt").cuda(),
+        start_sequence,
         max_length=max_length,
         min_length=max_length,
         do_sample=True,
