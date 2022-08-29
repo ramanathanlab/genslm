@@ -143,6 +143,7 @@ def non_redundant_generation(
     known_sequence_files: Optional[List[str]] = None,
     start_sequence: str = "ATG",
     to_stop_codon: bool = True,
+    length_cutoff: bool = False,
 ) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
@@ -155,7 +156,7 @@ def non_redundant_generation(
     if known_sequence_files is not None:
         known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
-    if len(known_sequences) > 1:
+    if len(known_sequences) > 1 and length_cutoff:
         lengths = [len(s) for s in known_sequences]
         length_cutoff = min(lengths)
     else:
