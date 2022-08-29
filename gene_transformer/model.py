@@ -141,6 +141,7 @@ class DNATransformer(pl.LightningModule):
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
             output_hidden_states=True)
+        pdb.set_trace()
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
         # if compute_mean:
