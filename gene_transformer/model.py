@@ -136,7 +136,7 @@ class DNATransformer(pl.LightningModule):
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.FloatTensor:
         """Computes and returns the embeddings"""
-        outputs = self.model(batch, output_hidden_states=True)
+        outputs = self(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
         # if compute_mean:
