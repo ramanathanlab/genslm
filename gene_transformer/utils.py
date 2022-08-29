@@ -56,7 +56,7 @@ def generate_dna(
     top_p: float = 0.95,
     num_seqs: int = 5,
     remove_invalid_values: bool = True,
-    start_sequence: str = "ATG"
+    start_sequence: str = "ATG",
 ) -> torch.Tensor:
     # remove_invalid_values slows down the calculation
     # but is more robust for the reformer model.
@@ -145,7 +145,7 @@ def non_redundant_generation(
     to_stop_codon: bool = True,
     length_cutoff: bool = False,
     write_to_file: Optional[Path] = None,
-    custom_seq_name: Optional[str] ="SyntheticSeq"
+    custom_seq_name: Optional[str] = "SyntheticSeq",
 ) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
@@ -179,16 +179,20 @@ def non_redundant_generation(
             top_k=top_k,
             top_p=top_p,
             num_seqs=1,
-            start_sequence=start_sequence
+            start_sequence=start_sequence,
         )
-        seq = tokens_to_sequences(tokens, tokenizer=tokenizer, to_stop_codon=to_stop_codon)[0]
+        seq = tokens_to_sequences(
+            tokens, tokenizer=tokenizer, to_stop_codon=to_stop_codon
+        )[0]
         all_generated_seqs.append(seq)
         found_existing = seq in known_sequences
         if not found_existing and len(seq) > length_cutoff:
             unique_seqs.add(seq)
             # TODO: append instead of overwrite?
             if write_to_file:
-                seqs_to_fasta(unique_seqs, write_to_file, custom_seq_name=custom_seq_name)
+                seqs_to_fasta(
+                    unique_seqs, write_to_file, custom_seq_name=custom_seq_name
+                )
                 print("Wrote {} seqs to {}...".format(len(unique_seqs), write_to_file))
         print("Found Existing: {}".format(found_existing))
         print("Sequence Length: {}".format(len(seq)))

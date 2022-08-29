@@ -1,5 +1,5 @@
-import sys
 import subprocess
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
