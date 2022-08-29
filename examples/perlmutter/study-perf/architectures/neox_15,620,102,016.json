@@ -2,8 +2,8 @@
     "architectures": [
         "GPTNeoXForCausalLM"
     ],
-    "hidden_size": 7200,
-    "num_attention_heads": 48,
+    "hidden_size": 7040,
+    "num_attention_heads": 64,
     "num_hidden_layers": 48,
     "intermediate_size": 8192,
     "attention_probs_dropout_prob": 0.1,
