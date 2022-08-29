@@ -134,14 +134,14 @@ class DNATransformer(pl.LightningModule):
 
     def predict_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
-    ) -> torch.FloatTensor:
+    ) -> np.ndarray:
         """Computes and returns the embeddings"""
         outputs = self.model(
             batch["input_ids"],
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
             output_hidden_states=True)
-        pdb.set_trace()
+        # pdb.set_trace()
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
         # if compute_mean:
