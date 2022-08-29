@@ -56,6 +56,7 @@ def generate_dna(
     top_p: float = 0.95,
     num_seqs: int = 5,
     remove_invalid_values: bool = True,
+    start_sequence: str = "ATG"
 ) -> torch.Tensor:
     # remove_invalid_values slows down the calculation
     # but is more robust for the reformer model.
@@ -63,7 +64,7 @@ def generate_dna(
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
 
     return model.generate(  # type: ignore[no-any-return]
-        tokenizer.encode("ATG", return_tensors="pt").cuda(),
+        tokenizer.encode(start_sequence, return_tensors="pt").cuda(),
         max_length=max_length,
         min_length=max_length,
         do_sample=True,
@@ -137,6 +138,7 @@ def non_redundant_generation(
     top_p: float = 0.95,
     num_seqs: int = 5,
     known_sequence_files: Optional[List[str]] = None,
+    start_sequence: str = "ATG"
 ) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
@@ -170,6 +172,7 @@ def non_redundant_generation(
             top_k=top_k,
             top_p=top_p,
             num_seqs=1,
+            start_sequence=start_sequence
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
         all_generated_seqs.append(seq)
