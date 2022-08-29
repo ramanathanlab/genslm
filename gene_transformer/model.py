@@ -1,5 +1,6 @@
 import json
 import os
+import pdb
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
@@ -130,6 +131,18 @@ class DNATransformer(pl.LightningModule):
         loss = outputs.loss
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
+
+    def predict_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.FloatTensor:
+        """Computes and returns the embeddings"""
+        outputs = self.model(batch, output_hidden_states=True)
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        emb = outputs.hidden_states[0].detach().cpu().numpy()
+        # if compute_mean:
+        #     # Compute average over sequence length
+        #     emb = np.mean(emb, axis=1)
+        return emb
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
@@ -300,6 +313,7 @@ def generate_embeddings(
 
 # TODO: Make separate files for training and inference
 def inference(
+    cfg: ModelSettings,
     model_load_strategy: ModelLoadStrategy,
     fasta_file: str,
     output_path: Optional[PathLike] = None,
@@ -307,11 +321,24 @@ def inference(
 ) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
-    model.cuda()
+
+    trainer = pl.Trainer(
+        gpus=-1,
+        # default_root_dir=str(cfg.checkpoint_dir),
+        strategy=DeepSpeedStrategy(stage=3),
+        # accumulate_grad_batches=cfg.accumulate_grad_batches,
+        # num_sanity_val_steps=2,
+        precision=cfg.precision,
+        max_epochs=cfg.epochs,
+        num_nodes=cfg.num_nodes,
+    )
+
     dataset = model.get_dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
-    embeddings = generate_embeddings(model, dataloader, compute_mean)
+    embeddings = trainer.predict(model, dataloaders=dataloader)
+    pdb.set_trace()
+    # embeddings = generate_embeddings(model, dataloader, compute_mean)
     print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
         assert Path(output_path).suffix == ".npy"
@@ -333,8 +360,6 @@ def test(cfg: ModelSettings) -> None:
     else:
         print("WARNING: running test on randomly initialized architecture")
         model = DNATransformer(cfg)
-
-    model.cuda()
 
     trainer = pl.Trainer(
         gpus=-1,
