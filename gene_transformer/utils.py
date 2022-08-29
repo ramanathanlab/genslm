@@ -173,9 +173,11 @@ def non_redundant_generation(
         )
         seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
         all_generated_seqs.append(seq)
-        if seq not in known_sequences and len(seq) > length_cutoff:
+        found_existing = seq in known_sequences
+        if not found_existing and len(seq) > length_cutoff:
             unique_seqs.add(seq)
-            print("Unique Sequence Length: {}".format(len(unique_seqs)))
+        print("Found Existing: {}".format(found_existing))
+        print("Sequence Length: {}".format(len(unique_seqs)))
 
     # create dictionary of results
     results = {
