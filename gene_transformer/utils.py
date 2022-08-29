@@ -183,7 +183,7 @@ def non_redundant_generation(
         if not found_existing and len(seq) > length_cutoff:
             unique_seqs.add(seq)
         print("Found Existing: {}".format(found_existing))
-        print("Sequence Length: {}".format(len(unique_seqs)))
+        print("Sequence Length: {}".format(len(seq)))
 
     # create dictionary of results
     results = {
