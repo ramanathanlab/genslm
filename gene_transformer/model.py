@@ -435,6 +435,7 @@ if __name__ == "__main__":
                 f"Invalid inference_model_load {args.inference_model_load}"
             )
         inference(
+            config,
             model_strategy,
             args.inference_fasta,
             args.inference_output_path,
