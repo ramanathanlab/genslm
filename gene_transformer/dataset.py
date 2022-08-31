@@ -139,21 +139,16 @@ class H5Dataset(Dataset):
             # instead of (batch_size, 1, seq_length)
             fields["input_ids"].append(batch_encoding["input_ids"].squeeze().astype(np.int8))
             fields["attention_mask"].append(batch_encoding["attention_mask"])
-            fields["id"].append(seq_record.id)
-            fields["description"].append(seq_record.description)
-            fields["sequence"].append(str(seq_record.seq).upper())
+
+            fields["id"].append(np.array(seq_record.id, dtype=object))
+            fields["description"].append(np.array(seq_record.description, dtype=object))
+            fields["sequence"].append(np.array(str(seq_record.seq).upper(), dtype=object))
             # TODO: Add other fields?
-
+        print(np.concatenate(fields["input_ids"]).shape)
+        print(np.concatenate(fields["attention_masks"]).shape)
+        exit()
         # Gather into numpy arrays
-        # TODO ragged array handling
-        def ragged(data: np.ndarray):
-            a = np.empty(data.shape, dtype=object)
-            a[...] = data
-            return a
-
-        for key in fields:
-            fields[key] = np.concatenate([ragged(data) for data in fields[key]])
-        # fields = {key: np.concatenate(fields[key]) for key in fields}
+        fields = {key: np.concatenate(fields[key]) for key in fields}
 
         # TODO: Some of these arrays (id, description, attention_mask) may be ragged
 
