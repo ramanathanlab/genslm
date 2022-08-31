@@ -143,6 +143,7 @@ class H5Dataset(Dataset):
             fields["description"].append(np.array(seq_record.description, dtype=object))
             fields["sequence"].append(np.array(str(seq_record.seq).upper(), dtype=object))
             # TODO: Add other fields?
+        print(fields["input_ids"][0].shape)
         print(np.concatenate(fields["input_ids"]).shape)
         print(np.concatenate(fields["attention_mask"]).shape)
         exit()
