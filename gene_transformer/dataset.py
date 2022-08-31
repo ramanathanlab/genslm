@@ -143,15 +143,14 @@ class H5Dataset(Dataset):
             fields["description"].append(np.array(seq_record.description, dtype=object))
             fields["sequence"].append(np.array(str(seq_record.seq).upper(), dtype=object))
             # TODO: Add other fields?
-        print(fields["input_ids"][0].shape)
         print(np.concatenate(fields["input_ids"]).shape)
         print(np.concatenate(fields["attention_mask"]).shape)
         print(fields["attention_mask"][0])
         print(fields["input_ids"][0])
 
-        exit()
         # Gather into numpy arrays
         fields = {key: np.concatenate(fields[key]) for key in fields}
+        exit()
 
         # TODO: Some of these arrays (id, description, attention_mask) may be ragged
 
