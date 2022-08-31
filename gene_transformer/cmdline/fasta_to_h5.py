@@ -20,7 +20,9 @@ def process_dataset(
         print(file)
         dataset = H5Dataset(file, tokenizer_blocksize, tokenizer)
         print(dataset)
+
         exit()
+    print("Done")
 
 
 if __name__ == "__main__":
