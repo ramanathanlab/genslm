@@ -139,6 +139,7 @@ class H5Dataset(Dataset):
             fields["attention_mask"].append(batch_encoding["attention_mask"])
             fields["id"].append(seq_record.id)
             fields["description"].append(seq_record.description)
+            fields["sequence"].append(str(seq_record.seq).upper())
             # TODO: Add other fields?
 
         # Gather into numpy arrays
@@ -162,3 +163,4 @@ class H5Dataset(Dataset):
             # TODO: Test/debug: https://docs.h5py.org/en/stable/strings.html
             create_dataset("id", data=fields["id"], dtype="S")
             create_dataset("description", data=fields["description"], dtype="S")
+            create_dataset("sequence", data=fields["sequence"], dtype="S")
