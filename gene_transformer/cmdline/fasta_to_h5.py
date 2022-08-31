@@ -18,7 +18,7 @@ def process_dataset(
     output_dir.mkdir(exist_ok=True)
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-    for file in fasta_dir.glob(glob_pattern):
+    for file in list(fasta_dir.glob(glob_pattern))[1:]:
         out_file = output_dir / f"{file.stem}_tokenized.h5"
         H5Dataset.preprocess(file, out_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
         break
