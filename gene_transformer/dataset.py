@@ -137,7 +137,7 @@ class H5Dataset(Dataset):
             )
             # Squeeze so that batched tensors end up with (batch_size, seq_length)
             # instead of (batch_size, 1, seq_length)
-            fields["input_ids"].append(batch_encoding["input_ids"].squeeze().astype(np.int8))
+            fields["input_ids"].append(batch_encoding["input_ids"].astype(np.int8))
             fields["attention_mask"].append(batch_encoding["attention_mask"])
             fields["id"].append(np.array(seq_record.id, dtype=object))
             fields["description"].append(np.array(seq_record.description, dtype=object))
