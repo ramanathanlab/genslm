@@ -139,13 +139,12 @@ class H5Dataset(Dataset):
             # instead of (batch_size, 1, seq_length)
             fields["input_ids"].append(batch_encoding["input_ids"].squeeze().astype(np.int8))
             fields["attention_mask"].append(batch_encoding["attention_mask"])
-
             fields["id"].append(np.array(seq_record.id, dtype=object))
             fields["description"].append(np.array(seq_record.description, dtype=object))
             fields["sequence"].append(np.array(str(seq_record.seq).upper(), dtype=object))
             # TODO: Add other fields?
         print(np.concatenate(fields["input_ids"]).shape)
-        print(np.concatenate(fields["attention_masks"]).shape)
+        print(np.concatenate(fields["attention_mask"]).shape)
         exit()
         # Gather into numpy arrays
         fields = {key: np.concatenate(fields[key]) for key in fields}
