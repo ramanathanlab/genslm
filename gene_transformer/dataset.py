@@ -146,8 +146,8 @@ class H5Dataset(Dataset):
 
         # Gather into numpy arrays
         # TODO ragged array handling
-        def ragged(data):
-            a = np.empty(len(data), dtype=object)
+        def ragged(data: np.ndarray):
+            a = np.empty(data.shape, dtype=object)
             a[...] = data
             return a
 
