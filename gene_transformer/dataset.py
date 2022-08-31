@@ -139,7 +139,7 @@ class H5Dataset(Dataset):
             # instead of (batch_size, 1, seq_length)
             fields["input_ids"].append(batch_encoding["input_ids"].astype(np.int8))
             fields["attention_mask"].append(batch_encoding["attention_mask"].astype(np.int8))
-            fields["id"].append(np.array(seq_record.id, dtype=object))
+            fields["id"].append(seq_record.id)
             fields["description"].append(np.array(seq_record.description, dtype=object))
             fields["sequence"].append(np.array(str(seq_record.seq).upper(), dtype=object))
             # TODO: Add other fields?
@@ -157,8 +157,8 @@ class H5Dataset(Dataset):
         for key in ["input_ids", "attention_mask"]:
             fields[key] = np.concatenate(fields[key])
 
-        for key in ["id", "description", "sequence"]:
-            fields[key] = ragged_array(fields[key])
+        # for key in ["id", "description", "sequence"]:
+        #     fields[key] = ragged_array(fields[key])
 
         # Write to HDF5 file
         with h5py.File(output_file, "w") as f:
@@ -176,6 +176,6 @@ class H5Dataset(Dataset):
             # TODO: Which is the best type to use?
             create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
             # TODO: Test/debug: https://docs.h5py.org/en/stable/strings.html
-            create_dataset("id", data=fields["id"], dtype=h5py.vlen_dtype("O"))
+            create_dataset("id", data=fields["id"], dtype=str_dtype)
             # create_dataset("description", data=fields["description"], dtype=str_dtype)
             # create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
