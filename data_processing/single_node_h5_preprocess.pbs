@@ -1,0 +1,26 @@
+#!/bin/sh
+#PBS -l select=1:system=polaris
+#PBS -l place=scatter
+#PBS -l walltime=01:00:00
+#PBS -N process_gene_data
+#PBS -q debug
+#PBS -A RL-fold
+#PBS -k doe
+#PBS -o $PBS_O_WORKDIR/process_data.out
+#PBS -e cd $PBS_O_WORKDIR/process_data.err
+
+
+# Change to working directory
+cd $PBS_O_WORKDIR
+
+# This environment should get passed through mpiexec
+module load conda/2022-07-19
+conda activate gene_transformer
+
+
+mpiexec -n 1 --ppn 1 python -m gene_transformer.cmdline.fasta_to_h5 \
+    -f /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k  \
+    -o ./lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5 \
+    -n 64 \
+    -t /home/hippekp/github/gene_transformer/gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json \
+    -b 2048
