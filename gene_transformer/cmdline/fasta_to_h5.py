@@ -24,8 +24,11 @@ def process_dataset(
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [output_dir / f"{f.stem}.h5" for f in files]
-
     already_done = set(f.name for f in output_dir.glob("*.h5"))
+
+    if len(already_done) == len(files):
+        raise ValueError(f"Already processed all files in {fasta_dir}")
+
     files, out_files = zip(
         *[
             (fin, fout)
@@ -34,17 +37,16 @@ def process_dataset(
         ]
     )
 
+    print(f"Processing {len(files)} from {fasta_dir}...")
     func = functools.partial(
         H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize
     )
-    chunksize = max(1, len(files) // num_workers)
+
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
-        for _ in pool.map(func, files, out_files, chunksize=chunksize):
+        for _ in pool.map(func, files, out_files):
             pass
 
-    # for file in list(fasta_dir.glob(glob_pattern))[1:]:
-    #     out_file = output_dir / f"{file.stem}_tokenized.h5"
-    #     H5Dataset.preprocess(file, out_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
+    print(f"Completed, saved files to {output_dir}")
 
 
 if __name__ == "__main__":

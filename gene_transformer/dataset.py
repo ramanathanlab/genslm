@@ -134,6 +134,7 @@ class H5Dataset(Dataset):
                 padding="max_length",
                 return_tensors="np",
             )
+
             for field in ["input_ids", "attention_mask"]:
                 fields[field].append(batch_encoding[field].astype(np.int8))
             fields["id"].append(seq_record.id)
