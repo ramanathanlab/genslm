@@ -56,7 +56,7 @@ def generate_dna(
     top_p: float = 0.95,
     num_seqs: int = 5,
     remove_invalid_values: bool = True,
-    start_sequence: str = "ATG",
+    start_sequence: Optional[str] = "ATG",
 ) -> torch.Tensor:
     # remove_invalid_values slows down the calculation
     # but is more robust for the reformer model.
