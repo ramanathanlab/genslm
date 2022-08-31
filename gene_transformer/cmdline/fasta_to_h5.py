@@ -23,13 +23,15 @@ def process_dataset(
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [output_dir / f"{f.stem}.h5" for f in files]
 
+    print(f"{len(files)=}, {len(out_files)=}")
     already_done = set(f.name for f in output_dir.glob("*.h5"))
     files, out_files = zip(*[(fin, fout) for fin, fout in zip(files, out_files) if fout.name not in already_done])
+    print(f"{len(files)=}, {len(out_files)=}, {len(already_done)=}")
+    print(already_done)
 
     func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize)
-    chunksize = max(1, len(files) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
-        for _ in pool.map(func, files, out_files, chunksize=chunksize):
+        for _ in pool.map(func, files, out_files):
             pass
 
     # for file in list(fasta_dir.glob(glob_pattern))[1:]:
