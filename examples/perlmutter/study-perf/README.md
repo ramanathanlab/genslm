@@ -23,7 +23,7 @@ Total possible experiments: 3 models * 4 params * 9 nodes * 2 blockSizes = 216
 
 Reformer experiment run on [Perlmutter](https://www.nersc.gov/systems/perlmutter/) at [NERSC](https://www.nersc.gov/).
 
-![Reformer Scaling](figures/reformer-scaling.png)
+![Reformer Scaling](figures/perlmutter-reformer-scaling.png)
 
 GPT-NeoX experiment run on [Polaris](https://www.alcf.anl.gov/polaris) at [ALCF](https://www.alcf.anl.gov/).
 
