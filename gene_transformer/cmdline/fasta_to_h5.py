@@ -37,7 +37,7 @@ def process_dataset(
         ]
     )
 
-    print(f"Processing {len(files)} from {fasta_dir}...")
+    print(f"Processing {len(files)} files from {fasta_dir}...")
     func = functools.partial(
         H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize
     )
