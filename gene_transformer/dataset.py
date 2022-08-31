@@ -128,7 +128,6 @@ class H5Dataset(Dataset):
 
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
         print(f"File: {fasta_path}, num sequences: {len(sequences)}")
-        return
         for seq_record in sequences:
             batch_encoding = tokenizer(
                 group_by_kmer(seq_record, kmer_size),

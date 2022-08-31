@@ -10,7 +10,7 @@ from gene_transformer.dataset import H5Dataset
 def process_dataset(
     fasta_dir: Path,
     glob_pattern: str,
-    output_file: Path,
+    output_dir: Path,
     num_workers: int,
     tokenizer_file: Path,
     tokenizer_blocksize: int,
@@ -18,7 +18,8 @@ def process_dataset(
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     print(list(fasta_dir.iterdir()))
     for file in fasta_dir.glob(glob_pattern):
-        H5Dataset.preprocess(file, output_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
+        out_file = output_dir / f"{file.stem}_tokenized.h5"
+        H5Dataset.preprocess(file, out_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
 
     print("Done")
 
