@@ -1,7 +1,11 @@
+import functools
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict
 
+import h5py
+import numpy as np
 import torch
 from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
@@ -12,7 +16,7 @@ from gene_transformer.config import PathLike
 
 
 def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
-    seq = str(s.seq).upper() # need to make sure it's in upper case
+    seq = str(s.seq).upper()  # need to make sure it's in upper case
     return " ".join(seq[i : i + n] for i in range(0, len(seq), n))
 
 
@@ -80,3 +84,81 @@ class FastaDataset(Dataset):
             }
             self.samples[idx] = sample
             return sample
+
+
+# TODO: Add h5py to requirements.txt and update docker
+class H5Dataset(Dataset):
+    def __init__(
+        self,
+        file_path: str,
+        block_size: int,
+        tokenizer: PreTrainedTokenizerFast,
+        kmer_size: int = 3,
+    ) -> None:
+        self.file_path = file_path
+        self.block_size = block_size
+        self.kmer_size = kmer_size
+        self.tokenizer = tokenizer
+
+        with h5py.File(file_path, "r") as f:
+            # fetch all samples from the dataset
+            self.input_ids = f["input_ids"][...]
+            self.attn_masks = f["attention_mask"][...]
+
+    def __len__(self) -> int:
+        return len(self.input_ids)
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        # TODO: If it takes too much memory to read the whole dataset
+        #       into memory, then we can open the h5py in the getitem
+        #       and cache the required idx values like in the other Dataset class.
+        return {
+            "input_ids": torch.tensor(self.input_ids[idx].astype("int32")).long(),
+            "attention_mask": torch.tensor(self.attn_masks[idx].astype("int32")).long(),
+        }
+
+    def preprocess(self, fasta_path: PathLike, output_file: PathLike) -> None:
+        # TODO: Instead of passing in a tokenizer, it may be easier to simply define one here.
+        fasta_path = Path(fasta_path)
+        # TODO: Handle the case were fasta_path is directory of fastas, or single file
+        fields = defaultdict(list)
+
+        sequences = list(SeqIO.parse(fasta_path, "fasta"))
+        for seq_record in sequences:
+            batch_encoding = self.tokenizer(
+                group_by_kmer(seq_record, self.kmer_size),
+                max_length=self.block_size,
+                padding="max_length",
+                return_tensors="np",
+            )
+            # Squeeze so that batched tensors end up with (batch_size, seq_length)
+            # instead of (batch_size, 1, seq_length)
+            fields["input_ids"].append(
+                batch_encoding["input_ids"].squeeze().astype(np.int8)
+            )
+            fields["attention_mask"].append(batch_encoding["attention_mask"])
+            fields["id"].append(seq_record.id)
+            fields["description"].append(seq_record.description)
+            # TODO: Add other fields?
+
+        # Gather into numpy arrays
+        fields = {key: np.concatenate(fields[key]) for key in fields}
+
+        # TODO: Some of these arrays (id, description, attention_mask) may be ragged
+
+        # Write to HDF5 file
+        with h5py.File(output_file, "w") as f:
+            # TODO: Experiment with smaller compression ratio
+            create_dataset = functools.partial(
+                f.create_dataset,
+                fletcher32=True,
+                chunks=True,
+                compression="gzip",
+                compression_opts=9,
+            )
+            create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
+            # TODO: Which is the best type to use?
+            create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
+            # TODO: Test/debug: https://docs.h5py.org/en/stable/strings.html
+            create_dataset("id", data=fields["id"], dtype="S")
+            create_dataset("description", data=fields["description"], dtype="S")
