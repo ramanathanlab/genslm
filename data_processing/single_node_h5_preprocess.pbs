@@ -6,8 +6,8 @@
 #PBS -q debug
 #PBS -A RL-fold
 #PBS -k doe
-#PBS -o $PBS_O_WORKDIR/process_data.out
-#PBS -e cd $PBS_O_WORKDIR/process_data.err
+#PBS -o process_data.out
+#PBS -e process_data.err
 
 
 # Change to working directory
