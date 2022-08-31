@@ -145,10 +145,15 @@ class H5Dataset(Dataset):
             # TODO: Add other fields?
 
         # Gather into numpy arrays
+        # TODO ragged array handling
+        def ragged(data):
+            a = np.empty(len(data), dtype=object)
+            a[...] = data
+            return a
+
         for key in fields:
-            if len(fields[key]) == 0:
-                print(key, fasta_path)
-        fields = {key: np.concatenate(fields[key]) for key in fields}
+            fields[key] = np.concatenate([ragged(data) for data in fields[key]])
+        # fields = {key: np.concatenate(fields[key]) for key in fields}
 
         # TODO: Some of these arrays (id, description, attention_mask) may be ragged
 
