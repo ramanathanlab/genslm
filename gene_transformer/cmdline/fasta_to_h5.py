@@ -21,7 +21,7 @@ def process_dataset(
     for file in fasta_dir.glob(glob_pattern):
         out_file = output_dir / f"{file.stem}_tokenized.h5"
         H5Dataset.preprocess(file, out_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
-
+        break
     print("Done")
 
 
