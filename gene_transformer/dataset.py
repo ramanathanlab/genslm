@@ -177,5 +177,5 @@ class H5Dataset(Dataset):
             create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
             # TODO: Test/debug: https://docs.h5py.org/en/stable/strings.html
             create_dataset("id", data=fields["id"], dtype=str_dtype)
-            # create_dataset("description", data=fields["description"], dtype=str_dtype)
+            create_dataset("description", data=fields["description"], dtype=str_dtype)
             create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
