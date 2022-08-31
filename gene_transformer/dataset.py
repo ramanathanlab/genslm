@@ -24,14 +24,18 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
+def write_individual_fasta_files(
+    fasta_file: Path, output_dir: Path, num_workers: int = 1
+) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
+        for _ in executor.map(
+            _write_fasta_file, seqs, output_files, chunksize=chunksize
+        ):
             pass
 
 
@@ -137,7 +141,9 @@ class H5Dataset(Dataset):
             # Squeeze so that batched tensors end up with (batch_size, seq_length)
             # instead of (batch_size, 1, seq_length)
             fields["input_ids"].append(batch_encoding["input_ids"].astype(np.int8))
-            fields["attention_mask"].append(batch_encoding["attention_mask"].astype(np.int8))
+            fields["attention_mask"].append(
+                batch_encoding["attention_mask"].astype(np.int8)
+            )
             fields["id"].append(seq_record.id)
             fields["description"].append(seq_record.description)
             fields["sequence"].append(str(seq_record.seq).upper())
