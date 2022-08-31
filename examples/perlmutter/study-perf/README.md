@@ -28,3 +28,7 @@ Reformer experiment run on [Perlmutter](https://www.nersc.gov/systems/perlmutter
 GPT-NeoX experiment run on [Polaris](https://www.alcf.anl.gov/polaris) at [ALCF](https://www.alcf.anl.gov/).
 
 ![GPT-NeoX Scaling](figures/polaris-gptneox-scaling.png)
+
+
+Combined plot:
+![Comparison](figures/gptneox-reformer-scaling.png)
