@@ -195,8 +195,8 @@ class H5Dataset(Dataset):
                 fout.create_dataset,
                 # fletcher32=True,
                 # chunks=True,
-                compression="gzip",
-                compression_opts=6,
+                # compression="gzip",
+                # compression_opts=6,
             )
             input_ids_dset = create_dataset(
                 "input_ids", maxshape=(None, input_ids_shape), dtype="i8"
@@ -219,6 +219,7 @@ class H5Dataset(Dataset):
             ind = 0
             for file in files:
                 with h5py.File(file, "r") as fin:
+                    print(f"Working with {file}")
                     num_examples = fin["input_ids"].shape[0]
 
                     input_ids_dset.resize((ind + num_examples, input_ids_shape))
