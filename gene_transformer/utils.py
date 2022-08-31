@@ -56,14 +56,18 @@ def generate_dna(
     top_p: float = 0.95,
     num_seqs: int = 5,
     remove_invalid_values: bool = True,
+    start_sequence: Optional[str] = "ATG",
 ) -> torch.Tensor:
     # remove_invalid_values slows down the calculation
     # but is more robust for the reformer model.
     # List of generated tokenized sequences.
     # stopping_criteria = StoppingCriteriaList([FoundStopCodonCriteria(tokenizer)])
 
+    if start_sequence is not None:
+        start_sequence = tokenizer.encode(start_sequence, return_tensors="pt").cuda()
+
     return model.generate(  # type: ignore[no-any-return]
-        tokenizer.encode("ATG", return_tensors="pt").cuda(),
+        start_sequence,
         max_length=max_length,
         min_length=max_length,
         do_sample=True,
@@ -137,6 +141,11 @@ def non_redundant_generation(
     top_p: float = 0.95,
     num_seqs: int = 5,
     known_sequence_files: Optional[List[str]] = None,
+    start_sequence: str = "ATG",
+    to_stop_codon: bool = True,
+    length_cutoff: bool = False,
+    write_to_file: Optional[Path] = None,
+    custom_seq_name: Optional[str] = "SyntheticSeq",
 ) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
@@ -149,7 +158,7 @@ def non_redundant_generation(
     if known_sequence_files is not None:
         known_sequences = set(map(str, get_known_sequences(known_sequence_files)))
 
-    if len(known_sequences) > 1:
+    if len(known_sequences) > 1 and length_cutoff:
         lengths = [len(s) for s in known_sequences]
         length_cutoff = min(lengths)
     else:
@@ -170,12 +179,23 @@ def non_redundant_generation(
             top_k=top_k,
             top_p=top_p,
             num_seqs=1,
+            start_sequence=start_sequence,
         )
-        seq = tokens_to_sequences(tokens, tokenizer=tokenizer)[0]
+        seq = tokens_to_sequences(
+            tokens, tokenizer=tokenizer, to_stop_codon=to_stop_codon
+        )[0]
         all_generated_seqs.append(seq)
-        if seq not in known_sequences and len(seq) > length_cutoff:
+        found_existing = seq in known_sequences
+        if not found_existing and len(seq) > length_cutoff:
             unique_seqs.add(seq)
-            print("Unique Sequence Length: {}".format(len(unique_seqs)))
+            # TODO: append instead of overwrite?
+            if write_to_file:
+                seqs_to_fasta(
+                    unique_seqs, write_to_file, custom_seq_name=custom_seq_name
+                )
+                print("Wrote {} seqs to {}...".format(len(unique_seqs), write_to_file))
+        print("Found Existing: {}".format(found_existing))
+        print("Sequence Length: {}".format(len(seq)))
 
     # create dictionary of results
     results = {

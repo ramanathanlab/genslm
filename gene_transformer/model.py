@@ -131,6 +131,24 @@ class DNATransformer(pl.LightningModule):
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
+    def predict_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> np.ndarray:
+        """Computes and returns the embeddings"""
+        outputs = self.model(
+            batch["input_ids"],
+            labels=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            output_hidden_states=True,
+        )
+        # pdb.set_trace()
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        emb = outputs.hidden_states[0].detach().cpu().numpy()
+        # if compute_mean:
+        #     # Compute average over sequence length
+        #     emb = np.mean(emb, axis=1)
+        return emb
+
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
         optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
@@ -161,6 +179,8 @@ def train(cfg: ModelSettings) -> None:
         print(f"Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....")
     else:
         model = DNATransformer(cfg)
+
+    print(f"Number of model parameters: {sum(p.numel() for p in model.parameters())}")
 
     # Setup wandb
     wandb_logger = None
@@ -300,6 +320,7 @@ def generate_embeddings(
 
 # TODO: Make separate files for training and inference
 def inference(
+    cfg: ModelSettings,
     model_load_strategy: ModelLoadStrategy,
     fasta_file: str,
     output_path: Optional[PathLike] = None,
@@ -307,11 +328,27 @@ def inference(
 ) -> np.ndarray:
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
-    model.cuda()
+
+    trainer = pl.Trainer(
+        gpus=-1,
+        # default_root_dir=str(cfg.checkpoint_dir),
+        # strategy=DeepSpeedStrategy(stage=3),
+        strategy="ddp",
+        # accumulate_grad_batches=cfg.accumulate_grad_batches,
+        # num_sanity_val_steps=2,
+        precision=cfg.precision,
+        max_epochs=cfg.epochs,
+        num_nodes=cfg.num_nodes,
+    )
+
     dataset = model.get_dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
-    embeddings = generate_embeddings(model, dataloader, compute_mean)
+    embeddings = trainer.predict(model, dataloaders=dataloader)
+    # embeddings = generate_embeddings(model, dataloader, compute_mean)
+    if compute_mean:
+        embeddings = [np.mean(emb, axis=1) for emb in embeddings]
+    embeddings = np.array(embeddings)
     print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
         assert Path(output_path).suffix == ".npy"
@@ -333,8 +370,6 @@ def test(cfg: ModelSettings) -> None:
     else:
         print("WARNING: running test on randomly initialized architecture")
         model = DNATransformer(cfg)
-
-    model.cuda()
 
     trainer = pl.Trainer(
         gpus=-1,
@@ -410,6 +445,7 @@ if __name__ == "__main__":
                 f"Invalid inference_model_load {args.inference_model_load}"
             )
         inference(
+            config,
             model_strategy,
             args.inference_fasta,
             args.inference_output_path,
