@@ -163,4 +163,13 @@ class H5Dataset(Dataset):
 
     @staticmethod
     def gather(h5_dir: Path, out_file: Path) -> None:
-        pass
+        """Combines many HDF5 files into a single HDF5 file.
+
+        Parameters
+        ----------
+        h5_dir : Path
+            Directory containing many HDF5 files.
+        out_file : Path
+            Output HDF5 file to be written.
+        """
+        ...
