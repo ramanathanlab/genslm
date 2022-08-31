@@ -146,6 +146,9 @@ class H5Dataset(Dataset):
         print(fields["input_ids"][0].shape)
         print(np.concatenate(fields["input_ids"]).shape)
         print(np.concatenate(fields["attention_mask"]).shape)
+        print(fields["attention_mask"][0])
+        print(fields["input_ids"][0])
+
         exit()
         # Gather into numpy arrays
         fields = {key: np.concatenate(fields[key]) for key in fields}
