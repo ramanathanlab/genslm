@@ -2,6 +2,7 @@ import functools
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from typing import Optional
 
 from tokenizers import Tokenizer
 from transformers import PreTrainedTokenizerFast
@@ -11,12 +12,33 @@ from gene_transformer.dataset import H5Dataset
 
 def process_dataset(
     fasta_dir: Path,
+    h5_dir: Optional[Path],
     glob_pattern: str,
     output_dir: Path,
     num_workers: int,
     tokenizer_file: Path,
     tokenizer_blocksize: int,
+    gather: bool,
+    h5_outfile: Optional[Path],
 ) -> None:
+
+    if gather:
+        if not h5_outfile:
+            raise ValueError("H5 outfile not present")
+        if not h5_dir:
+            raise ValueError("H5 in directory not present")
+
+        print("Gathering...")
+        # H5Dataset.gather(h5_dir, h5_outfile)
+        exit()
+
+    if not fasta_dir:
+        raise ValueError("Fasta dir not present")
+    if not tokenizer_file:
+        raise ValueError("Tokenizer file not present")
+    if not output_dir:
+        raise ValueError("Output dir not present")
+
     output_dir.mkdir(exist_ok=True)
     tokenizer = PreTrainedTokenizerFast(
         tokenizer_object=Tokenizer.from_file(str(tokenizer_file))
@@ -51,7 +73,8 @@ def process_dataset(
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-f", "--fasta_dir", type=Path, required=True)
+    parser.add_argument("-f", "--fasta_dir", type=Path)
+    parser.add_argument("-h5i", "--h5_dir", type=Path)
     parser.add_argument(
         "-g",
         "--glob",
@@ -59,7 +82,7 @@ if __name__ == "__main__":
         type=str,
         default="*.ffn",
     )
-    parser.add_argument("-o", "--output_file", type=Path, required=True)
+    parser.add_argument("-o", "--output_dir", type=Path)
     parser.add_argument("-n", "--num_workers", type=int, default=1)
     parser.add_argument("-t", "--tokenizer", type=Path, help="Path to tokenizer file")
     parser.add_argument(
@@ -69,14 +92,29 @@ if __name__ == "__main__":
         help="Block size for the tokenizer",
         default=2048,
     )
+    parser.add_argument(
+        "-g",
+        "--gather",
+        action="store_true",
+        help="Whether to gather existing h5 files, defaults false",
+    )
+    parser.add_argument(
+        "-h5o",
+        "--h5_outfile",
+        type=Path,
+        help="Path to the h5 outfile, only specify when gathering",
+    )
 
     args = parser.parse_args()
 
     process_dataset(
         args.fasta_dir,
+        args.h5_dir,
         args.glob,
-        args.output_file,
+        args.output_dir,
         args.num_workers,
         args.tokenizer,
         args.block_size,
+        args.gather,
+        args.h5_outfile,
     )

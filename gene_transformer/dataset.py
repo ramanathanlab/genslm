@@ -162,14 +162,76 @@ class H5Dataset(Dataset):
             create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def gather(h5_dir: Path, out_file: Path) -> None:
+    def gather(h5_dir: Path, output_file: Path) -> None:
         """Combines many HDF5 files into a single HDF5 file.
 
         Parameters
         ----------
         h5_dir : Path
             Directory containing many HDF5 files.
-        out_file : Path
+        output_file : Path
             Output HDF5 file to be written.
         """
-        ...
+
+        files = list(h5_dir.glob("*.h5"))
+
+        if not files:
+            raise FileNotFoundError(f"No HDF5 files found in {h5_dir}")
+
+        # Peak into the first file to get the data shape
+        #
+        # input_ids (7379, 2048)
+        # attention_mask (7379, 2048)
+        # id (7379,)
+        # description (7379,)
+        # sequence (7379,)
+        #
+        with h5py.File(files[0], "r") as f:
+            input_ids_shape = f["input_ids"].shape[1]
+            attn_mask_shape = f["attention_mask"].shape[1]
+
+        with h5py.File(output_file, "w") as fout:
+            create_dataset = functools.partial(
+                fout.create_dataset,
+                fletcher32=True,
+                chunks=True,
+                compression="gzip",
+                compression_opts=6,
+            )
+            input_ids_dset = create_dataset(
+                "input_ids", maxshape=(None, input_ids_shape), dtype="i8"
+            )
+            attention_mask_dset = create_dataset(
+                "attention_mask", maxshape=(None, attn_mask_shape), dtype="i8"
+            )
+            id_dset = create_dataset(
+                "id", maxshape=(None,), dtype=h5py.string_dtype(encoding="utf-8")
+            )
+            description_dset = create_dataset(
+                "description",
+                maxshape=(None,),
+                dtype=h5py.string_dtype(encoding="utf-8"),
+            )
+            sequence_dset = create_dataset(
+                "sequence", maxshape=(None,), dtype=h5py.string_dtype(encoding="utf-8")
+            )
+
+            ind = 0
+            for file in files:
+                with h5py.File(file, "r") as fin:
+                    num_examples = fin["input_ids"].shape[0]
+
+                    input_ids_dset.resize((ind + num_examples, input_ids_shape))
+                    input_ids_dset[ind:] = fin["input_ids"][...]
+
+                    attention_mask_dset.resize((ind + num_examples, attn_mask_shape))
+                    attention_mask_dset[ind:] = fin["attention_mask"][...]
+
+                    id_dset.resize((ind + num_examples,))
+                    id_dset[ind:] = fin["id"][...]
+
+                    description_dset.resize((ind + num_examples,))
+                    description_dset[ind:] = fin["description"][...]
+
+                    sequence_dset.resize((ind + num_examples,))
+                    sequence_dset[ind:] = fin["sequence"][...]
