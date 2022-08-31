@@ -170,7 +170,7 @@ class H5Dataset(Dataset):
                 # fletcher32=True,
                 # chunks=True,
                 compression="gzip",
-                compression_opts=9,
+                compression_opts=4,
             )
             create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
             # TODO: Which is the best type to use?
