@@ -140,8 +140,8 @@ class H5Dataset(Dataset):
             fields["input_ids"].append(batch_encoding["input_ids"].astype(np.int8))
             fields["attention_mask"].append(batch_encoding["attention_mask"].astype(np.int8))
             fields["id"].append(seq_record.id)
-            fields["description"].append(np.array(seq_record.description, dtype=object))
-            fields["sequence"].append(np.array(str(seq_record.seq).upper(), dtype=object))
+            fields["description"].append(seq_record.description)
+            fields["sequence"].append(str(seq_record.seq).upper())
             # TODO: Add other fields?
         print(np.concatenate(fields["input_ids"]).shape)
         print(np.concatenate(fields["attention_mask"]).shape)
@@ -178,4 +178,4 @@ class H5Dataset(Dataset):
             # TODO: Test/debug: https://docs.h5py.org/en/stable/strings.html
             create_dataset("id", data=fields["id"], dtype=str_dtype)
             # create_dataset("description", data=fields["description"], dtype=str_dtype)
-            # create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
+            create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
