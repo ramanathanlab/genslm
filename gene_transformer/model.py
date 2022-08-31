@@ -180,6 +180,8 @@ def train(cfg: ModelSettings) -> None:
     else:
         model = DNATransformer(cfg)
 
+    print(f"Number of model parameters: {sum(p.numel() for p in model.parameters())}")
+
     # Setup wandb
     wandb_logger = None
     if cfg.wandb_active:
