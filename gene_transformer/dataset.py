@@ -194,7 +194,7 @@ class H5Dataset(Dataset):
             create_dataset = functools.partial(
                 fout.create_dataset,
                 fletcher32=True,
-                chunks=True,
+                # chunks=True,
                 compression="gzip",
                 compression_opts=6,
             )
