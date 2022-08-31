@@ -145,6 +145,9 @@ class H5Dataset(Dataset):
             # TODO: Add other fields?
 
         # Gather into numpy arrays
+        for key in fields:
+            if len(fields[key]) == 0:
+                print(key, fasta_path)
         fields = {key: np.concatenate(fields[key]) for key in fields}
 
         # TODO: Some of these arrays (id, description, attention_mask) may be ragged
