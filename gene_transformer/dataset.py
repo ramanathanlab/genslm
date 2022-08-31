@@ -148,8 +148,18 @@ class H5Dataset(Dataset):
         print(fields["attention_mask"][0])
         print(fields["input_ids"][0])
 
+        def ragged_array(data):
+            a = np.empty(len(data), dtype=object)
+            a[...] = data
+            return a
+
         # Gather into numpy arrays
-        fields = {key: np.concatenate(fields[key]) for key in fields}
+        for key in ["input_ids", "attention_mask"]:
+            fields[key] = np.concatenate(fields[key])
+
+        for key in ["id", "description", "sequence"]:
+            fields[key] = ragged_array(fields[key])
+
         exit()
 
         # TODO: Some of these arrays (id, description, attention_mask) may be ragged
