@@ -1,5 +1,7 @@
-from argparse import ArgumentParser
 from pathlib import Path
+import functools
+from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 
 from transformers import PreTrainedTokenizerFast
 from tokenizers import Tokenizer
@@ -18,11 +20,21 @@ def process_dataset(
     output_dir.mkdir(exist_ok=True)
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-    for file in list(fasta_dir.glob(glob_pattern))[1:]:
-        out_file = output_dir / f"{file.stem}_tokenized.h5"
-        H5Dataset.preprocess(file, out_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
-        break
-    print("Done")
+    files = list(fasta_dir.glob(glob_pattern))
+    out_files = [output_dir / f"{f.stem}.h5" for f in files]
+
+    already_done = set(f.name for f in output_dir.glob("*.h5"))
+    files, out_files = zip(*[(fin, fout) for fin, fout in zip(files, out_files) if fout.name not in already_done])
+
+    func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize)
+    chunksize = max(1, len(files) // num_workers)
+    with ProcessPoolExecutor(max_workers=num_workers) as pool:
+        for _ in pool.map(func, files, out_files, chunksize=chunksize):
+            pass
+
+    # for file in list(fasta_dir.glob(glob_pattern))[1:]:
+    #     out_file = output_dir / f"{file.stem}_tokenized.h5"
+    #     H5Dataset.preprocess(file, out_file, tokenizer, block_size=tokenizer_blocksize, kmer_size=3)
 
 
 if __name__ == "__main__":

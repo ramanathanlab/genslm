@@ -125,7 +125,6 @@ class H5Dataset(Dataset):
         fasta_path = Path(fasta_path)
         # TODO: Handle the case were fasta_path is directory of fastas, or single file
         fields = defaultdict(list)
-
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
         print(f"File: {fasta_path}, num sequences: {len(sequences)}")
         for seq_record in sequences:
@@ -142,40 +141,27 @@ class H5Dataset(Dataset):
             fields["id"].append(seq_record.id)
             fields["description"].append(seq_record.description)
             fields["sequence"].append(str(seq_record.seq).upper())
-            # TODO: Add other fields?
-        print(np.concatenate(fields["input_ids"]).shape)
-        print(np.concatenate(fields["attention_mask"]).shape)
-        print(fields["attention_mask"][0])
-        print(fields["input_ids"][0])
 
-        def ragged_array(data):
-            a = np.empty(len(data), dtype=object)
-            a[...] = data
-            return a
-
-        # Gather into numpy arrays
+        # Gather model input into numpy arrays
         for key in ["input_ids", "attention_mask"]:
             fields[key] = np.concatenate(fields[key])
-
-        # for key in ["id", "description", "sequence"]:
-        #     fields[key] = ragged_array(fields[key])
 
         # Write to HDF5 file
         with h5py.File(output_file, "w") as f:
             str_dtype = h5py.string_dtype(encoding="utf-8")
-
-            # TODO: Experiment with smaller compression ratio
             create_dataset = functools.partial(
                 f.create_dataset,
                 fletcher32=True,
                 chunks=True,
                 compression="gzip",
-                compression_opts=9,
+                compression_opts=6,
             )
             create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
-            # TODO: Which is the best type to use?
             create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
-            # TODO: Test/debug: https://docs.h5py.org/en/stable/strings.html
             create_dataset("id", data=fields["id"], dtype=str_dtype)
             create_dataset("description", data=fields["description"], dtype=str_dtype)
             create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
+
+    @staticmethod
+    def gather(h5_dir: Path, out_file: Path) -> None:
+        pass
