@@ -1,6 +1,5 @@
 import json
 import os
-import pdb
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
@@ -140,7 +139,8 @@ class DNATransformer(pl.LightningModule):
             batch["input_ids"],
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
-            output_hidden_states=True)
+            output_hidden_states=True,
+        )
         # pdb.set_trace()
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
@@ -330,7 +330,7 @@ def inference(
     trainer = pl.Trainer(
         gpus=-1,
         # default_root_dir=str(cfg.checkpoint_dir),
-        #strategy=DeepSpeedStrategy(stage=3),
+        # strategy=DeepSpeedStrategy(stage=3),
         strategy="ddp",
         # accumulate_grad_batches=cfg.accumulate_grad_batches,
         # num_sanity_val_steps=2,

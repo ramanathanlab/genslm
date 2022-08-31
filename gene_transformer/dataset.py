@@ -12,7 +12,7 @@ from gene_transformer.config import PathLike
 
 
 def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
-    seq = str(s.seq).upper() # need to make sure it's in upper case
+    seq = str(s.seq).upper()  # need to make sure it's in upper case
     return " ".join(seq[i : i + n] for i in range(0, len(seq), n))
 
 
