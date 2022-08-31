@@ -15,6 +15,7 @@ def process_dataset(
     tokenizer_file: Path,
     tokenizer_blocksize: int,
 ) -> None:
+    output_dir.mkdir(exist_ok=True)
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     for file in fasta_dir.glob(glob_pattern):
