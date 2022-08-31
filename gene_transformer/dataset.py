@@ -24,18 +24,14 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(
-    fasta_file: Path, output_dir: Path, num_workers: int = 1
-) -> None:
+def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(
-            _write_fasta_file, seqs, output_files, chunksize=chunksize
-        ):
+        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
             pass
 
 
@@ -117,25 +113,32 @@ class H5Dataset(Dataset):
             "attention_mask": torch.tensor(self.attn_masks[idx].astype("int32")).long(),
         }
 
-    def preprocess(self, fasta_path: PathLike, output_file: PathLike) -> None:
+    @staticmethod
+    def preprocess(
+        fasta_path: PathLike,
+        output_file: PathLike,
+        tokenizer: PreTrainedTokenizerFast,
+        block_size: int = 2048,
+        kmer_size: int = 3,
+    ) -> None:
         # TODO: Instead of passing in a tokenizer, it may be easier to simply define one here.
         fasta_path = Path(fasta_path)
         # TODO: Handle the case were fasta_path is directory of fastas, or single file
         fields = defaultdict(list)
 
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
+        print(f"File: {fasta_path}, num sequences: {len(sequences)}")
+        return
         for seq_record in sequences:
-            batch_encoding = self.tokenizer(
-                group_by_kmer(seq_record, self.kmer_size),
-                max_length=self.block_size,
+            batch_encoding = tokenizer(
+                group_by_kmer(seq_record, kmer_size),
+                max_length=block_size,
                 padding="max_length",
                 return_tensors="np",
             )
             # Squeeze so that batched tensors end up with (batch_size, seq_length)
             # instead of (batch_size, 1, seq_length)
-            fields["input_ids"].append(
-                batch_encoding["input_ids"].squeeze().astype(np.int8)
-            )
+            fields["input_ids"].append(batch_encoding["input_ids"].squeeze().astype(np.int8))
             fields["attention_mask"].append(batch_encoding["attention_mask"])
             fields["id"].append(seq_record.id)
             fields["description"].append(seq_record.description)

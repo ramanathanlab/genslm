@@ -18,11 +18,8 @@ def process_dataset(
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     print(list(fasta_dir.iterdir()))
     for file in fasta_dir.glob(glob_pattern):
-        print(file)
-        dataset = H5Dataset(file, tokenizer_blocksize, tokenizer)
-        print(dataset)
+        H5Dataset.preprocess(file, output_file)
 
-        exit()
     print("Done")
 
 
