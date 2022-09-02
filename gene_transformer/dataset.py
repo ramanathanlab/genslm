@@ -24,18 +24,14 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(
-    fasta_file: Path, output_dir: Path, num_workers: int = 1
-) -> None:
+def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(
-            _write_fasta_file, seqs, output_files, chunksize=chunksize
-        ):
+        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
             pass
 
 
@@ -88,54 +84,86 @@ class FastaDataset(Dataset):
 
 class H5PreprocessMixin:
     @staticmethod
+    def train_val_test_split(seqs, train_pct, val_pct):
+        train_pct, val_pct = 0.8, 0.1
+        shuffled_inds = np.random.shuffle(np.arange(len(seqs)))
+        train_ind = round(len(seqs) * train_pct)
+        val_ind = train_ind + round(len(seqs) * val_pct)
+        train_split = [seqs[i] for i in shuffled_inds[:train_ind]]
+        val_split = [seqs[i] for i in shuffled_inds[train_ind:val_ind]]
+        test_split = [seqs[i] for i in shuffled_inds[val_ind:]]
+        return train_split, val_split, test_split
+
+    @staticmethod
     def preprocess(
         fasta_path: PathLike,
         output_file: PathLike,
         tokenizer: PreTrainedTokenizerFast,
         block_size: int = 2048,
         kmer_size: int = 3,
+        train_test_val_split: Optional[Dict[str, float]] = None,
     ) -> None:
+        if train_test_val_split is not None:
+            if sum(train_test_val_split.values()) != 1:
+                raise ValueError(f"Train test val split percentages {train_test_val_split} do not add up to 100%")
+
         fields = defaultdict(list)
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
         print(f"File: {fasta_path}, num sequences: {len(sequences)}")
-        for seq_record in sequences:
-            batch_encoding = tokenizer(
-                group_by_kmer(seq_record, kmer_size),
-                max_length=block_size,
-                padding="max_length",
-                return_tensors="np",
+
+        sequence_splits = {"all": sequences}
+
+        if train_test_val_split is not None:
+
+            train_split, val_split, test_split = H5PreprocessMixin.train_val_test_split(
+                sequences, train_test_val_split["train"], train_test_val_split["val"]
             )
 
-            for field in ["input_ids", "attention_mask"]:
-                fields[field].append(batch_encoding[field].astype(np.int8))
-            fields["id"].append(seq_record.id)
-            fields["description"].append(seq_record.description)
-            fields["sequence"].append(str(seq_record.seq).upper())
+            sequence_splits["train"] = train_split
+            sequence_splits["val"] = val_split
+            sequence_splits["test"] = test_split
 
-        # Gather model input into numpy arrays
-        for key in ["input_ids", "attention_mask"]:
-            fields[key] = np.concatenate(fields[key])
+        for split_name, split_sequences in sequence_splits.items():
+            for seq_record in split_sequences:
+                batch_encoding = tokenizer(
+                    group_by_kmer(seq_record, kmer_size),
+                    max_length=block_size,
+                    padding="max_length",
+                    return_tensors="np",
+                )
 
-        # Write to HDF5 file
-        with h5py.File(output_file, "w") as f:
-            str_dtype = h5py.string_dtype(encoding="utf-8")
-            create_dataset = functools.partial(
-                f.create_dataset,
-                fletcher32=True,
-                chunks=True,
-                compression="gzip",
-                compression_opts=6,
-            )
-            create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
-            create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
-            create_dataset("id", data=fields["id"], dtype=str_dtype)
-            create_dataset("description", data=fields["description"], dtype=str_dtype)
-            create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
+                for field in ["input_ids", "attention_mask"]:
+                    fields[field].append(batch_encoding[field].astype(np.int8))
+                fields["id"].append(seq_record.id)
+                fields["description"].append(seq_record.description)
+                fields["sequence"].append(str(seq_record.seq).upper())
+
+            # Gather model input into numpy arrays
+            for key in ["input_ids", "attention_mask"]:
+                fields[key] = np.concatenate(fields[key])
+
+            # Write to HDF5 file
+            if split_name != "all":
+                output_file = Path(output_file)
+                output_file = output_file.parent / f"{output_file.name}_{split_name}{output_file.suffix}"
+
+            with h5py.File(output_file, "w") as f:
+                str_dtype = h5py.string_dtype(encoding="utf-8")
+                create_dataset = functools.partial(
+                    f.create_dataset,
+                    fletcher32=True,
+                    chunks=True,
+                    compression="gzip",
+                    compression_opts=6,
+                )
+                create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
+                create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
+                create_dataset("id", data=fields["id"], dtype=str_dtype)
+                create_dataset("description", data=fields["description"], dtype=str_dtype)
+                create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def concatenate_virtual_h5(
-        input_files: List[str], output_file: Path, fields: Optional[List[str]] = None
-    ) -> None:
+    def concatenate_virtual_h5(input_files: List[str], output_file: Path, fields: Optional[List[str]] = None) -> None:
         """Concatenate HDF5 files into a virtual HDF5 file.
         Concatenates a list :obj:`input_files` of HDF5 files containing
         the same format into a single virtual dataset.
@@ -182,9 +210,7 @@ class H5PreprocessMixin:
             for field in fields:
                 for i, filename in enumerate(input_files):
                     shape = h5_file[field].shape
-                    vsource = h5py.VirtualSource(
-                        filename, field, shape=(lengths[i], *shape[1:])
-                    )
+                    vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
                     start_idx = sum(lengths[:i])
                     end_idx = sum(lengths[: i + 1])
                     layouts[field][start_idx:end_idx, ...] = vsource
@@ -251,9 +277,7 @@ class CachingH5Dataset(Dataset, H5PreprocessMixin):
 
     def cache_sample_from_h5(self, idx: int) -> None:
         # Accessing self.h5_file may raise AttributeError
-        self.samples[idx] = {
-            key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]
-        }
+        self.samples[idx] = {key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]}
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         try:
