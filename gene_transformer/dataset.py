@@ -89,6 +89,7 @@ class H5Dataset(Dataset):
         block_size: int,
         tokenizer: PreTrainedTokenizerFast,
         kmer_size: int = 3,
+        small_subset: int = 0,
     ) -> None:
         self.file_path = file_path
         self.block_size = block_size
@@ -99,6 +100,10 @@ class H5Dataset(Dataset):
             # fetch all samples from the dataset
             self.input_ids = f["input_ids"][...]
             self.attn_masks = f["attention_mask"][...]
+
+        if small_subset:
+            self.input_ids = self.input_ids[:small_subset]
+            self.attn_masks = self.attn_masks[:small_subset]
 
         print(f"{self.input_ids.shape=}")
         print(f"{self.attn_masks.shape=}")
