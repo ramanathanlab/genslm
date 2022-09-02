@@ -125,6 +125,8 @@ class H5PreprocessMixin:
             sequence_splits["val"] = val_split
             sequence_splits["test"] = test_split
 
+            del sequence_splits["all"]
+
         for split_name, split_sequences in sequence_splits.items():
             fields = defaultdict(list)
             for seq_record in split_sequences:
