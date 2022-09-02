@@ -37,6 +37,6 @@ mpiexec \
     python -m gene_transformer.cmdline.fasta_to_h5 \
     -f /lus/eagle/projects/CVD-Mol-AI/genome-data/patric_89M/pgfam_30k  \
     -h5 /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts \
-    -n 64 \
+    -n 16 \
     -t /home/hippekp/github/gene_transformer/gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json \
     -b 2048
