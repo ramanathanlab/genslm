@@ -85,7 +85,7 @@ class FastaDataset(Dataset):
 class H5Dataset(Dataset):
     def __init__(
         self,
-        file_path: str,
+        file_path: PathLike,
         block_size: int,
         tokenizer: PreTrainedTokenizerFast,
         kmer_size: int = 3,
