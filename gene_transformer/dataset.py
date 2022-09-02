@@ -114,9 +114,10 @@ class H5PreprocessMixin:
         sequence_splits = {"all": sequences}
 
         if train_val_test_split is not None:
-
+            train_percentage = train_val_test_split["train"]
+            val_percentage = train_val_test_split["val"]
             train_split, val_split, test_split = H5PreprocessMixin.train_val_test_split(
-                sequences, train_val_test_split["train"], train_val_test_split["val"]
+                sequences, train_percentage, val_percentage
             )
 
             sequence_splits["train"] = train_split

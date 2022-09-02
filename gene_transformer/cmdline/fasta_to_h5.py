@@ -123,7 +123,7 @@ if __name__ == "__main__":
     num_nodes = int(os.environ.get("NRANKS", 1))
     print(f"Node rank {node_rank} of {num_nodes}")
 
-    train_test_val_split = {"train": 0.8, "val": 0.1, "test": 0.1}
+    train_val_test_split = {"train": 0.8, "val": 0.1, "test": 0.1}
 
     process_dataset(
         args.fasta_dir,
@@ -135,7 +135,7 @@ if __name__ == "__main__":
         args.block_size,
         args.gather,
         args.h5_outfile,
-        train_test_val_split,
+        train_val_test_split,
         node_rank,
         num_nodes,
     )
