@@ -35,7 +35,7 @@ mpiexec \
     --hostfile $PBS_NODEFILE \
     $PBS_O_WORKDIR/run-polaris.sh \
     python -m gene_transformer.cmdline.fasta_to_h5 \
-    -f /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k  \
+    -f /lus/eagle/projects/CVD-Mol-AI/genome-data/patric_89M/pgfam_30k  \
     -h5 /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts \
     -n 64 \
     -t /home/hippekp/github/gene_transformer/gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json \
