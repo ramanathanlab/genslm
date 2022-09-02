@@ -187,13 +187,13 @@ class H5PreprocessMixin:
                 create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def get_num_samples_in_file(file: str, field: str) -> int:
+    def get_num_samples_in_file(file: Path, field: str) -> int:
         with h5py.File(file, "r") as f:
             return f[field].shape[0]
 
     @staticmethod
     def get_num_samples(
-        input_files: List[str], field: str, num_workers: int = 1
+        input_files: List[Path], field: str, num_workers: int = 1
     ) -> List[int]:
         lengths = []
         func = functools.partial(H5PreprocessMixin.get_num_samples_in_file, field=field)
@@ -205,7 +205,7 @@ class H5PreprocessMixin:
 
     @staticmethod
     def concatenate_virtual_h5(
-        input_files: List[str],
+        input_files: List[Path],
         output_file: Path,
         fields: Optional[List[str]] = None,
         num_workers: int = 1,
@@ -215,7 +215,7 @@ class H5PreprocessMixin:
         the same format into a single virtual dataset.
         Parameters
         ----------
-        input_files : List[str]
+        input_files : List[Path]
             List of HDF5 file names to concatenate.
         output_file : Path
             Name of output virtual HDF5 file.

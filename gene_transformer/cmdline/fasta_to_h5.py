@@ -5,7 +5,6 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Optional
 
-import h5py
 from tokenizers import Tokenizer
 from transformers import PreTrainedTokenizerFast
 
