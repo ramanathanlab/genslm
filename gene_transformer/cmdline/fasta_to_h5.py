@@ -44,9 +44,7 @@ def process_dataset(
         raise ValueError("Output dir not present")
 
     output_dir.mkdir(exist_ok=True)
-    tokenizer = PreTrainedTokenizerFast(
-        tokenizer_object=Tokenizer.from_file(str(tokenizer_file))
-    )
+    tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [output_dir / f"{f.stem}.h5" for f in files]
@@ -55,13 +53,7 @@ def process_dataset(
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
 
-    files, out_files = zip(
-        *[
-            (fin, fout)
-            for fin, fout in zip(files, out_files)
-            if fout.name not in already_done
-        ]
-    )
+    files, out_files = zip(*[(fin, fout) for fin, fout in zip(files, out_files) if fout.name not in already_done])
 
     # determine which chunk this instance is supposed to be running
     if num_nodes > 1:
@@ -71,17 +63,12 @@ def process_dataset(
         if node_rank + 1 == num_nodes:
             end_idx = len(files)
 
-        print(
-            f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx} ({len(files)=}"
-        )
+        print(f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx} ({len(files)=}")
         files = files[start_idx:end_idx]
         out_files = out_files[start_idx:end_idx]
 
-    exit()
     print(f"Processing {len(files)} files from {fasta_dir}...")
-    func = functools.partial(
-        H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize
-    )
+    func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize)
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
         for _ in pool.map(func, files, out_files):
