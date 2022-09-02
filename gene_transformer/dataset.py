@@ -112,7 +112,7 @@ class H5PreprocessMixin:
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
         print(f"File: {fasta_path}, num sequences: {len(sequences)}")
 
-        sequence_splits = {"all": sequences}
+        sequence_splits = {}
 
         if train_val_test_split is not None:
             train_percentage = train_val_test_split["train"]
@@ -125,7 +125,8 @@ class H5PreprocessMixin:
             sequence_splits["val"] = val_split
             sequence_splits["test"] = test_split
 
-            del sequence_splits["all"]
+        else:
+            sequence_splits["all"] = sequences
 
         for split_name, split_sequences in sequence_splits.items():
             fields = defaultdict(list)
