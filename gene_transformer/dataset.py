@@ -100,6 +100,9 @@ class H5Dataset(Dataset):
             self.input_ids = f["input_ids"][...]
             self.attn_masks = f["attention_mask"][...]
 
+        print(f"{self.input_ids.shape=}")
+        print(f"{self.attn_masks.shape=}")
+
     def __len__(self) -> int:
         return len(self.input_ids)
 
