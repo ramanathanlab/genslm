@@ -21,7 +21,7 @@ def process_dataset(
     tokenizer_blocksize: int,
     gather: bool,
     h5_outfile: Optional[Path],
-    train_val_test_split: Optional[Dict[str, float]] = None,
+    train_val_test_split: Optional[Dict[str, float]],
     node_rank: int,
     num_nodes: int,
 ) -> None:
@@ -70,7 +70,12 @@ def process_dataset(
         out_files = out_files[start_idx:end_idx]
 
     print(f"Processing {len(files)} files from {fasta_dir}...")
-    func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize, train_val_test_split=train_val_test_split)
+    func = functools.partial(
+        H5Dataset.preprocess,
+        tokenizer=tokenizer,
+        block_size=tokenizer_blocksize,
+        train_val_test_split=train_val_test_split,
+    )
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
         for _ in pool.map(func, files, out_files):
@@ -118,6 +123,8 @@ if __name__ == "__main__":
     num_nodes = int(os.environ.get("NRANKS", 1))
     print(f"Node rank {node_rank} of {num_nodes}")
 
+    train_test_val_split = {"train": 0.8, "val": 0.1, "test": 0.1}
+
     process_dataset(
         args.fasta_dir,
         args.h5_dir,
@@ -128,6 +135,7 @@ if __name__ == "__main__":
         args.block_size,
         args.gather,
         args.h5_outfile,
+        train_test_val_split,
         node_rank,
         num_nodes,
     )
