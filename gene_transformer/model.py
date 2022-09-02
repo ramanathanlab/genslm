@@ -22,7 +22,7 @@ from transformers.utils import ModelOutput
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
-from gene_transformer.dataset import H5Dataset
+from gene_transformer.dataset import CachingH5Dataset
 from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
@@ -36,9 +36,9 @@ from gene_transformer.utils import (
 class DNATransformer(pl.LightningModule):
 
     cfg: ModelSettings
-    train_dataset: H5Dataset
-    val_dataset: H5Dataset
-    test_dataset: H5Dataset
+    train_dataset: CachingH5Dataset
+    val_dataset: CachingH5Dataset
+    test_dataset: CachingH5Dataset
 
     def __init__(self, cfg: ModelSettings) -> None:
         super().__init__()
@@ -62,9 +62,9 @@ class DNATransformer(pl.LightningModule):
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
 
-    def get_dataset(self, data_path: PathLike) -> H5Dataset:
+    def get_dataset(self, data_path: PathLike) -> CachingH5Dataset:
         """Helper function to generate dataset."""
-        return H5Dataset(
+        return CachingH5Dataset(
             data_path,
             block_size=self.cfg.block_size,
             tokenizer=self.tokenizer,
@@ -73,7 +73,7 @@ class DNATransformer(pl.LightningModule):
         )
 
     def get_dataloader(
-        self, dataset: H5Dataset, shuffle: bool, drop_last: bool = True
+        self, dataset: CachingH5Dataset, shuffle: bool, drop_last: bool = True
     ) -> DataLoader:
         """Helper function to generate dataloader."""
         return DataLoader(
