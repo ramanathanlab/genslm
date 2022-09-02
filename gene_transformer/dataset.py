@@ -146,7 +146,7 @@ class H5PreprocessMixin:
             # Write to HDF5 file
             if split_name != "all":
                 output_file = Path(output_file)
-                output_file = output_file.parent / f"{output_file.name}_{split_name}{output_file.suffix}"
+                output_file = output_file.parent / f"{output_file.stem}_{split_name}{output_file.suffix}"
 
             with h5py.File(output_file, "w") as f:
                 str_dtype = h5py.string_dtype(encoding="utf-8")
