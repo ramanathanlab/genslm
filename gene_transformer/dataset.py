@@ -116,8 +116,8 @@ class H5Dataset(Dataset):
         #       into memory, then we can open the h5py in the getitem
         #       and cache the required idx values like in the other Dataset class.
         return {
-            "input_ids": torch.tensor(self.input_ids[idx].astype("int32")).long(),
-            "attention_mask": torch.tensor(self.attn_masks[idx].astype("int32")).long(),
+            "input_ids": torch.tensor(self.input_ids[idx]).long(),
+            "attention_mask": torch.tensor(self.attn_masks[idx]).long(),
         }
 
     @staticmethod
