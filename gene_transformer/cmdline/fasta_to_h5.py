@@ -3,6 +3,7 @@ import os
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from tabnanny import check
 from typing import Dict, Optional
 
 from tokenizers import Tokenizer
@@ -45,15 +46,12 @@ def process_dataset(
         raise ValueError("Output dir not present")
 
     h5_dir.mkdir(exist_ok=True)
-    tokenizer = PreTrainedTokenizerFast(
-        tokenizer_object=Tokenizer.from_file(str(tokenizer_file))
-    )
+    tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [h5_dir / f"{f.stem}.h5" for f in files]
     already_done = set(
-        f.name.replace("_train", "").replace("_val", "").replace("_test", "")
-        for f in h5_dir.glob("**/*.h5")
+        f.name.replace("_train", "").replace("_val", "").replace("_test", "") for f in h5_dir.glob("**/*.h5")
     )
     if train_val_test_split is not None:
         (h5_dir / "train").mkdir(exist_ok=True)
@@ -63,13 +61,7 @@ def process_dataset(
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
 
-    files, out_files = zip(
-        *[
-            (fin, fout)
-            for fin, fout in zip(files, out_files)
-            if fout.name not in already_done
-        ]
-    )
+    files, out_files = zip(*[(fin, fout) for fin, fout in zip(files, out_files) if fout.name not in already_done])
 
     # determine which chunk this instance is supposed to be running
     if num_nodes > 1:
@@ -79,9 +71,7 @@ def process_dataset(
         if node_rank + 1 == num_nodes:
             end_idx = len(files)
 
-        print(
-            f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx} ({len(files)=}"
-        )
+        print(f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx} ({len(files)=}")
         files = files[start_idx:end_idx]
         out_files = out_files[start_idx:end_idx]
 
@@ -98,6 +88,18 @@ def process_dataset(
             pass
 
     print(f"Completed, saved files to {h5_dir}")
+
+
+def check_length(h5_dir):
+    h5_files = h5_dir.glob("*.h5")
+    lengths = []
+    import h5py
+
+    for file in h5_files:
+        with h5py.File(file, "r") as f:
+            lengths.append(f["input_ids"].shape[0])
+
+    print(f"Total sequences: {sum(lengths)}")
 
 
 if __name__ == "__main__":
@@ -131,6 +133,7 @@ if __name__ == "__main__":
         type=Path,
         help="Path to the h5 outfile, only specify when gathering",
     )
+    parser.add_argument("-c", "--check_length", action="store_true")
 
     args = parser.parse_args()
 
@@ -140,6 +143,10 @@ if __name__ == "__main__":
     train_val_test_split = {"train": 0.8, "val": 0.1, "test": 0.1}
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
+    if args.check_length:
+        check_length(args.h5_dir)
+        exit()
 
     process_dataset(
         args.fasta_dir,
