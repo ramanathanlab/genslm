@@ -85,4 +85,6 @@ if __name__ == "__main__":
     with open("command.log", "w") as f:
         f.write(" ".join(sys.argv))
 
+    # TODO: Log the nodelist
+
     format_and_submit(args.template, settings)
