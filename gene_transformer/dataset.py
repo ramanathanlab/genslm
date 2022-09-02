@@ -1,9 +1,9 @@
 import functools
+import warnings
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import warnings
 
 import h5py
 import numpy as np
@@ -25,14 +25,18 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
+def write_individual_fasta_files(
+    fasta_file: Path, output_dir: Path, num_workers: int = 1
+) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
+        for _ in executor.map(
+            _write_fasta_file, seqs, output_files, chunksize=chunksize
+        ):
             pass
 
 
@@ -108,7 +112,9 @@ class H5PreprocessMixin:
     ) -> None:
         if train_val_test_split is not None:
             if sum(train_val_test_split.values()) != 1:
-                raise ValueError(f"Train test val split percentages {train_val_test_split} do not add up to 100%")
+                raise ValueError(
+                    f"Train test val split percentages {train_val_test_split} do not add up to 100%"
+                )
 
         sequences = list(SeqIO.parse(fasta_file, "fasta"))
         print(f"File: {fasta_file}, num sequences: {len(sequences)}")
@@ -148,14 +154,18 @@ class H5PreprocessMixin:
             # Gather model input into numpy arrays
             for key in ["input_ids", "attention_mask"]:
                 if len(fields[key]) == 0:
-                    warnings.warn(f"{fasta_file} led to empty input array with key: {key}")
+                    warnings.warn(
+                        f"{fasta_file} led to empty input array with key: {key}"
+                    )
                     return
                 fields[key] = np.concatenate(fields[key])
 
             # Write to HDF5 file
             local_output_file = Path(output_file)
             if split_name != "all":
-                local_output_file = local_output_file.parent / split_name / local_output_file.name
+                local_output_file = (
+                    local_output_file.parent / split_name / local_output_file.name
+                )
 
             with h5py.File(local_output_file, "w") as f:
                 str_dtype = h5py.string_dtype(encoding="utf-8")
@@ -167,13 +177,19 @@ class H5PreprocessMixin:
                     compression_opts=6,
                 )
                 create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
-                create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
+                create_dataset(
+                    "attention_mask", data=fields["attention_mask"], dtype="i8"
+                )
                 create_dataset("id", data=fields["id"], dtype=str_dtype)
-                create_dataset("description", data=fields["description"], dtype=str_dtype)
+                create_dataset(
+                    "description", data=fields["description"], dtype=str_dtype
+                )
                 create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def concatenate_virtual_h5(input_files: List[str], output_file: Path, fields: Optional[List[str]] = None) -> None:
+    def concatenate_virtual_h5(
+        input_files: List[str], output_file: Path, fields: Optional[List[str]] = None
+    ) -> None:
         """Concatenate HDF5 files into a virtual HDF5 file.
         Concatenates a list :obj:`input_files` of HDF5 files containing
         the same format into a single virtual dataset.
@@ -220,7 +236,9 @@ class H5PreprocessMixin:
             for field in fields:
                 for i, filename in enumerate(input_files):
                     shape = h5_file[field].shape
-                    vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
+                    vsource = h5py.VirtualSource(
+                        filename, field, shape=(lengths[i], *shape[1:])
+                    )
                     start_idx = sum(lengths[:i])
                     end_idx = sum(lengths[: i + 1])
                     layouts[field][start_idx:end_idx, ...] = vsource
@@ -287,7 +305,9 @@ class CachingH5Dataset(Dataset, H5PreprocessMixin):
 
     def cache_sample_from_h5(self, idx: int) -> None:
         # Accessing self.h5_file may raise AttributeError
-        self.samples[idx] = {key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]}
+        self.samples[idx] = {
+            key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]
+        }
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         try:

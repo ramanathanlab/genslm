@@ -402,6 +402,7 @@ if __name__ == "__main__":
 
     # Setup torch environment
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
+    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
