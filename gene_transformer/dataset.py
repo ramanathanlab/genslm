@@ -2,7 +2,7 @@ import functools
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import h5py
 import numpy as np
@@ -24,14 +24,18 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
+def write_individual_fasta_files(
+    fasta_file: Path, output_dir: Path, num_workers: int = 1
+) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
+        for _ in executor.map(
+            _write_fasta_file, seqs, output_files, chunksize=chunksize
+        ):
             pass
 
 
@@ -166,7 +170,9 @@ class H5Dataset(Dataset):
             create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def concatenate_virtual_h5(input_files: List[str], output_file: Path, fields: Optional[List[str]] = None) -> None:
+    def concatenate_virtual_h5(
+        input_files: List[str], output_file: Path, fields: Optional[List[str]] = None
+    ) -> None:
         """Concatenate HDF5 files into a virtual HDF5 file.
         Concatenates a list :obj:`input_files` of HDF5 files containing
         the same format into a single virtual dataset.
@@ -213,7 +219,9 @@ class H5Dataset(Dataset):
             for field in fields:
                 for i, filename in enumerate(input_files):
                     shape = h5_file[field].shape
-                    vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
+                    vsource = h5py.VirtualSource(
+                        filename, field, shape=(lengths[i], *shape[1:])
+                    )
                     start_idx = sum(lengths[:i])
                     end_idx = sum(lengths[: i + 1])
                     layouts[field][start_idx:end_idx, ...] = vsource
