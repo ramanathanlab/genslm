@@ -3,11 +3,13 @@ import os
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from tabnanny import check
 from typing import Dict, Optional
 
 from tokenizers import Tokenizer
 from transformers import PreTrainedTokenizerFast
+from tqdm import tqdm
+import h5py
+
 
 from gene_transformer.dataset import H5Dataset
 
@@ -91,11 +93,10 @@ def process_dataset(
 
 
 def check_length(h5_dir):
-    h5_files = h5_dir.glob("*.h5")
+    h5_files = list(h5_dir.glob("*.h5"))
     lengths = []
-    import h5py
-
-    for file in h5_files:
+    print(f"There are {len(h5_files)} files in {h5_dir}")
+    for file in tqdm(h5_files):
         with h5py.File(file, "r") as f:
             lengths.append(f["input_ids"].shape[0])
 
