@@ -81,6 +81,7 @@ def process_dataset(
         print("Gathering...")
         h5_files = list(h5_dir.glob("*.h5"))
         concatenate_virtual_h5(h5_files, str(h5_outfile))
+        exit()
         # H5Dataset.gather(h5_dir, h5_outfile)
         # exit()
 
