@@ -52,6 +52,10 @@ def process_dataset(
     already_done = set(
         f.name.replace("_train", "").replace("_val", "").replace("_test", "") for f in h5_dir.glob("*.h5")
     )
+    if train_val_test_split is not None:
+        (h5_dir / "train").mkdir(exist_ok=True)
+        (h5_dir / "test").mkdir(exist_ok=True)
+        (h5_dir / "val").mkdir(exist_ok=True)
 
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
