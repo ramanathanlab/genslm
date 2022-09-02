@@ -109,7 +109,6 @@ class H5PreprocessMixin:
             if sum(train_val_test_split.values()) != 1:
                 raise ValueError(f"Train test val split percentages {train_val_test_split} do not add up to 100%")
 
-        fields = defaultdict(list)
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
         print(f"File: {fasta_path}, num sequences: {len(sequences)}")
 
@@ -127,6 +126,7 @@ class H5PreprocessMixin:
             sequence_splits["test"] = test_split
 
         for split_name, split_sequences in sequence_splits.items():
+            fields = defaultdict(list)
             for seq_record in split_sequences:
                 batch_encoding = tokenizer(
                     group_by_kmer(seq_record, kmer_size),
@@ -134,7 +134,6 @@ class H5PreprocessMixin:
                     padding="max_length",
                     return_tensors="np",
                 )
-
                 for field in ["input_ids", "attention_mask"]:
                     fields[field].append(batch_encoding[field].astype(np.int8))
                 fields["id"].append(seq_record.id)
