@@ -85,6 +85,7 @@ class FastaDataset(Dataset):
 class H5PreprocessMixin:
     @staticmethod
     def train_val_test_split(seqs, train_pct, val_pct):
+        np.random.seed(42)
         train_pct, val_pct = 0.8, 0.1
         shuffled_inds = np.arange(len(seqs))
         np.random.shuffle(shuffled_inds)
@@ -144,8 +145,8 @@ class H5PreprocessMixin:
                 fields[key] = np.concatenate(fields[key])
 
             # Write to HDF5 file
+            local_output_file = Path(output_file)
             if split_name != "all":
-                local_output_file = Path(output_file)
                 local_output_file = (
                     local_output_file.parent / f"{local_output_file.stem}_{split_name}{local_output_file.suffix}"
                 )
