@@ -3,72 +3,12 @@ import functools
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Optional, List, Tuple
-import h5py
+from typing import Optional
 
 from tokenizers import Tokenizer
 from transformers import PreTrainedTokenizerFast
 
 from gene_transformer.dataset import H5Dataset
-
-
-def concatenate_virtual_h5(input_file_names: List[str], output_name: str, fields: Optional[List[str]] = None) -> None:
-    """Concatenate HDF5 files into a virtual HDF5 file.
-    Concatenates a list :obj:`input_file_names` of HDF5 files containing
-    the same format into a single virtual dataset.
-    Parameters
-    ----------
-    input_file_names : List[str]
-        List of HDF5 file names to concatenate.
-    output_name : str
-        Name of output virtual HDF5 file.
-    fields : Optional[List[str]], default=None
-        Which dataset fields to concatenate. Will concatenate all fields by default.
-    """
-
-    # Open first file to get dataset shape and dtype
-    # Assumes uniform number of data points per file
-    h5_file = h5py.File(input_file_names[0], "r")
-
-    if not fields:
-        fields = list(h5_file.keys())
-
-    if not fields:
-        raise ValueError("No fields found in HDF5 file.")
-
-    lengths = []
-    for file in input_file_names:
-        with h5py.File(file, "r") as f:
-            lengths.append(f[fields[0]].shape[0])
-    total_length = sum(lengths)
-
-    # Helper function to output concatenated shape
-    def concat_shape(shape: Tuple[int]) -> Tuple[int]:
-        return (total_length, *shape[1:])
-
-    # Create a virtual layout for each input field
-    layouts = {
-        field: h5py.VirtualLayout(
-            shape=concat_shape(h5_file[field].shape),
-            dtype=h5_file[field].dtype,
-        )
-        for field in fields
-    }
-
-    with h5py.File(output_name, "w", libver="latest") as f:
-        for field in fields:
-            for i, filename in enumerate(input_file_names):
-                print(f"Filename: {filename}")
-                shape = h5_file[field].shape
-                vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
-                start_idx = sum(lengths[:i])
-                end_idx = sum(lengths[: i + 1])
-                print(f"{start_idx=}, {end_idx=}, ")
-                layouts[field][start_idx:end_idx, ...] = vsource
-
-            f.create_virtual_dataset(field, layouts[field])
-
-    h5_file.close()
 
 
 def process_dataset(
@@ -93,10 +33,8 @@ def process_dataset(
 
         print("Gathering...")
         h5_files = list(h5_dir.glob("*.h5"))
-        concatenate_virtual_h5(h5_files, str(h5_outfile))
+        H5Dataset.concatenate_virtual_h5(h5_files, str(h5_outfile))
         exit()
-        # H5Dataset.gather(h5_dir, h5_outfile)
-        # exit()
 
     if not fasta_dir:
         raise ValueError("Fasta dir not present")

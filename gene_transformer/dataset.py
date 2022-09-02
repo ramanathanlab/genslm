@@ -2,7 +2,7 @@ import functools
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Tuple, Optional
 
 import h5py
 import numpy as np
@@ -24,18 +24,14 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(
-    fasta_file: Path, output_dir: Path, num_workers: int = 1
-) -> None:
+def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(
-            _write_fasta_file, seqs, output_files, chunksize=chunksize
-        ):
+        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
             pass
 
 
@@ -162,77 +158,58 @@ class H5Dataset(Dataset):
             create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def gather(h5_dir: Path, output_file: Path) -> None:
-        """Combines many HDF5 files into a single HDF5 file.
-
+    def concatenate_virtual_h5(input_files: List[str], output_file: Path, fields: Optional[List[str]] = None) -> None:
+        """Concatenate HDF5 files into a virtual HDF5 file.
+        Concatenates a list :obj:`input_files` of HDF5 files containing
+        the same format into a single virtual dataset.
         Parameters
         ----------
-        h5_dir : Path
-            Directory containing many HDF5 files.
+        input_files : List[str]
+            List of HDF5 file names to concatenate.
         output_file : Path
-            Output HDF5 file to be written.
+            Name of output virtual HDF5 file.
+        fields : Optional[List[str]], default=None
+            Which dataset fields to concatenate. Will concatenate all fields by default.
         """
 
-        files = list(h5_dir.glob("*.h5"))
+        # Open first file to get dataset shape and dtype
+        # Assumes uniform number of data points per file
+        h5_file = h5py.File(input_files[0], "r")
 
-        if not files:
-            raise FileNotFoundError(f"No HDF5 files found in {h5_dir}")
+        if not fields:
+            fields = list(h5_file.keys())
 
-        # Peak into the first file to get the data shape
-        #
-        # input_ids (7379, 2048)
-        # attention_mask (7379, 2048)
-        # id (7379,)
-        # description (7379,)
-        # sequence (7379,)
-        #
-        with h5py.File(files[0], "r") as f:
-            input_ids_shape = f["input_ids"].shape[1]
-            attn_mask_shape = f["attention_mask"].shape[1]
+        if not fields:
+            raise ValueError("No fields found in HDF5 file.")
 
-        with h5py.File(output_file, "w") as fout:
-            create_dataset = functools.partial(
-                fout.create_dataset,
-                # fletcher32=True,
-                # chunks=True,
-                # compression="gzip",
-                # compression_opts=6,
+        lengths = []
+        for file in input_files:
+            with h5py.File(file, "r") as f:
+                lengths.append(f[fields[0]].shape[0])
+        total_length = sum(lengths)
+
+        # Helper function to output concatenated shape
+        def concat_shape(shape: Tuple[int]) -> Tuple[int]:
+            return (total_length, *shape[1:])
+
+        # Create a virtual layout for each input field
+        layouts = {
+            field: h5py.VirtualLayout(
+                shape=concat_shape(h5_file[field].shape),
+                dtype=h5_file[field].dtype,
             )
-            input_ids_dset = create_dataset(
-                "input_ids", maxshape=(None, input_ids_shape), dtype="i8"
-            )
-            attention_mask_dset = create_dataset(
-                "attention_mask", maxshape=(None, attn_mask_shape), dtype="i8"
-            )
-            id_dset = create_dataset(
-                "id", maxshape=(None,), dtype=h5py.string_dtype(encoding="utf-8")
-            )
-            description_dset = create_dataset(
-                "description",
-                maxshape=(None,),
-                dtype=h5py.string_dtype(encoding="utf-8"),
-            )
-            sequence_dset = create_dataset(
-                "sequence", maxshape=(None,), dtype=h5py.string_dtype(encoding="utf-8")
-            )
+            for field in fields
+        }
 
-            ind = 0
-            for file in files:
-                with h5py.File(file, "r") as fin:
-                    print(f"Working with {file}")
-                    num_examples = fin["input_ids"].shape[0]
+        with h5py.File(output_file, "w", libver="latest") as f:
+            for field in fields:
+                for i, filename in enumerate(input_files):
+                    shape = h5_file[field].shape
+                    vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
+                    start_idx = sum(lengths[:i])
+                    end_idx = sum(lengths[: i + 1])
+                    layouts[field][start_idx:end_idx, ...] = vsource
 
-                    input_ids_dset.resize((ind + num_examples, input_ids_shape))
-                    input_ids_dset[ind:] = fin["input_ids"][...]
+                f.create_virtual_dataset(field, layouts[field])
 
-                    attention_mask_dset.resize((ind + num_examples, attn_mask_shape))
-                    attention_mask_dset[ind:] = fin["attention_mask"][...]
-
-                    id_dset.resize((ind + num_examples,))
-                    id_dset[ind:] = fin["id"][...]
-
-                    description_dset.resize((ind + num_examples,))
-                    description_dset[ind:] = fin["description"][...]
-
-                    sequence_dset.resize((ind + num_examples,))
-                    sequence_dset[ind:] = fin["sequence"][...]
+        h5_file.close()
