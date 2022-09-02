@@ -50,7 +50,7 @@ def process_dataset(
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [h5_dir / f"{f.stem}.h5" for f in files]
     already_done = set(
-        f.name.replace("_train", "").replace("_val", "").replace("_test", "") for f in h5_dir.glob("*.h5")
+        f.name.replace("_train", "").replace("_val", "").replace("_test", "") for f in h5_dir.glob("**/*.h5")
     )
     if train_val_test_split is not None:
         (h5_dir / "train").mkdir(exist_ok=True)
