@@ -3,6 +3,7 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import warnings
 
 import h5py
 import numpy as np
@@ -98,7 +99,7 @@ class H5PreprocessMixin:
 
     @staticmethod
     def preprocess(
-        fasta_path: PathLike,
+        fasta_file: PathLike,
         output_file: PathLike,
         tokenizer: PreTrainedTokenizerFast,
         block_size: int = 2048,
@@ -109,8 +110,8 @@ class H5PreprocessMixin:
             if sum(train_val_test_split.values()) != 1:
                 raise ValueError(f"Train test val split percentages {train_val_test_split} do not add up to 100%")
 
-        sequences = list(SeqIO.parse(fasta_path, "fasta"))
-        print(f"File: {fasta_path}, num sequences: {len(sequences)}")
+        sequences = list(SeqIO.parse(fasta_file, "fasta"))
+        print(f"File: {fasta_file}, num sequences: {len(sequences)}")
 
         sequence_splits = {}
 
@@ -146,6 +147,9 @@ class H5PreprocessMixin:
 
             # Gather model input into numpy arrays
             for key in ["input_ids", "attention_mask"]:
+                if len(fields[key]) == 0:
+                    warnings.warn(f"{fasta_file} led to empty input array with key: {key}")
+                    return
                 fields[key] = np.concatenate(fields[key])
 
             # Write to HDF5 file
