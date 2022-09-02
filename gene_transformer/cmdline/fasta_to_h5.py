@@ -33,9 +33,18 @@ def concatenate_virtual_h5(input_file_names: List[str], output_name: str, fields
     if not fields:
         fields = list(h5_file.keys())
 
+    if not fields:
+        raise ValueError("No fields found in HDF5 file.")
+
+    lengths = []
+    for file in input_file_names:
+        with h5py.File(file, "r") as f:
+            lengths.append(f[fields[0]].shape[0])
+    total_length = sum(lengths)
+
     # Helper function to output concatenated shape
     def concat_shape(shape: Tuple[int]) -> Tuple[int]:
-        return (len(input_file_names) * shape[0], *shape[1:])
+        return (total_length, *shape[1:])
 
     # Create a virtual layout for each input field
     layouts = {
@@ -52,7 +61,9 @@ def concatenate_virtual_h5(input_file_names: List[str], output_name: str, fields
                 print(f"Filename: {filename}")
                 shape = h5_file[field].shape
                 vsource = h5py.VirtualSource(filename, field, shape=shape)
-                layouts[field][i * shape[0] : (i + 1) * shape[0], ...] = vsource
+                start_idx = sum(lengths[:i])
+                end_idx = sum(lengths[: i + 1])
+                layouts[field][start_idx:end_idx, ...] = vsource
 
             f.create_virtual_dataset(field, layouts[field])
 
