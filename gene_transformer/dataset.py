@@ -101,11 +101,11 @@ class H5PreprocessMixin:
         tokenizer: PreTrainedTokenizerFast,
         block_size: int = 2048,
         kmer_size: int = 3,
-        train_test_val_split: Optional[Dict[str, float]] = None,
+        train_val_test_split: Optional[Dict[str, float]] = None,
     ) -> None:
-        if train_test_val_split is not None:
-            if sum(train_test_val_split.values()) != 1:
-                raise ValueError(f"Train test val split percentages {train_test_val_split} do not add up to 100%")
+        if train_val_test_split is not None:
+            if sum(train_val_test_split.values()) != 1:
+                raise ValueError(f"Train test val split percentages {train_val_test_split} do not add up to 100%")
 
         fields = defaultdict(list)
         sequences = list(SeqIO.parse(fasta_path, "fasta"))
@@ -113,10 +113,10 @@ class H5PreprocessMixin:
 
         sequence_splits = {"all": sequences}
 
-        if train_test_val_split is not None:
+        if train_val_test_split is not None:
 
             train_split, val_split, test_split = H5PreprocessMixin.train_val_test_split(
-                sequences, train_test_val_split["train"], train_test_val_split["val"]
+                sequences, train_val_test_split["train"], train_val_test_split["val"]
             )
 
             sequence_splits["train"] = train_split

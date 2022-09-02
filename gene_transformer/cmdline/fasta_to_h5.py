@@ -87,7 +87,7 @@ def process_dataset(
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta_dir", type=Path)
-    parser.add_argument("-h5i", "--h5_dir", type=Path)
+    parser.add_argument("-h5", "--h5_dir", type=Path)
     parser.add_argument(
         "-g",
         "--glob",
