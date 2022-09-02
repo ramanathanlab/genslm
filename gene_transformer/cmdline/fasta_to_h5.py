@@ -101,26 +101,6 @@ def process_dataset(
     print(f"Completed, saved files to {h5_dir}")
 
 
-def check_file_len(file: Path) -> int:
-    with h5py.File(file, "r") as f:
-        return f["input_ids"].shape[0]
-
-
-def check_length(h5_dir, num_workers):
-    h5_files = list(h5_dir.glob("*.h5"))
-    lengths = []
-    print(f"There are {len(h5_files)} files in {h5_dir}")
-    # for file in tqdm(h5_files):
-    #     with h5py.File(file, "r") as f:
-    #         lengths.append(f["input_ids"].shape[0])
-    chunksize = max(1, len(h5_files) // num_workers)
-    with ProcessPoolExecutor() as pool:
-        for length in pool.map(check_file_len, h5_files, chunksize=chunksize):
-            lengths.append(length)
-
-    print(f"Total sequences: {sum(lengths)}")
-
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta_dir", type=Path)
@@ -164,7 +144,9 @@ if __name__ == "__main__":
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
     if args.check_length:
-        check_length(args.h5_dir, args.num_workers)
+        input_files = list(args.h5_dir.glob("**/*.h5"))
+        lengths = H5Dataset.get_num_samples(input_files, "sequences", args.num_workers)
+        print(f"Total sequences: {sum(lengths)}")
         exit()
 
     process_dataset(
