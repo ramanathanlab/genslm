@@ -3,7 +3,7 @@ import os
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
 from tokenizers import Tokenizer
 from transformers import PreTrainedTokenizerFast
@@ -21,6 +21,7 @@ def process_dataset(
     tokenizer_blocksize: int,
     gather: bool,
     h5_outfile: Optional[Path],
+    train_val_test_split: Optional[Dict[str, float]] = None,
     node_rank: int,
     num_nodes: int,
 ) -> None:
@@ -34,6 +35,7 @@ def process_dataset(
         print("Gathering...")
         h5_files = list(h5_dir.glob("*.h5"))
         H5Dataset.concatenate_virtual_h5(h5_files, h5_outfile)
+        print(f"Completed gathering into {h5_outfile}")
         exit()
 
     if not fasta_dir:
@@ -68,7 +70,7 @@ def process_dataset(
         out_files = out_files[start_idx:end_idx]
 
     print(f"Processing {len(files)} files from {fasta_dir}...")
-    func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize)
+    func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize, train_val_test_split=train_val_test_split)
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
         for _ in pool.map(func, files, out_files):
