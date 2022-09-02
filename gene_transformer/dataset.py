@@ -2,7 +2,7 @@ import functools
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import h5py
 import numpy as np
@@ -86,41 +86,7 @@ class FastaDataset(Dataset):
             return sample
 
 
-class H5Dataset(Dataset):
-    def __init__(
-        self,
-        file_path: PathLike,
-        block_size: int,
-        tokenizer: PreTrainedTokenizerFast,
-        kmer_size: int = 3,
-        small_subset: int = 0,
-    ) -> None:
-        self.file_path = file_path
-        self.block_size = block_size
-        self.kmer_size = kmer_size
-        self.tokenizer = tokenizer
-
-        with h5py.File(file_path, "r") as f:
-            # fetch all samples from the dataset
-            self.input_ids = f["input_ids"][...]
-            self.attn_masks = f["attention_mask"][...]
-
-        if small_subset:
-            self.input_ids = self.input_ids[:small_subset]
-            self.attn_masks = self.attn_masks[:small_subset]
-
-    def __len__(self) -> int:
-        return len(self.input_ids)
-
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        # TODO: If it takes too much memory to read the whole dataset
-        #       into memory, then we can open the h5py in the getitem
-        #       and cache the required idx values like in the other Dataset class.
-        return {
-            "input_ids": torch.tensor(self.input_ids[idx]).long(),
-            "attention_mask": torch.tensor(self.attn_masks[idx]).long(),
-        }
-
+class H5PreprocessMixin:
     @staticmethod
     def preprocess(
         fasta_path: PathLike,
@@ -226,3 +192,80 @@ class H5Dataset(Dataset):
                 f.create_virtual_dataset(field, layouts[field])
 
         h5_file.close()
+
+
+class H5Dataset(Dataset, H5PreprocessMixin):
+    def __init__(
+        self,
+        file_path: PathLike,
+        block_size: int,
+        tokenizer: PreTrainedTokenizerFast,
+        kmer_size: int = 3,
+        small_subset: int = 0,
+    ) -> None:
+        self.file_path = file_path
+        self.block_size = block_size
+        self.kmer_size = kmer_size
+        self.tokenizer = tokenizer
+
+        with h5py.File(file_path, "r") as f:
+            # fetch all samples from the dataset
+            self.input_ids = f["input_ids"][...]
+            self.attn_masks = f["attention_mask"][...]
+
+        if small_subset:
+            self.input_ids = self.input_ids[:small_subset]
+            self.attn_masks = self.attn_masks[:small_subset]
+
+    def __len__(self) -> int:
+        return len(self.input_ids)
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        return {
+            "input_ids": torch.tensor(self.input_ids[idx]).long(),
+            "attention_mask": torch.tensor(self.attn_masks[idx]).long(),
+        }
+
+
+class CachingH5Dataset(Dataset, H5PreprocessMixin):
+    def __init__(self, file_path: PathLike, **extra: Any) -> None:
+        # Data is preprocessed and does not require tokenizer, etc
+        self.file_path = file_path
+
+        # Peek into file to get dataset length
+        with h5py.File(file_path, "r") as f:
+            self._len = f["input_ids"].shape[0]
+
+        # Cache the samples in memory
+        self.samples: Dict[int, Dict[str, np.ndarray]] = {}
+
+    def __len__(self) -> int:
+        return len(self._len)
+
+    def get_sample(self, idx: int) -> Dict[str, torch.Tensor]:
+        sample = self.samples[idx]
+        return {
+            "input_ids": torch.tensor(sample["input_ids"]).long(),
+            "attention_mask": torch.tensor(sample["attention_mask"]).long(),
+        }
+
+    def cache_sample_from_h5(self, idx: int) -> None:
+        # Accessing self.h5_file may raise AttributeError
+        self.samples[idx] = {
+            key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]
+        }
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        try:
+            return self.get_sample(idx)
+        except KeyError:
+            pass
+
+        try:
+            self.cache_sample_from_h5(idx)
+        except AttributeError:
+            # Need to open the H5 file in the getitem worker process
+            self.h5_file = h5py.File(self.file_path, "r")
+            self.cache_sample_from_h5(idx)
+
+        return self.get_sample(idx)
