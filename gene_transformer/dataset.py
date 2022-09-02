@@ -86,6 +86,7 @@ class H5PreprocessMixin:
     @staticmethod
     def train_val_test_split(seqs, train_pct, val_pct):
         train_pct, val_pct = 0.8, 0.1
+        print(f"{len(seqs)=},")
         shuffled_inds = np.random.shuffle(np.arange(len(seqs)))
 
         print(f"{len(seqs)=}, {len(shuffled_inds)=}")
