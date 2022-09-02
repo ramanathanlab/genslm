@@ -1,7 +1,7 @@
 #!/bin/sh
-#PBS -l select=128:system=polaris
+#PBS -l select=64:system=polaris
 #PBS -l place=scatter
-#PBS -l walltime=10:00:00
+#PBS -l walltime=02:00:00
 #PBS -N process_gene_data
 #PBS -q prod
 #PBS -A RL-fold
