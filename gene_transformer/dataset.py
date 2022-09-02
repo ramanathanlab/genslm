@@ -187,8 +187,16 @@ class H5PreprocessMixin:
                 create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
+    def check_file_len(file: Path, field: str) -> int:
+        with h5py.File(file, "r") as f:
+            return f[field].shape[0]
+
+    @staticmethod
     def concatenate_virtual_h5(
-        input_files: List[str], output_file: Path, fields: Optional[List[str]] = None
+        input_files: List[str],
+        output_file: Path,
+        fields: Optional[List[str]] = None,
+        num_workers: int = 1,
     ) -> None:
         """Concatenate HDF5 files into a virtual HDF5 file.
         Concatenates a list :obj:`input_files` of HDF5 files containing
@@ -201,6 +209,8 @@ class H5PreprocessMixin:
             Name of output virtual HDF5 file.
         fields : Optional[List[str]], default=None
             Which dataset fields to concatenate. Will concatenate all fields by default.
+        num_workers : int, default=1
+            Number of process to use for reading the data lengths from each file.
         """
 
         # Open first file to get dataset shape and dtype
@@ -213,12 +223,18 @@ class H5PreprocessMixin:
         if not fields:
             raise ValueError("No fields found in HDF5 file.")
 
+        # for file in input_files:
+        #     with h5py.File(file, "r") as f:
+        #         lengths.append(f[fields[0]].shape[0])
+        # print(f"Total lengths {total_length}, num files: {len(input_files)}")
         lengths = []
-        for file in input_files:
-            with h5py.File(file, "r") as f:
-                lengths.append(f[fields[0]].shape[0])
+        func = functools.partial(H5PreprocessMixin.check_file_len, field=fields[0])
+        chunksize = max(1, len(input_files) // num_workers)
+        with ProcessPoolExecutor() as pool:
+            for length in pool.map(func, input_files, chunksize=chunksize):
+                lengths.append(length)
+
         total_length = sum(lengths)
-        print(f"Total lengths {total_length}, num files: {len(input_files)}")
 
         # Helper function to output concatenated shape
         def concat_shape(shape: Tuple[int]) -> Tuple[int]:
