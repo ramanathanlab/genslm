@@ -111,8 +111,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    node_rank = os.environ.get("NODE_RANK", 0)  # zero indexed
-    num_nodes = os.environ.get("NRANKS", 1)
+    node_rank = int(os.environ.get("NODE_RANK", 0))  # zero indexed
+    num_nodes = int(os.environ.get("NRANKS", 1))
     print(f"Node rank {node_rank} of {num_nodes}")
 
     process_dataset(
