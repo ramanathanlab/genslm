@@ -87,6 +87,8 @@ class H5PreprocessMixin:
     def train_val_test_split(seqs, train_pct, val_pct):
         train_pct, val_pct = 0.8, 0.1
         shuffled_inds = np.random.shuffle(np.arange(len(seqs)))
+
+        print(f"{len(seqs)=}, {len(shuffled_inds)=}")
         train_ind = round(len(seqs) * train_pct)
         val_ind = train_ind + round(len(seqs) * val_pct)
         train_split = [seqs[i] for i in shuffled_inds[:train_ind]]
