@@ -98,7 +98,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     node_rank = os.environ["NODE_RANK"]
-    print(f"Node rank: {node_rank}")
+    num_nodes = os.environ["NNODES"]
+    print(f"Node rank: {node_rank}, number of nodes: {num_nodes}")
     exit()
 
     process_dataset(
