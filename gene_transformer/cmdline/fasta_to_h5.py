@@ -1,3 +1,4 @@
+import os
 import functools
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
@@ -40,9 +41,7 @@ def process_dataset(
         raise ValueError("Output dir not present")
 
     output_dir.mkdir(exist_ok=True)
-    tokenizer = PreTrainedTokenizerFast(
-        tokenizer_object=Tokenizer.from_file(str(tokenizer_file))
-    )
+    tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [output_dir / f"{f.stem}.h5" for f in files]
@@ -51,18 +50,10 @@ def process_dataset(
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
 
-    files, out_files = zip(
-        *[
-            (fin, fout)
-            for fin, fout in zip(files, out_files)
-            if fout.name not in already_done
-        ]
-    )
+    files, out_files = zip(*[(fin, fout) for fin, fout in zip(files, out_files) if fout.name not in already_done])
 
     print(f"Processing {len(files)} files from {fasta_dir}...")
-    func = functools.partial(
-        H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize
-    )
+    func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize)
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
         for _ in pool.map(func, files, out_files):
@@ -105,6 +96,10 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    node_rank = os.environ["NODE_RANK"]
+    print(f"Node rank: {node_rank}")
+    exit()
 
     process_dataset(
         args.fasta_dir,

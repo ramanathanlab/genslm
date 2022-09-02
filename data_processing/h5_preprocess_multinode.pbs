@@ -18,7 +18,14 @@ module load conda/2022-07-19
 conda activate gene_transformer
 
 
-mpiexec -n 1 --ppn 1 python -m gene_transformer.cmdline.fasta_to_h5 \
+mpiexec \
+    -n ${NTOTRANKS} \
+    --ppn ${NRANKS_PER_NODE} \
+    --depth=${NDEPTH} \
+    --cpu-bind depth \
+    --hostfile $PBS_NODEFILE \
+    run-polaris.sh \
+    python -m gene_transformer.cmdline.fasta_to_h5 \
     -f /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k  \
     -o /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5/ \
     -n 64 \
