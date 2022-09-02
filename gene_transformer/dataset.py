@@ -187,9 +187,21 @@ class H5PreprocessMixin:
                 create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
-    def check_file_len(file: Path, field: str) -> int:
+    def get_num_samples_in_file(file: str, field: str) -> int:
         with h5py.File(file, "r") as f:
             return f[field].shape[0]
+
+    @staticmethod
+    def get_num_samples(
+        input_files: List[str], field: str, num_workers: int = 1
+    ) -> List[int]:
+        lengths = []
+        func = functools.partial(H5PreprocessMixin.get_num_samples_in_file, field=field)
+        chunksize = max(1, len(input_files) // num_workers)
+        with ProcessPoolExecutor() as pool:
+            for length in pool.map(func, input_files, chunksize=chunksize):
+                lengths.append(length)
+        return lengths
 
     @staticmethod
     def concatenate_virtual_h5(
@@ -227,14 +239,10 @@ class H5PreprocessMixin:
         #     with h5py.File(file, "r") as f:
         #         lengths.append(f[fields[0]].shape[0])
         # print(f"Total lengths {total_length}, num files: {len(input_files)}")
-        lengths = []
-        func = functools.partial(H5PreprocessMixin.check_file_len, field=fields[0])
-        chunksize = max(1, len(input_files) // num_workers)
-        with ProcessPoolExecutor() as pool:
-            for length in pool.map(func, input_files, chunksize=chunksize):
-                lengths.append(length)
+        lengths = H5PreprocessMixin.get_num_samples(input_files, fields[0], num_workers)
 
         total_length = sum(lengths)
+        print(f"Total sequences: {total_length}")
 
         # Helper function to output concatenated shape
         def concat_shape(shape: Tuple[int]) -> Tuple[int]:
