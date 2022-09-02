@@ -323,7 +323,7 @@ class CachingH5Dataset(Dataset, H5PreprocessMixin):
         self.samples: Dict[int, Dict[str, np.ndarray]] = {}
 
     def __len__(self) -> int:
-        return len(self._len)
+        return self._len
 
     def get_sample(self, idx: int) -> Dict[str, torch.Tensor]:
         sample = self.samples[idx]
