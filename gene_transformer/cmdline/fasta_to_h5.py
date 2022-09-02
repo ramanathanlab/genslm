@@ -49,7 +49,9 @@ def process_dataset(
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [h5_dir / f"{f.stem}.h5" for f in files]
-    already_done = set(f.name for f in h5_dir.glob("*.h5"))
+    already_done = set(
+        f.name.replace("_train", "").replace("_val", "").replace("_test", "") for f in h5_dir.glob("*.h5")
+    )
 
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
