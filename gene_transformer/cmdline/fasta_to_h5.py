@@ -60,10 +60,10 @@ def concatenate_virtual_h5(input_file_names: List[str], output_name: str, fields
             for i, filename in enumerate(input_file_names):
                 print(f"Filename: {filename}")
                 shape = h5_file[field].shape
-                vsource = h5py.VirtualSource(filename, field, shape=shape)
+                vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
                 start_idx = sum(lengths[:i])
                 end_idx = sum(lengths[: i + 1])
-                print(f"{start_idx=}, {end_idx=}")
+                print(f"{start_idx=}, {end_idx=}, ")
                 layouts[field][start_idx:end_idx, ...] = vsource
 
             f.create_virtual_dataset(field, layouts[field])
