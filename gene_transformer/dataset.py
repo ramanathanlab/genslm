@@ -218,7 +218,7 @@ class H5PreprocessMixin:
             with h5py.File(file, "r") as f:
                 lengths.append(f[fields[0]].shape[0])
         total_length = sum(lengths)
-        print(f"Total lengths {total_length}")
+        print(f"Total lengths {total_length}, num files: {len(input_files)}")
 
         # Helper function to output concatenated shape
         def concat_shape(shape: Tuple[int]) -> Tuple[int]:
@@ -233,7 +233,7 @@ class H5PreprocessMixin:
             for field in fields
         }
 
-        with h5py.File(output_file, "w", libver="latest") as f:
+        with h5py.File(output_file, "w") as f:
             for field in fields:
                 for i, filename in enumerate(input_files):
                     shape = h5_file[field].shape
