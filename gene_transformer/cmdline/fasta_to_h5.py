@@ -56,7 +56,7 @@ def process_dataset(
 
     # determine which chunk this instance is supposed to be running
     if num_nodes > 1:
-        chunk_size = len(files) / num_nodes
+        chunk_size = len(files) // num_nodes
         start_idx = node_rank * chunk_size
         end_idx = start_idx + chunk_size
         if node_rank + 1 == num_nodes:
