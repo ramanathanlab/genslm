@@ -179,6 +179,7 @@ def train(cfg: ModelSettings) -> None:
     else:
         model = DNATransformer(cfg)
 
+    callbacks: List[Callback] = []
     # Setup wandb
     wandb_logger = None
     if cfg.wandb_active:
@@ -191,8 +192,8 @@ def train(cfg: ModelSettings) -> None:
                 id=cfg.wandb_model_tag,
                 # resume="must",
             )
+            callbacks.append(LearningRateMonitor(logging_interval="step"))
 
-    callbacks: List[Callback] = []
     if cfg.checkpoint_dir is not None:
         callbacks.append(
             ModelCheckpoint(
@@ -206,9 +207,6 @@ def train(cfg: ModelSettings) -> None:
                 every_n_train_steps=cfg.checkpoint_every_n_train_steps,
             )
         )
-
-    if cfg.wandb_active:
-        callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     if cfg.enable_blast:
         assert cfg.checkpoint_dir is not None
