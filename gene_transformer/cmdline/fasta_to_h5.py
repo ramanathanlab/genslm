@@ -62,8 +62,9 @@ def process_dataset(
         if node_rank + 1 == num_nodes:
             end_idx = len(files)
 
-        print(f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx}")
+        print(f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx} ({len(files)=}")
         files = files[start_idx:end_idx]
+        out_files = out_files[start_idx:end_idx]
 
     exit()
     print(f"Processing {len(files)} files from {fasta_dir}...")
