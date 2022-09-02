@@ -15,7 +15,6 @@ def process_dataset(
     fasta_dir: Path,
     h5_dir: Optional[Path],
     glob_pattern: str,
-    output_dir: Path,
     num_workers: int,
     tokenizer_file: Path,
     tokenizer_blocksize: int,
@@ -42,15 +41,15 @@ def process_dataset(
         raise ValueError("Fasta dir not present")
     if not tokenizer_file:
         raise ValueError("Tokenizer file not present")
-    if not output_dir:
+    if not h5_dir:
         raise ValueError("Output dir not present")
 
-    output_dir.mkdir(exist_ok=True)
+    h5_dir.mkdir(exist_ok=True)
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_file)))
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
-    out_files = [output_dir / f"{f.stem}.h5" for f in files]
-    already_done = set(f.name for f in output_dir.glob("*.h5"))
+    out_files = [h5_dir / f"{f.stem}.h5" for f in files]
+    already_done = set(f.name for f in h5_dir.glob("*.h5"))
 
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
@@ -81,7 +80,7 @@ def process_dataset(
         for _ in pool.map(func, files, out_files):
             pass
 
-    print(f"Completed, saved files to {output_dir}")
+    print(f"Completed, saved files to {h5_dir}")
 
 
 if __name__ == "__main__":
@@ -95,7 +94,6 @@ if __name__ == "__main__":
         type=str,
         default="*.ffn",
     )
-    parser.add_argument("-o", "--output_dir", type=Path)
     parser.add_argument("-n", "--num_workers", type=int, default=1)
     parser.add_argument("-t", "--tokenizer", type=Path, help="Path to tokenizer file")
     parser.add_argument(
@@ -129,7 +127,6 @@ if __name__ == "__main__":
         args.fasta_dir,
         args.h5_dir,
         args.glob,
-        args.output_dir,
         args.num_workers,
         args.tokenizer,
         args.block_size,
