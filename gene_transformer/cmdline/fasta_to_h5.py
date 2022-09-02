@@ -21,6 +21,8 @@ def process_dataset(
     tokenizer_blocksize: int,
     gather: bool,
     h5_outfile: Optional[Path],
+    node_rank: int,
+    num_nodes: int,
 ) -> None:
 
     if gather:
@@ -52,6 +54,18 @@ def process_dataset(
 
     files, out_files = zip(*[(fin, fout) for fin, fout in zip(files, out_files) if fout.name not in already_done])
 
+    # determine which chunk this instance is supposed to be running
+    if num_nodes > 1:
+        chunk_size = len(files) / num_nodes
+        start_idx = node_rank * chunk_size
+        end_idx = start_idx + chunk_size
+        if node_rank + 1 == num_nodes:
+            end_idx = len(files)
+
+        print(f"Node {node_rank}/{num_nodes} starting at {start_idx}, ending at {end_idx}")
+        files = files[start_idx:end_idx]
+
+    exit()
     print(f"Processing {len(files)} files from {fasta_dir}...")
     func = functools.partial(H5Dataset.preprocess, tokenizer=tokenizer, block_size=tokenizer_blocksize)
 
@@ -97,10 +111,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    node_rank = os.environ["NODE_RANK"]
-    num_nodes = os.environ["NRANKS"]
-    print(f"Node rank: {node_rank}, number of nodes: {num_nodes}")
-    exit()
+    node_rank = os.environ.get("NODE_RANK", 0)  # zero indexed
+    num_nodes = os.environ.get("NRANKS", 1)
+    print(f"Node rank {node_rank} of {num_nodes}")
 
     process_dataset(
         args.fasta_dir,
@@ -112,4 +125,6 @@ if __name__ == "__main__":
         args.block_size,
         args.gather,
         args.h5_outfile,
+        node_rank,
+        num_nodes,
     )
