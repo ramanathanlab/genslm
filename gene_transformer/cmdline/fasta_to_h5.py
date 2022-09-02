@@ -47,7 +47,7 @@ def concatenate_virtual_h5(input_file_names: List[str], output_name: str, fields
     }
 
     with h5py.File(output_name, "w", libver="latest") as f:
-        for field in fields:
+        for field in ["input_ids", "attention_mask"]:
             for i, filename in enumerate(input_file_names):
                 shape = h5_file[field].shape
                 vsource = h5py.VirtualSource(filename, field, shape=shape)
