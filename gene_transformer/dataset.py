@@ -136,6 +136,7 @@ class H5PreprocessMixin:
                     max_length=block_size,
                     padding="max_length",
                     return_tensors="np",
+                    truncation=True,
                 )
                 for field in ["input_ids", "attention_mask"]:
                     fields[field].append(batch_encoding[field].astype(np.int8))
