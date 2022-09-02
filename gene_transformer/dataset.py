@@ -89,17 +89,20 @@ class FastaDataset(Dataset):
 
 class H5PreprocessMixin:
     @staticmethod
-    def train_val_test_split(seqs, train_pct, val_pct):
+    def train_val_test_split(
+        seqs: List[str], train_pct: float, val_pct: float
+    ) -> Dict[str, List[str]]:
         np.random.seed(42)
-        train_pct, val_pct = 0.8, 0.1
         shuffled_inds = np.arange(len(seqs))
         np.random.shuffle(shuffled_inds)
         train_ind = round(len(seqs) * train_pct)
         val_ind = train_ind + round(len(seqs) * val_pct)
-        train_split = [seqs[i] for i in shuffled_inds[:train_ind]]
-        val_split = [seqs[i] for i in shuffled_inds[train_ind:val_ind]]
-        test_split = [seqs[i] for i in shuffled_inds[val_ind:]]
-        return train_split, val_split, test_split
+        split = {
+            "train": [seqs[i] for i in shuffled_inds[:train_ind]],
+            "val": [seqs[i] for i in shuffled_inds[train_ind:val_ind]],
+            "test": [seqs[i] for i in shuffled_inds[val_ind:]],
+        }
+        return split
 
     @staticmethod
     def preprocess(
@@ -124,18 +127,24 @@ class H5PreprocessMixin:
         if train_val_test_split is not None:
             train_percentage = train_val_test_split["train"]
             val_percentage = train_val_test_split["val"]
-            train_split, val_split, test_split = H5PreprocessMixin.train_val_test_split(
+            sequence_splits = H5PreprocessMixin.train_val_test_split(
                 sequences, train_percentage, val_percentage
             )
 
-            sequence_splits["train"] = train_split
-            sequence_splits["val"] = val_split
-            sequence_splits["test"] = test_split
+            split_length = sum(len(split) for split in sequence_splits.values())
+            assert split_length == len(sequences)
 
         else:
             sequence_splits["all"] = sequences
 
         for split_name, split_sequences in sequence_splits.items():
+
+            if not split_sequences:
+                warnings.warn(
+                    f"{fasta_file} {split_name} split led to empty input array"
+                )
+                continue
+
             fields = defaultdict(list)
             for seq_record in split_sequences:
                 batch_encoding = tokenizer(
@@ -153,11 +162,6 @@ class H5PreprocessMixin:
 
             # Gather model input into numpy arrays
             for key in ["input_ids", "attention_mask"]:
-                if len(fields[key]) == 0:
-                    warnings.warn(
-                        f"{fasta_file} led to empty input array with key: {key}"
-                    )
-                    return
                 fields[key] = np.concatenate(fields[key])
 
             # Write to HDF5 file

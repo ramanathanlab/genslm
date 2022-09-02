@@ -37,14 +37,7 @@ def process_dataset(
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     files = list(fasta_dir.glob(glob_pattern))
     out_files = [h5_dir / f"{f.stem}.h5" for f in files]
-    already_done = set(
-        f.name.replace("_train", "").replace("_val", "").replace("_test", "")
-        for f in h5_dir.glob("**/*.h5")
-    )
-    if train_val_test_split is not None:
-        (h5_dir / "train").mkdir(exist_ok=True)
-        (h5_dir / "test").mkdir(exist_ok=True)
-        (h5_dir / "val").mkdir(exist_ok=True)
+    already_done = set(f.name for f in h5_dir.glob("**/*.h5"))
 
     if len(already_done) == len(files):
         raise ValueError(f"Already processed all files in {fasta_dir}")
@@ -56,6 +49,11 @@ def process_dataset(
             if fout.name not in already_done
         ]
     )
+
+    if train_val_test_split is not None:
+        (h5_dir / "train").mkdir(exist_ok=True)
+        (h5_dir / "test").mkdir(exist_ok=True)
+        (h5_dir / "val").mkdir(exist_ok=True)
 
     # determine which chunk this instance is supposed to be running
     if num_nodes > 1:
