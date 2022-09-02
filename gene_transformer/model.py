@@ -202,7 +202,7 @@ def train(cfg: ModelSettings) -> None:
                 auto_insert_metric_name=False,
                 filename="model-epoch{epoch:02d}-val_loss{val/loss:.2f}",
                 save_top_k=3,
-                every_n_train_steps=cfg.every_n_train_steps,
+                every_n_train_steps=cfg.checkpoint_every_n_train_steps,
             )
         )
 
