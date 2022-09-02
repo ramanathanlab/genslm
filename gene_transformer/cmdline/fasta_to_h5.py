@@ -18,24 +18,10 @@ def process_dataset(
     num_workers: int,
     tokenizer_file: Path,
     tokenizer_blocksize: int,
-    gather: bool,
-    h5_outfile: Optional[Path],
     train_val_test_split: Optional[Dict[str, float]],
     node_rank: int,
     num_nodes: int,
 ) -> None:
-
-    if gather:
-        if not h5_outfile:
-            raise ValueError("H5 outfile not present")
-        if not h5_dir:
-            raise ValueError("H5 in directory not present")
-
-        print("Gathering...")
-        h5_files = list(h5_dir.glob("*.h5"))
-        H5Dataset.concatenate_virtual_h5(h5_files, h5_outfile, num_workers=num_workers)
-        print(f"Completed gathering into {h5_outfile}")
-        exit()
 
     if not fasta_dir:
         raise ValueError("Fasta dir not present")
@@ -143,9 +129,23 @@ if __name__ == "__main__":
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
     if args.check_length:
-        input_files = list(args.h5_dir.glob("**/*.h5"))
+        input_files = list(args.h5_dir.glob("*.h5"))
         lengths = H5Dataset.get_num_samples(input_files, "sequences", args.num_workers)
         print(f"Total sequences: {sum(lengths)}")
+        exit()
+
+    if args.gather:
+        if not args.h5_outfile:
+            raise ValueError("H5 outfile not present")
+        if not args.h5_dir:
+            raise ValueError("H5 in directory not present")
+
+        print("Gathering...")
+        h5_files = list(args.h5_dir.glob("*.h5"))
+        H5Dataset.concatenate_virtual_h5(
+            h5_files, args.h5_outfile, num_workers=args.num_workers
+        )
+        print(f"Completed gathering {len(h5_files)} files into {args.h5_outfile}")
         exit()
 
     process_dataset(
@@ -155,8 +155,6 @@ if __name__ == "__main__":
         args.num_workers,
         args.tokenizer,
         args.block_size,
-        args.gather,
-        args.h5_outfile,
         train_val_test_split,
         node_rank,
         num_nodes,
