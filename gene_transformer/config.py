@@ -51,6 +51,8 @@ class ModelSettings(BaseSettings):
     """Team name for wandb logging."""
     wandb_model_tag: Optional[str] = None
     """Model tag for wandb labeling and resuming."""
+    checkpoint_every_n_train_steps: Optional[int] = None
+    """Number of training steps to perform model checkpointing"""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None

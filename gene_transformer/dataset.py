@@ -323,7 +323,7 @@ class CachingH5Dataset(Dataset, H5PreprocessMixin):
         self.samples: Dict[int, Dict[str, np.ndarray]] = {}
 
     def __len__(self) -> int:
-        return len(self._len)
+        return self._len
 
     def get_sample(self, idx: int) -> Dict[str, torch.Tensor]:
         sample = self.samples[idx]
@@ -352,3 +352,32 @@ class CachingH5Dataset(Dataset, H5PreprocessMixin):
             self.cache_sample_from_h5(idx)
 
         return self.get_sample(idx)
+
+
+class FileBackedH5Dataset(Dataset, H5PreprocessMixin):
+    def __init__(self, file_path: PathLike, **extra: Any) -> None:
+        # Data is preprocessed and does not require tokenizer, etc
+        self.file_path = file_path
+
+        # Peek into file to get dataset length
+        with h5py.File(file_path, "r") as f:
+            self._len = f["input_ids"].shape[0]
+
+    def __len__(self) -> int:
+        return self._len
+
+    def read_from_h5(self, idx: int) -> Dict[str, torch.Tensor]:
+        # Accessing self.h5_file may raise AttributeError
+        return {
+            key: torch.tensor(self.h5_file[key][idx][...]).long()
+            for key in ["input_ids", "attention_mask"]
+        }
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        try:
+            return self.read_from_h5(idx)
+        except AttributeError:
+            # Need to open the H5 file in the getitem worker process
+            self.h5_file = h5py.File(self.file_path, "r")
+
+        return self.read_from_h5(idx)
