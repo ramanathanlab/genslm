@@ -109,9 +109,6 @@ class H5Dataset(Dataset):
             self.input_ids = self.input_ids[:small_subset]
             self.attn_masks = self.attn_masks[:small_subset]
 
-        print(f"{self.input_ids.shape=}")
-        print(f"{self.attn_masks.shape=}")
-
     def __len__(self) -> int:
         return len(self.input_ids)
 
