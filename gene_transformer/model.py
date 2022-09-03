@@ -173,14 +173,13 @@ def train(cfg: ModelSettings) -> None:
     # Setup wandb
     wandb_logger = None
     if cfg.wandb_active:
-        node_rank = os.environ.get("NODE_RANK", 0)
-        print(f"Node rank: {node_rank}")
+        node_rank = os.environ.get("NODE_RANK")
         rank = os.environ.get("RANK")
         local_rank = os.environ.get("LOCAL_RANK")
         slurm_procid = os.environ.get("SLURM_PROCID")
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
-        print(f"{rank=}, {local_rank=}, {slurm_procid}, {jsm_namespace}")
+        print(f"{rank=}, {local_rank=}, {slurm_procid}, {jsm_namespace}, {node_rank=}")
         wandb_logger = WandbLogger(
             project=cfg.wandb_project_name,
             entity=cfg.wandb_entity_name,
