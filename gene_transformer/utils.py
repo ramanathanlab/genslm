@@ -530,17 +530,41 @@ class PerplexityCallback(Callback):
 
 
 class EmbeddingsCallback(Callback):
-    def __init__(self, compute_mean: bool = True) -> None:
+    def __init__(
+        self,
+        compute_mean: bool = True,
+        batches_per_save: int = 5,
+        save_dir: Path = Path("./embeddings"),
+    ) -> None:
         self.compute_mean = compute_mean
+        self.batches_per_save = batches_per_save
+        self.save_dir = save_dir
         self._embeddings = []
+        self.batch_idx = 0
 
     @property
     def embeddings(self) -> npt.ArrayLike:
         return self._embeddings
 
+    def _gather_embeddings(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        # Need to gather embeddings across all ranks into a single array
+        trainer._accelerator_connector.strategy.barrier()
+        self._embeddings = torch.cat(self._embeddings)
+        self._embeddings = pl_module.all_gather(self._embeddings)
+        # Convert to host memory and concatenate over the ranks
+        # Initial shape: (n_ranks, n_samples, n_hidden)
+        # Final shape: (n_ranks * n_samples, n_hidden)
+        self._embeddings = np.concatenate(self._embeddings.cpu().numpy())
+
+    def _save_embeddings(self) -> None:
+        np.save(self.save_dir / f"embeddings-{self.batch_idx}.npy", self._embeddings)
+
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
+        self.batch_idx = 0
         self._embeddings = []
 
     def on_predict_batch_end(
@@ -559,14 +583,15 @@ class EmbeddingsCallback(Callback):
             embed = embed.mean(dim=1)
         self._embeddings.append(embed)
 
+        if batch_idx % self.batches_per_save == 0:
+            self.batch_idx = batch_idx
+            self._gather_embeddings(trainer, pl_module)
+            self._save_embeddings()
+            self._embeddings = []
+
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        # Need to gather embeddings across all ranks into a single array
-        trainer._accelerator_connector.strategy.barrier()
-        self._embeddings = torch.cat(self._embeddings)
-        self._embeddings = pl_module.all_gather(self._embeddings)
-        # Convert to host memory and concatenate over the ranks
-        # Initial shape: (n_ranks, n_samples, n_hidden)
-        # Final shape: (n_ranks * n_samples, n_hidden)
-        self._embeddings = np.concatenate(self._embeddings.cpu().numpy())
+        self._gather_embeddings(trainer, pl_module)
+        self.batch_idx += 1  # Increment to name the saved file
+        self._save_embeddings()
