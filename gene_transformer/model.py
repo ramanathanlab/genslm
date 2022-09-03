@@ -179,7 +179,7 @@ def train(cfg: ModelSettings) -> None:
         slurm_procid = os.environ.get("SLURM_PROCID")
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
-        print(f"{rank=}, {local_rank=}, {slurm_procid}, {jsm_namespace}, {node_rank=}")
+        print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
         wandb_logger = WandbLogger(
             project=cfg.wandb_project_name,
             entity=cfg.wandb_entity_name,
