@@ -135,17 +135,10 @@ class DNATransformer(pl.LightningModule):
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> np.ndarray:
         """Computes and returns the embeddings"""
-        outputs = self.model(
-            batch["input_ids"],
-            labels=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            output_hidden_states=True,
-        )
+        outputs = self(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        emb = outputs.hidden_states[0].detach().cpu().numpy()
-        # if compute_mean:
-        #     # Compute average over sequence length
-        #     emb = np.mean(emb, axis=1)
+        # Take mean embedding over sequence length
+        emb = outputs.hidden_states[0].detach().cpu().numpy().mean(axis=1)
         return emb
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
@@ -337,8 +330,9 @@ def inference(
     print(f"Running inference with dataset length {len(dataloader)}")
     embeddings = trainer.predict(model, dataloaders=dataloader)
     # embeddings = generate_embeddings(model, dataloader, compute_mean)
-    if compute_mean:
-        embeddings = [np.mean(emb, axis=1) for emb in embeddings]
+    # if compute_mean:
+    #     embeddings = [np.mean(emb, axis=1) for emb in embeddings]
+    print(f"Embeddings shape: {embeddings.shape}")
     embeddings = np.array(embeddings)
     print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
