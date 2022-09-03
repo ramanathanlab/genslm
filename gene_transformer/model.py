@@ -394,8 +394,7 @@ if __name__ == "__main__":
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
-
-    print(os.environ)
+    
     # check if we're computing throughput - this means a new config with specific settings - default is false
     if config.compute_throughput:
         warnings.warn(
