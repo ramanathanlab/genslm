@@ -379,6 +379,7 @@ if __name__ == "__main__":
     parser.add_argument("--inference_model_load", default="pt", help="deepspeed or pt")
     parser.add_argument(
         "--inference_pt_file",
+        type=Path,
         help="Path to pytorch model weights if inference_model_load==pt",
     )
     parser.add_argument(
