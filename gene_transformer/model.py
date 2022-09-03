@@ -322,7 +322,12 @@ def inference(
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
 
-    trainer = pl.Trainer(gpus=1, precision=cfg.precision, num_nodes=cfg.num_nodes)
+    trainer = pl.Trainer(
+        gpus=-1,
+        strategy=DeepSpeedStrategy(stage=3),
+        precision=cfg.precision,
+        num_nodes=cfg.num_nodes,
+    )
 
     dataset = FileBackedH5Dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
