@@ -56,5 +56,5 @@ mpiexec \
   --cpu-bind depth \
   --hostfile $PBS_NODEFILE  \
   {{ gene_transformer_path / "hpc" / "templates" / "run-polaris.sh" }} \
-  python -m gene_transformer.model -c {{ config }}
+  python -m {{ module }} -c {{ config }}
 

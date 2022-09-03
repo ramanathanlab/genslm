@@ -25,12 +25,12 @@ from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import CachingH5Dataset, FileBackedH5Dataset
 from gene_transformer.utils import (
+    EmbeddingsCallback,
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
     PerplexityCallback,
     SequenceGenerationCallback,
-    EmbeddingsCallback,
     ThroughputMonitor,
 )
 
