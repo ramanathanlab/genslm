@@ -27,6 +27,8 @@ class InferenceConfig(BaseSettings):
     """Data file to run inference on (HDF5)."""
     embeddings_out_path: Path
     """Output path to write embeddings to (npy)."""
+    model_config_json: Path
+    """Huggingface json dict to load AutoConfig from."""
     load_pt_checkpoint: Optional[Path] = None
     """Checkpoint pt file to initialze model weights."""
     load_ds_checkpoint: Optional[Path] = None
@@ -106,9 +108,13 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     pl.seed_everything(0)
 
     if config.load_pt_checkpoint:
-        model_strategy = LoadPTCheckpointStrategy(config.load_pt_checkpoint, cfg=config)
+        model_strategy = LoadPTCheckpointStrategy(
+            config.load_pt_checkpoint, model_config_json=config.model_config_json
+        )
     else:
-        model_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
+        model_strategy = LoadDeepSpeedStrategy(
+            config.load_ds_checkpoint, model_config_json=config.model_config_json
+        )
 
     model: GeneTransformer = model_strategy.get_model(GeneTransformer)
 
