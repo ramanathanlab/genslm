@@ -117,7 +117,7 @@ class InferenceConfig(BaseSettings):
 def main(config: InferenceConfig) -> npt.ArrayLike:
     # Setup torch environment
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-    torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
+    # torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
     if config.load_pt_checkpoint:
