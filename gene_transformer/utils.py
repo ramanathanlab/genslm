@@ -5,6 +5,7 @@ from statistics import mean
 from typing import Any, Dict, List, Optional, Set, Type
 
 import numpy as np
+import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 from Bio import SeqIO  # type: ignore[import]
@@ -526,3 +527,34 @@ class PerplexityCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         self._log_perplexity(pl_module, self.val_name, train=False, on_epoch=True)
+
+
+class EmbeddingsCallback(Callback):
+    def __init__(self, compute_mean: bool = True) -> None:
+        self.compute_mean = compute_mean
+        self._embeddings: List[npt.ArrayLike] = []
+
+    @property
+    def embeddings(self) -> npt.ArrayLike:
+        return np.concatenate(self._embeddings)
+
+    def on_predict_start(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self._embeddings = []
+
+    def on_predict_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+        dataloader_idx: int,
+    ) -> None:
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        embed = outputs.hidden_states[0].detach().cpu().numpy()
+        if self.compute_mean:
+            # Compute average over sequence length
+            embed = np.mean(embed, axis=1)
+        self._embeddings.append(embed)

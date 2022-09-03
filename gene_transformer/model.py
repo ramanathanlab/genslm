@@ -30,39 +30,9 @@ from gene_transformer.utils import (
     ModelLoadStrategy,
     PerplexityCallback,
     SequenceGenerationCallback,
+    EmbeddingsCallback,
     ThroughputMonitor,
 )
-
-
-class EmbeddingsCallback(Callback):
-    def __init__(self, compute_mean: bool = True) -> None:
-        self.compute_mean = compute_mean
-        self._embeddings: List[npt.ArrayLike] = []
-
-    @property
-    def embeddings(self) -> npt.ArrayLike:
-        return np.concatenate(self._embeddings)
-
-    def on_predict_start(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
-    ) -> None:
-        self._embeddings = []
-
-    def on_predict_batch_end(
-        self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
-        outputs: Any,
-        batch: Any,
-        batch_idx: int,
-        dataloader_idx: int,
-    ) -> None:
-        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        embed = outputs.hidden_states[0].detach().cpu().numpy()
-        if self.compute_mean:
-            # Compute average over sequence length
-            embed = np.mean(embed, axis=1)
-        self._embeddings.append(embed)
 
 
 class DNATransformer(pl.LightningModule):
@@ -166,13 +136,7 @@ class DNATransformer(pl.LightningModule):
     def predict_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> ModelOutput:
-        """Computes and returns the embeddings"""
         return self(batch, output_hidden_states=True)
-        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        # Take mean embedding over sequence length
-        # emb = outputs.hidden_states[0].detach().cpu().numpy().mean(axis=1)
-        # print(f"Embeddings shape: {emb.shape}")
-        # return emb
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
@@ -349,9 +313,8 @@ def inference(
     model_load_strategy: ModelLoadStrategy,
     fasta_file: str,
     output_path: Optional[PathLike] = None,
-    compute_mean: bool = False,
-) -> np.ndarray:
-    """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
+) -> npt.ArrayLike:
+    """Output embedding array of shape (num_seqs, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
 
     embedding_callback = EmbeddingsCallback()
@@ -369,12 +332,7 @@ def inference(
     trainer.predict(model, dataloaders=dataloader)
 
     embeddings = embedding_callback.embeddings
-    # embeddings = generate_embeddings(model, dataloader, compute_mean)
-    # if compute_mean:
-    #     embeddings = [np.mean(emb, axis=1) for emb in embeddings]
     print(f"Embeddings shape: {embeddings.shape}")
-    # embeddings = np.array(embeddings)
-    # print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
         assert Path(output_path).suffix == ".npy"
         np.save(output_path, embeddings)
@@ -416,7 +374,6 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("--mode", default="train")
     parser.add_argument("--inference_fasta", default="")
-    parser.add_argument("--inference_mean", action="store_true")
     parser.add_argument("--inference_model_load", default="pt", help="deepspeed or pt")
     parser.add_argument(
         "--inference_pt_file",
@@ -474,9 +431,5 @@ if __name__ == "__main__":
                 f"Invalid inference_model_load {args.inference_model_load}"
             )
         inference(
-            config,
-            model_strategy,
-            args.inference_fasta,
-            args.inference_output_path,
-            args.inference_mean,
+            config, model_strategy, args.inference_fasta, args.inference_output_path
         )
