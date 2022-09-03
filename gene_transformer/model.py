@@ -329,15 +329,7 @@ def inference(
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
 
     trainer = pl.Trainer(
-        gpus=-1,
-        # default_root_dir=str(cfg.checkpoint_dir),
-        # strategy=DeepSpeedStrategy(stage=3),
-        strategy="ddp",
-        # accumulate_grad_batches=cfg.accumulate_grad_batches,
-        # num_sanity_val_steps=2,
-        precision=cfg.precision,
-        max_epochs=cfg.epochs,
-        num_nodes=cfg.num_nodes,
+        gpus=-1, strategy="ddp", precision=cfg.precision, num_nodes=cfg.num_nodes
     )
 
     dataset = model.get_dataset(fasta_file)
