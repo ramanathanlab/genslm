@@ -13,8 +13,10 @@ from torch.utils.data import DataLoader
 from transformers import AutoConfig, AutoModelForCausalLM
 from transformers.utils import ModelOutput
 
+import gene_transformer
 from gene_transformer.config import BaseSettings
 from gene_transformer.dataset import FileBackedH5Dataset
+from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
     EmbeddingsCallback,
     LoadDeepSpeedStrategy,
@@ -45,6 +47,12 @@ class InferenceConfig(BaseSettings):
     """Number of batches loaded in advance by each worker."""
     pin_memory: bool = True
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
+
+    tokenizer_file: Path = (
+        Path(gene_transformer.__file__).parent
+        / "tokenizer_files"
+        / "codon_wordlevel_100vocab.json"
+    )
 
     @root_validator
     def assert_checkpoint_file_specified(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -81,26 +89,26 @@ class InferenceConfig(BaseSettings):
         return v
 
 
-class DNATransformer(pl.LightningModule):
-    def __init__(self, cfg: InferenceConfig) -> None:
-        # Loads from a hugging face JSON file
-        base_config = AutoConfig.from_pretrained(cfg.model_config_json)
-        self.model = AutoModelForCausalLM.from_config(base_config)
+# class DNATransformer(pl.LightningModule):
+#     def __init__(self, cfg: InferenceConfig) -> None:
+#         # Loads from a hugging face JSON file
+#         base_config = AutoConfig.from_pretrained(cfg.model_config_json)
+#         self.model = AutoModelForCausalLM.from_config(base_config)
 
-    def forward(
-        self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]
-    ) -> ModelOutput:
-        return self.model(
-            batch["input_ids"],
-            labels=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            **kwargs,
-        )
+#     def forward(
+#         self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]
+#     ) -> ModelOutput:
+#         return self.model(
+#             batch["input_ids"],
+#             labels=batch["input_ids"],
+#             attention_mask=batch["attention_mask"],
+#             **kwargs,
+#         )
 
-    def predict_step(
-        self, batch: Dict[str, torch.Tensor], batch_idx: int
-    ) -> ModelOutput:
-        return self(batch, output_hidden_states=True)
+#     def predict_step(
+#         self, batch: Dict[str, torch.Tensor], batch_idx: int
+#     ) -> ModelOutput:
+#         return self(batch, output_hidden_states=True)
 
 
 def main(config: InferenceConfig) -> npt.ArrayLike:
