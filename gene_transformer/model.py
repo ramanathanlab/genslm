@@ -22,7 +22,7 @@ from transformers.utils import ModelOutput
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
-from gene_transformer.dataset import CachingH5Dataset
+from gene_transformer.dataset import CachingH5Dataset, FileBackedH5Dataset
 from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
@@ -139,6 +139,7 @@ class DNATransformer(pl.LightningModule):
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         # Take mean embedding over sequence length
         emb = outputs.hidden_states[0].detach().cpu().numpy().mean(axis=1)
+        print(f"Embeddings shape: {emb.shape}")
         return emb
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
@@ -321,11 +322,9 @@ def inference(
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
 
-    trainer = pl.Trainer(
-        gpus=-1, strategy="ddp", precision=cfg.precision, num_nodes=cfg.num_nodes
-    )
+    trainer = pl.Trainer(gpus=-1, precision=cfg.precision, num_nodes=cfg.num_nodes)
 
-    dataset = model.get_dataset(fasta_file)
+    dataset = FileBackedH5Dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
     embeddings = trainer.predict(model, dataloaders=dataloader)
