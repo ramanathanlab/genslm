@@ -152,8 +152,6 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     trainer.predict(model, dataloaders=dataloader)
 
     embeddings = embedding_callback.embeddings
-    trainer._accelerator_connector.strategy.barrier()
-    embeddings = model.all_gather(embeddings)
 
     if trainer.is_global_zero:
         print(f"Embeddings shape: {embeddings.shape}")

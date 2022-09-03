@@ -532,11 +532,11 @@ class PerplexityCallback(Callback):
 class EmbeddingsCallback(Callback):
     def __init__(self, compute_mean: bool = True) -> None:
         self.compute_mean = compute_mean
-        self._embeddings: List[npt.ArrayLike] = []
+        self._embeddings = []
 
     @property
     def embeddings(self) -> npt.ArrayLike:
-        return np.concatenate(self._embeddings)
+        return self._embeddings
 
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
@@ -558,3 +558,11 @@ class EmbeddingsCallback(Callback):
             # Compute average over sequence length
             embed = np.mean(embed, axis=1)
         self._embeddings.append(embed)
+
+    def on_predict_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        trainer._accelerator_connector.strategy.barrier()
+        self._embeddings = torch.from_numpy(np.concatenate(self._embeddings))
+        self._embeddings = pl_module.all_gather(self._embeddings)
+        self._embeddings = self._embeddings.numpy()
