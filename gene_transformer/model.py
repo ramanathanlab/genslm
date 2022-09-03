@@ -175,8 +175,10 @@ def train(cfg: ModelSettings) -> None:
     if cfg.wandb_active:
         node_rank = os.environ.get("NODE_RANK", 0)
         print(f"Node rank: {node_rank}")
-        
-        print("Using Weights and Biases for logging...")
+        rank = os.environ.get("RANK")
+        local_rank = os.environ.get("LOCAL_RANK")
+
+        print(f"{rank=}, {local_rank=}")
         wandb_logger = WandbLogger(
             project=cfg.wandb_project_name,
             entity=cfg.wandb_entity_name,
