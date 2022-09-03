@@ -552,8 +552,8 @@ class EmbeddingsCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         # Need to gather embeddings across all ranks into a single array
-        trainer._accelerator_connector.strategy.barrier()
         self._embeddings = torch.cat(self._embeddings)
+        trainer._accelerator_connector.strategy.barrier()
         self._embeddings = pl_module.all_gather(self._embeddings)
         # Convert to host memory and concatenate over the ranks
         # Initial shape: (n_ranks, n_samples, n_hidden)
