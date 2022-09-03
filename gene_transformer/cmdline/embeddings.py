@@ -139,7 +139,7 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     )
 
     dataset = FileBackedH5Dataset(config.data_file)
-    dataset = Subset(dataset, np.arange(512))  # TODO: testing
+    # dataset = Subset(dataset, np.arange(512))  # for testing
     dataloader = DataLoader(
         dataset,
         batch_size=config.batch_size,
