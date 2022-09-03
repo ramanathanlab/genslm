@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import torch
 from pydantic import root_validator, validator
 from pytorch_lightning.strategies import DeepSpeedStrategy
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from transformers import AutoConfig, AutoModelForCausalLM
 from transformers.utils import ModelOutput
 
@@ -139,6 +139,7 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     )
 
     dataset = FileBackedH5Dataset(config.data_file)
+    dataset = Subset(dataset, np.arange(512))  # TODO: testing
     dataloader = DataLoader(
         dataset,
         batch_size=config.batch_size,
