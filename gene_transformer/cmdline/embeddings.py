@@ -134,7 +134,9 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
         num_nodes=config.num_nodes,
         callbacks=[embedding_callback],
         strategy=DeepSpeedStrategy(
-            stage=3, logging_batch_size_per_gpu=config.batch_size
+            stage=3,
+            offload_parameters=True,
+            logging_batch_size_per_gpu=config.batch_size,
         ),
     )
 
