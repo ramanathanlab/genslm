@@ -542,6 +542,8 @@ class EmbeddingsCallback(Callback):
         self._embeddings = []
         self.save_idx = 0
 
+        save_dir.mkdir(exist_ok=True)
+
     @property
     def embeddings(self) -> npt.ArrayLike:
         return self._embeddings
