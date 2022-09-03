@@ -81,7 +81,7 @@ class InferenceConfig(BaseSettings):
         return v
 
 
-class GeneTransformer(pl.LightningModule):
+class DNATransformer(pl.LightningModule):
     def __init__(self, cfg: InferenceConfig) -> None:
         # Loads from a hugging face JSON file
         base_config = AutoConfig.from_pretrained(cfg.model_config_json)
@@ -114,7 +114,7 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     else:
         model_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
 
-    model: GeneTransformer = model_strategy.get_model(GeneTransformer)
+    model: DNATransformer = model_strategy.get_model(DNATransformer)
 
     embedding_callback = EmbeddingsCallback()
     trainer = pl.Trainer(
