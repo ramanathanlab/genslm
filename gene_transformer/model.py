@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
@@ -31,6 +32,37 @@ from gene_transformer.utils import (
     SequenceGenerationCallback,
     ThroughputMonitor,
 )
+
+
+class EmbeddingsCallback(Callback):
+    def __init__(self, compute_mean: bool = True) -> None:
+        self.compute_mean = compute_mean
+        self._embeddings: List[npt.ArrayLike] = []
+
+    @property
+    def embeddings(self) -> npt.ArrayLike:
+        return np.concatenate(self._embeddings)
+
+    def on_predict_start(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self._embeddings = []
+
+    def on_predict_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+        dataloader_idx: int,
+    ) -> None:
+        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
+        embed = outputs.hidden_states[0].detach().cpu().numpy()
+        if self.compute_mean:
+            # Compute average over sequence length
+            embed = np.mean(embed, axis=1)
+        self._embeddings.append(embed)
 
 
 class DNATransformer(pl.LightningModule):
@@ -133,14 +165,14 @@ class DNATransformer(pl.LightningModule):
 
     def predict_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
-    ) -> np.ndarray:
+    ) -> ModelOutput:
         """Computes and returns the embeddings"""
-        outputs = self(batch, output_hidden_states=True)
+        return self(batch, output_hidden_states=True)
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         # Take mean embedding over sequence length
-        emb = outputs.hidden_states[0].detach().cpu().numpy().mean(axis=1)
-        print(f"Embeddings shape: {emb.shape}")
-        return emb
+        # emb = outputs.hidden_states[0].detach().cpu().numpy().mean(axis=1)
+        # print(f"Embeddings shape: {emb.shape}")
+        # return emb
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
@@ -322,23 +354,27 @@ def inference(
     """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
 
+    embedding_callback = EmbeddingsCallback()
     trainer = pl.Trainer(
         gpus=-1,
         strategy=DeepSpeedStrategy(stage=3),
         precision=cfg.precision,
         num_nodes=cfg.num_nodes,
+        callbacks=[embedding_callback],
     )
 
     dataset = FileBackedH5Dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
-    embeddings = trainer.predict(model, dataloaders=dataloader)
+    trainer.predict(model, dataloaders=dataloader)
+
+    embeddings = embedding_callback.embeddings
     # embeddings = generate_embeddings(model, dataloader, compute_mean)
     # if compute_mean:
     #     embeddings = [np.mean(emb, axis=1) for emb in embeddings]
     print(f"Embeddings shape: {embeddings.shape}")
-    embeddings = np.array(embeddings)
-    print(f"Embeddings shape: {embeddings.shape}")
+    # embeddings = np.array(embeddings)
+    # print(f"Embeddings shape: {embeddings.shape}")
     if output_path:
         assert Path(output_path).suffix == ".npy"
         np.save(output_path, embeddings)
