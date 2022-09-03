@@ -587,7 +587,7 @@ class EmbeddingsCallback(Callback):
             embed = embed.mean(dim=1)
         self._embeddings.append(embed)
 
-        if batch_idx % self.batches_per_save == 0:
+        if batch_idx + 1 % self.batches_per_save == 0:
             self._gather_embeddings(trainer, pl_module)
             self._save_embeddings(trainer)
             self._embeddings = []
@@ -595,5 +595,6 @@ class EmbeddingsCallback(Callback):
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        self._gather_embeddings(trainer, pl_module)
-        self._save_embeddings(trainer)
+        if self._embeddings:
+            self._gather_embeddings(trainer, pl_module)
+            self._save_embeddings(trainer)
