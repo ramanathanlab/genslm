@@ -41,11 +41,11 @@ class InferenceConfig(BaseSettings):
     """Number of nodes to use for inference."""
     batch_size: int = 32
     """Batch size to use for inference."""
-    num_data_workers: int = 4
+    num_data_workers: int = 0
     """Number of subprocesses to use for data loading."""
-    prefetch_factor: int = 4
+    prefetch_factor: int = 2
     """Number of batches loaded in advance by each worker."""
-    pin_memory: bool = True
+    pin_memory: bool = False
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
 
     # Parameters needed to initialize DNATransformer (not used for inference)
