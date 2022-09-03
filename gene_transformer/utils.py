@@ -565,4 +565,4 @@ class EmbeddingsCallback(Callback):
         trainer._accelerator_connector.strategy.barrier()
         self._embeddings = torch.from_numpy(np.concatenate(self._embeddings))
         self._embeddings = pl_module.all_gather(self._embeddings)
-        self._embeddings = self._embeddings.numpy()
+        self._embeddings = self._embeddings.cpu().numpy()
