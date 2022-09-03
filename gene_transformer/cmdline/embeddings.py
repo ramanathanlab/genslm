@@ -82,9 +82,9 @@ class InferenceConfig(BaseSettings):
 
 
 class GeneTransformer(pl.LightningModule):
-    def __init__(self, model_config_json: Path) -> None:
+    def __init__(self, cfg: InferenceConfig) -> None:
         # Loads from a hugging face JSON file
-        base_config = AutoConfig.from_pretrained(model_config_json)
+        base_config = AutoConfig.from_pretrained(cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(base_config)
 
     def forward(
@@ -108,13 +108,9 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     pl.seed_everything(0)
 
     if config.load_pt_checkpoint:
-        model_strategy = LoadPTCheckpointStrategy(
-            config.load_pt_checkpoint, model_config_json=config.model_config_json
-        )
+        model_strategy = LoadPTCheckpointStrategy(config.load_pt_checkpoint, cfg=config)
     else:
-        model_strategy = LoadDeepSpeedStrategy(
-            config.load_ds_checkpoint, model_config_json=config.model_config_json
-        )
+        model_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
 
     model: GeneTransformer = model_strategy.get_model(GeneTransformer)
 
