@@ -540,7 +540,7 @@ class EmbeddingsCallback(Callback):
         self.batches_per_save = batches_per_save
         self.save_dir = save_dir
         self._embeddings = []
-        self.batch_idx = 0
+        self.save_idx = 0
 
     @property
     def embeddings(self) -> npt.ArrayLike:
@@ -558,13 +558,15 @@ class EmbeddingsCallback(Callback):
         # Final shape: (n_ranks * n_samples, n_hidden)
         self._embeddings = np.concatenate(self._embeddings.cpu().numpy())
 
-    def _save_embeddings(self) -> None:
-        np.save(self.save_dir / f"embeddings-{self.batch_idx}.npy", self._embeddings)
+    def _save_embeddings(self, trainer: "pl.Trainer") -> None:
+        if trainer.is_global_zero:
+            np.save(self.save_dir / f"embeddings-{self.save_idx}.npy", self._embeddings)
+            self.save_idx += 1
 
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        self.batch_idx = 0
+        self.save_idx = 0
         self._embeddings = []
 
     def on_predict_batch_end(
@@ -584,14 +586,12 @@ class EmbeddingsCallback(Callback):
         self._embeddings.append(embed)
 
         if batch_idx % self.batches_per_save == 0:
-            self.batch_idx = batch_idx
             self._gather_embeddings(trainer, pl_module)
-            self._save_embeddings()
+            self._save_embeddings(trainer)
             self._embeddings = []
 
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         self._gather_embeddings(trainer, pl_module)
-        self.batch_idx += 1  # Increment to name the saved file
-        self._save_embeddings()
+        self._save_embeddings(trainer)
