@@ -14,7 +14,7 @@ from transformers import AutoConfig, AutoModelForCausalLM
 from transformers.utils import ModelOutput
 
 import gene_transformer
-from gene_transformer.config import BaseSettings
+from gene_transformer.config import BaseSettings, WarmupLRSettings
 from gene_transformer.dataset import FileBackedH5Dataset
 from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
@@ -55,7 +55,7 @@ class InferenceConfig(BaseSettings):
         / "codon_wordlevel_100vocab.json"
     )
     learning_rate: float = 5e-5
-    """Learning rate to use for training."""
+    warm_up_lr: Optional[WarmupLRSettings] = None
 
     @root_validator
     def assert_checkpoint_file_specified(cls, values: Dict[str, Any]) -> Dict[str, Any]:
