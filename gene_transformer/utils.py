@@ -553,10 +553,10 @@ class EmbeddingsCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        embed = outputs.hidden_states[0].detach().cpu().numpy()
+        embed = outputs.hidden_states[0].detach().cpu()
         if self.compute_mean:
             # Compute average over sequence length
-            embed = np.mean(embed, axis=1)
+            embed = embed.mean(dim=1)
         self._embeddings.append(embed)
 
     def on_predict_end(
@@ -564,7 +564,7 @@ class EmbeddingsCallback(Callback):
     ) -> None:
         # Need to gather embeddings across all ranks into a single array
         trainer._accelerator_connector.strategy.barrier()
-        self._embeddings = torch.from_numpy(np.concatenate(self._embeddings))
+        self._embeddings = torch.cat(self._embeddings)
         self._embeddings = pl_module.all_gather(self._embeddings)
         # Convert to host memory and concatenate over the ranks
         # Initial shape: (n_ranks, n_samples, n_hidden)
