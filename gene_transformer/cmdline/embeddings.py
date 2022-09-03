@@ -97,7 +97,9 @@ class GeneTransformer(pl.LightningModule):
             **kwargs,
         )
 
-    def predict_step(self, batch: Any, batch_idx: int) -> ModelOutput:
+    def predict_step(
+        self, batch: Dict[str, torch.Tensor], batch_idx: int
+    ) -> ModelOutput:
         return self(batch, output_hidden_states=True)
 
 
