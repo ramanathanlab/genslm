@@ -130,10 +130,12 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     embedding_callback = EmbeddingsCallback()
     trainer = pl.Trainer(
         gpus=-1,
-        strategy=DeepSpeedStrategy(stage=3),
         precision=config.precision,
         num_nodes=config.num_nodes,
         callbacks=[embedding_callback],
+        strategy=DeepSpeedStrategy(
+            stage=3, logging_batch_size_per_gpu=config.batch_size
+        ),
     )
 
     dataset = FileBackedH5Dataset(config.data_file)
