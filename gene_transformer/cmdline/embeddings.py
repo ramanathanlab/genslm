@@ -22,6 +22,9 @@ from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
 )
+    LoadDeepSpeedStrategy,
+    LoadPTCheckpointStrategy,
+)
 
 
 class InferenceConfig(BaseSettings):
@@ -152,8 +155,13 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     trainer.predict(model, dataloaders=dataloader)
 
     embeddings = embedding_callback.embeddings
-    print(f"Embeddings shape: {embeddings.shape}")
-    np.save(config.embeddings_out_path, embeddings)
+    trainer._accelerator_connector.strategy.barrier()
+    embeddings = model.all_gather(embeddings)
+
+    if trainer.is_global_zero:
+        print(f"Embeddings shape: {embeddings.shape}")
+        np.save(config.embeddings_out_path, embeddings)
+
     return embeddings
 
 
