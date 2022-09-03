@@ -175,16 +175,16 @@ def train(cfg: ModelSettings) -> None:
     if cfg.wandb_active:
         node_rank = os.environ.get("NODE_RANK", 0)
         print(f"Node rank: {node_rank}")
-        if node_rank == 1:
-            print("Using Weights and Biases for logging...")
-            wandb_logger = WandbLogger(
-                project=cfg.wandb_project_name,
-                entity=cfg.wandb_entity_name,
-                name=cfg.wandb_model_tag,
-                id=cfg.wandb_model_tag,
-                # resume="must",
-            )
-            callbacks.append(LearningRateMonitor(logging_interval="step"))
+        
+        print("Using Weights and Biases for logging...")
+        wandb_logger = WandbLogger(
+            project=cfg.wandb_project_name,
+            entity=cfg.wandb_entity_name,
+            name=cfg.wandb_model_tag,
+            id=cfg.wandb_model_tag,
+            # resume="must",
+        )
+        callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     if cfg.checkpoint_dir is not None:
         callbacks.append(
