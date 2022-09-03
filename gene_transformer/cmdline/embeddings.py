@@ -48,11 +48,14 @@ class InferenceConfig(BaseSettings):
     pin_memory: bool = True
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
 
+    # Parameters needed to initialize DNATransformer (not used for inference)
     tokenizer_file: Path = (
         Path(gene_transformer.__file__).parent
         / "tokenizer_files"
         / "codon_wordlevel_100vocab.json"
     )
+    learning_rate: float = 5e-5
+    """Learning rate to use for training."""
 
     @root_validator
     def assert_checkpoint_file_specified(cls, values: Dict[str, Any]) -> Dict[str, Any]:
