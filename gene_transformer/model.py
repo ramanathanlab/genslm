@@ -416,7 +416,9 @@ if __name__ == "__main__":
             )
 
         if args.inference_model_load == "pt":
-            model_strategy = LoadPTCheckpointStrategy(args.pt_file, cfg=config)
+            model_strategy = LoadPTCheckpointStrategy(
+                args.inference_pt_file, cfg=config
+            )
         elif args.inference_model_load == "deepspeed":
             if config.load_ds_checkpoint is None:
                 raise ValueError(
