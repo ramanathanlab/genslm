@@ -22,9 +22,6 @@ from gene_transformer.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
 )
-    LoadDeepSpeedStrategy,
-    LoadPTCheckpointStrategy,
-)
 
 
 class InferenceConfig(BaseSettings):
