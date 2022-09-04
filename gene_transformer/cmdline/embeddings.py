@@ -3,15 +3,9 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import numpy as np
-import numpy.typing as npt
 import pytorch_lightning as pl
-import torch
 from pydantic import root_validator, validator
-from pytorch_lightning.strategies import DeepSpeedStrategy
-from torch.utils.data import DataLoader, Subset
-from transformers import AutoConfig, AutoModelForCausalLM
-from transformers.utils import ModelOutput
+from torch.utils.data import DataLoader  # Subset
 
 import gene_transformer
 from gene_transformer.config import BaseSettings, WarmupLRSettings
@@ -134,11 +128,6 @@ def main(config: InferenceConfig) -> None:
         num_nodes=config.num_nodes,
         callbacks=[embedding_callback],
         strategy="ddp",
-        # strategy=DeepSpeedStrategy(
-        #     stage=3,
-        #     # offload_parameters=True,
-        #     logging_batch_size_per_gpu=config.batch_size,
-        # ),
     )
 
     dataset = FileBackedH5Dataset(config.data_file)
@@ -153,14 +142,6 @@ def main(config: InferenceConfig) -> None:
 
     print(f"Running inference with dataset length {len(dataloader)}")
     trainer.predict(model, dataloaders=dataloader)
-
-    # embeddings = embedding_callback.embeddings
-
-    # if trainer.is_global_zero:
-    #     print(f"Embeddings shape: {embeddings.shape}")
-    #     np.save(config.embeddings_out_path, embeddings)
-
-    # return embeddings
 
 
 if __name__ == "__main__":

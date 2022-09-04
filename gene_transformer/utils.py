@@ -1,12 +1,11 @@
 import time
+import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 from statistics import mean
-import uuid
 from typing import Any, Dict, List, Optional, Set, Type
 
 import numpy as np
-import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 from Bio import SeqIO  # type: ignore[import]
@@ -616,7 +615,7 @@ class EmbeddingsCallback(Callback):
 
     def _gather_data(self) -> None:
         self.embeddings = torch.cat(self.embeddings).numpy()
-        self.indices = torch.cat(self.indices).numpy()
+        self.indices = torch.cat(self.indices).numpy().squeeze()
 
     def _save_embeddings(self) -> None:
         rank_label = uuid.uuid4()
