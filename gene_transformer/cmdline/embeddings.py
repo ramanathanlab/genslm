@@ -22,7 +22,7 @@ class InferenceConfig(BaseSettings):
     data_file: Path
     """Data file to run inference on (HDF5)."""
     embeddings_out_path: Path
-    """Output path to write embeddings to (npy)."""
+    """Directory to write embeddings to."""
     model_config_json: Path
     """Huggingface json dict to load AutoConfig from."""
     load_pt_checkpoint: Optional[Path] = None
@@ -79,12 +79,6 @@ class InferenceConfig(BaseSettings):
             raise FileNotFoundError(f"load_ds_checkpoint path does not exist {v}.")
         return v
 
-    @validator("embeddings_out_path")
-    def assert_embeddings_out_path_npy(cls, v: Path) -> Path:
-        if v.suffix != ".npy":
-            raise ValueError("embeddings_out_path must have a .npy extension")
-        return v
-
 
 # class DNATransformer(pl.LightningModule):
 #     def __init__(self, cfg: InferenceConfig) -> None:
@@ -121,7 +115,7 @@ def main(config: InferenceConfig) -> None:
 
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 
-    embedding_callback = EmbeddingsCallback()
+    embedding_callback = EmbeddingsCallback(save_dir=config.embeddings_out_path)
     trainer = pl.Trainer(
         gpus=-1,
         precision=config.precision,
