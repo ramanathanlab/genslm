@@ -553,12 +553,14 @@ class EmbeddingsCallback(Callback):
     ) -> None:
         # Need to gather embeddings across all ranks into a single array
         self._embeddings = torch.cat(self._embeddings)
+        print(f"before gather: {self._embeddings.shape}")
         trainer._accelerator_connector.strategy.barrier()
         self._embeddings = pl_module.all_gather(self._embeddings)
         # Convert to host memory and concatenate over the ranks
         # Initial shape: (n_ranks, n_samples, n_hidden)
         # Final shape: (n_ranks * n_samples, n_hidden)
         self._embeddings = np.concatenate(self._embeddings.cpu().numpy())
+        print(f"after gather: {self._embeddings.shape}")
 
     def _save_embeddings(self, trainer: "pl.Trainer") -> None:
         if trainer.is_global_zero:
