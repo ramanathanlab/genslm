@@ -41,11 +41,11 @@ class InferenceConfig(BaseSettings):
     """Number of nodes to use for inference."""
     batch_size: int = 32
     """Batch size to use for inference."""
-    num_data_workers: int = 0
+    num_data_workers: int = 4
     """Number of subprocesses to use for data loading."""
     prefetch_factor: int = 2
     """Number of batches loaded in advance by each worker."""
-    pin_memory: bool = False
+    pin_memory: bool = True
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
 
     # Parameters needed to initialize DNATransformer (not used for inference)
@@ -114,7 +114,7 @@ class InferenceConfig(BaseSettings):
 #         return self(batch, output_hidden_states=True)
 
 
-def main(config: InferenceConfig) -> npt.ArrayLike:
+def main(config: InferenceConfig) -> None:
     # Setup torch environment
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     # torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
@@ -133,11 +133,12 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
         precision=config.precision,
         num_nodes=config.num_nodes,
         callbacks=[embedding_callback],
-        strategy=DeepSpeedStrategy(
-            stage=3,
-            # offload_parameters=True,
-            logging_batch_size_per_gpu=config.batch_size,
-        ),
+        strategy="ddp",
+        # strategy=DeepSpeedStrategy(
+        #     stage=3,
+        #     # offload_parameters=True,
+        #     logging_batch_size_per_gpu=config.batch_size,
+        # ),
     )
 
     dataset = FileBackedH5Dataset(config.data_file)
@@ -153,13 +154,13 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
     print(f"Running inference with dataset length {len(dataloader)}")
     trainer.predict(model, dataloaders=dataloader)
 
-    embeddings = embedding_callback.embeddings
+    # embeddings = embedding_callback.embeddings
 
-    if trainer.is_global_zero:
-        print(f"Embeddings shape: {embeddings.shape}")
-        np.save(config.embeddings_out_path, embeddings)
+    # if trainer.is_global_zero:
+    #     print(f"Embeddings shape: {embeddings.shape}")
+    #     np.save(config.embeddings_out_path, embeddings)
 
-    return embeddings
+    # return embeddings
 
 
 if __name__ == "__main__":

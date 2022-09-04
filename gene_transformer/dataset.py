@@ -368,10 +368,12 @@ class FileBackedH5Dataset(Dataset, H5PreprocessMixin):
 
     def read_from_h5(self, idx: int) -> Dict[str, torch.Tensor]:
         # Accessing self.h5_file may raise AttributeError
-        return {
+        sample = {
             key: torch.tensor(self.h5_file[key][idx][...]).long()
             for key in ["input_ids", "attention_mask"]
         }
+        sample["indices"] = torch.from_numpy(np.array([idx]))
+        return sample
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         try:
