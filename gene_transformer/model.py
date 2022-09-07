@@ -180,7 +180,7 @@ def train(cfg: ModelSettings) -> None:
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
         print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
-        if int(rank) == 0:
+        if rank == 0 and node_rank == 0:
             wandb_logger = WandbLogger(
                 project=cfg.wandb_project_name,
                 entity=cfg.wandb_entity_name,
