@@ -3,9 +3,9 @@
   "architectures": [
     "GPT2LMHeadModel"
   ],
-  "n_embd": 2472,
-  "n_head": 24,
-  "n_layer": 20,
+  "n_embd": 1152,
+  "n_head": 16,
+  "n_layer": 16,
   "n_inner": null,
   "attn_pdrop": 0.1,
   "embd_pdrop": 0.1,
