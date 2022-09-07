@@ -182,7 +182,7 @@ def train(cfg: ModelSettings) -> None:
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
         print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
-        if int(rank) == 0 and int(node_rank) == 0:
+        if int(rank) == 0 and local_rank is None:
             # wandb.init()
             print("Found the right rank")
             wandb_logger = WandbLogger(
