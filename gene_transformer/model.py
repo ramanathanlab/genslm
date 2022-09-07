@@ -34,6 +34,8 @@ from gene_transformer.utils import (
     ThroughputMonitor,
 )
 
+import wandb
+
 
 class DNATransformer(pl.LightningModule):
 
@@ -180,7 +182,8 @@ def train(cfg: ModelSettings) -> None:
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
         print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
-        if local_rank == 0:
+        if rank == 0:
+            wandb.init()
             print("Found the right rank")
             wandb_logger = WandbLogger(
                 project=cfg.wandb_project_name,
