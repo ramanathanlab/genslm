@@ -180,14 +180,15 @@ def train(cfg: ModelSettings) -> None:
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
         print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
-        wandb_logger = WandbLogger(
-            project=cfg.wandb_project_name,
-            entity=cfg.wandb_entity_name,
-            name=cfg.wandb_model_tag,
-            id=cfg.wandb_model_tag,
-            # resume="must",
-        )
-        callbacks.append(LearningRateMonitor(logging_interval="step"))
+        if int(rank) == 0:
+            wandb_logger = WandbLogger(
+                project=cfg.wandb_project_name,
+                entity=cfg.wandb_entity_name,
+                name=cfg.wandb_model_tag,
+                id=cfg.wandb_model_tag,
+                # resume="must",
+            )
+            callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     if cfg.checkpoint_dir is not None:
         callbacks.append(
