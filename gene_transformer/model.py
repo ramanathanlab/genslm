@@ -116,7 +116,8 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        #self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(
@@ -124,7 +125,8 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        # self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def test_step(
@@ -132,7 +134,9 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        # self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def predict_step(
@@ -182,8 +186,8 @@ def train(cfg: ModelSettings) -> None:
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
         print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
+        # For some reason, this is how it looks on Polaris for global_rank zero
         if int(rank) == 0 and local_rank is None:
-        #     # wandb.init()
             print("Found the right rank")
             wandb_logger = WandbLogger(
                 project=cfg.wandb_project_name,
