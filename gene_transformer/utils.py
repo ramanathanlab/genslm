@@ -637,10 +637,12 @@ class EmbeddingsCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        embed = outputs.hidden_states[0].detach().cpu()
         if self.compute_mean:
             # Compute average over sequence length
-            embed = embed.mean(dim=1)
+            embed = outputs.hidden_states[0].detach().mean(dim=1).cpu()
+        else:
+            embed = outputs.hidden_states[0].detach().cpu()
+
         self.embeddings.append(embed)
         self.indices.append(batch["indices"].detach().cpu())
 

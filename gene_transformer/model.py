@@ -329,7 +329,7 @@ def inference(
     dataset = FileBackedH5Dataset(fasta_file)
     dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
     print(f"Running inference with dataset length {len(dataloader)}")
-    trainer.predict(model, dataloaders=dataloader)
+    trainer.predict(model, dataloaders=dataloader, return_predictions=False)
 
     embeddings = embedding_callback.embeddings
     print(f"Embeddings shape: {embeddings.shape}")
