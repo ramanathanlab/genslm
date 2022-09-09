@@ -25,14 +25,18 @@ def _write_fasta_file(seq: SeqIO.SeqRecord, output_file: Path) -> None:
     SeqIO.write(seq, str(output_file), "fasta")
 
 
-def write_individual_fasta_files(fasta_file: Path, output_dir: Path, num_workers: int = 1) -> None:
+def write_individual_fasta_files(
+    fasta_file: Path, output_dir: Path, num_workers: int = 1
+) -> None:
     output_dir.mkdir(exist_ok=True)
     seqs = list(SeqIO.parse(fasta_file, "fasta"))
     output_files = [output_dir / f"sequence-{i}.fasta" for i in range(len(seqs))]
     print(f"Number of sequences: {len(seqs)}")
     chunksize = max(1, len(seqs) // num_workers)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for _ in executor.map(_write_fasta_file, seqs, output_files, chunksize=chunksize):
+        for _ in executor.map(
+            _write_fasta_file, seqs, output_files, chunksize=chunksize
+        ):
             pass
 
 
@@ -85,7 +89,9 @@ class FastaDataset(Dataset):
 
 class H5PreprocessMixin:
     @staticmethod
-    def train_val_test_split(seqs: List[str], train_pct: float, val_pct: float) -> Dict[str, List[str]]:
+    def train_val_test_split(
+        seqs: List[str], train_pct: float, val_pct: float
+    ) -> Dict[str, List[str]]:
         np.random.seed(42)
         shuffled_inds = np.arange(len(seqs))
         np.random.shuffle(shuffled_inds)
@@ -111,7 +117,9 @@ class H5PreprocessMixin:
     ) -> None:
         if train_val_test_split is not None:
             if sum(train_val_test_split.values()) != 1:
-                raise ValueError(f"Train test val split percentages {train_val_test_split} do not add up to 100%")
+                raise ValueError(
+                    f"Train test val split percentages {train_val_test_split} do not add up to 100%"
+                )
 
         sequences = list(SeqIO.parse(fasta_file, "fasta"))
         print(f"File: {fasta_file}, num sequences: {len(sequences)}")
@@ -121,7 +129,9 @@ class H5PreprocessMixin:
         if train_val_test_split is not None:
             train_percentage = train_val_test_split["train"]
             val_percentage = train_val_test_split["val"]
-            sequence_splits = H5PreprocessMixin.train_val_test_split(sequences, train_percentage, val_percentage)
+            sequence_splits = H5PreprocessMixin.train_val_test_split(
+                sequences, train_percentage, val_percentage
+            )
 
             split_length = sum(len(split) for split in sequence_splits.values())
             assert split_length == len(sequences)
@@ -132,7 +142,9 @@ class H5PreprocessMixin:
         for split_name, split_sequences in sequence_splits.items():
 
             if not split_sequences:
-                warnings.warn(f"{fasta_file} {split_name} split led to empty input array")
+                warnings.warn(
+                    f"{fasta_file} {split_name} split led to empty input array"
+                )
                 continue
 
             fields = defaultdict(list)
@@ -157,7 +169,9 @@ class H5PreprocessMixin:
             # Write to HDF5 file
             local_output_file = Path(output_file)
             if split_name != "all":
-                local_output_file = local_output_file.parent / split_name / local_output_file.name
+                local_output_file = (
+                    local_output_file.parent / split_name / local_output_file.name
+                )
 
             with h5py.File(local_output_file, "w") as f:
                 str_dtype = h5py.string_dtype(encoding="utf-8")
@@ -169,9 +183,13 @@ class H5PreprocessMixin:
                     compression_opts=compression_ratio,
                 )
                 create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
-                create_dataset("attention_mask", data=fields["attention_mask"], dtype="i8")
+                create_dataset(
+                    "attention_mask", data=fields["attention_mask"], dtype="i8"
+                )
                 create_dataset("id", data=fields["id"], dtype=str_dtype)
-                create_dataset("description", data=fields["description"], dtype=str_dtype)
+                create_dataset(
+                    "description", data=fields["description"], dtype=str_dtype
+                )
                 create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
     @staticmethod
@@ -180,11 +198,13 @@ class H5PreprocessMixin:
             return f[field].shape[0]
 
     @staticmethod
-    def get_num_samples(input_files: List[Path], field: str, num_workers: int = 1) -> List[int]:
+    def get_num_samples(
+        input_files: List[Path], field: str, num_workers: int = 1
+    ) -> List[int]:
         lengths = []
         func = functools.partial(H5PreprocessMixin.get_num_samples_in_file, field=field)
         chunksize = max(1, len(input_files) // num_workers)
-        with ProcessPoolExecutor() as pool:
+        with ProcessPoolExecutor(max_workers=num_workers) as pool:
             for length in pool.map(func, input_files, chunksize=chunksize):
                 lengths.append(length)
         return lengths
@@ -247,7 +267,9 @@ class H5PreprocessMixin:
             for field in fields:
                 for i, filename in enumerate(input_files):
                     shape = h5_file[field].shape
-                    vsource = h5py.VirtualSource(filename, field, shape=(lengths[i], *shape[1:]))
+                    vsource = h5py.VirtualSource(
+                        filename, field, shape=(lengths[i], *shape[1:])
+                    )
                     start_idx = sum(lengths[:i])
                     end_idx = sum(lengths[: i + 1])
                     layouts[field][start_idx:end_idx, ...] = vsource
@@ -314,7 +336,9 @@ class CachingH5Dataset(Dataset, H5PreprocessMixin):
 
     def cache_sample_from_h5(self, idx: int) -> None:
         # Accessing self.h5_file may raise AttributeError
-        self.samples[idx] = {key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]}
+        self.samples[idx] = {
+            key: self.h5_file[key][idx][...] for key in ["input_ids", "attention_mask"]
+        }
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         try:
@@ -346,7 +370,10 @@ class FileBackedH5Dataset(Dataset, H5PreprocessMixin):
 
     def read_from_h5(self, idx: int) -> Dict[str, torch.Tensor]:
         # Accessing self.h5_file may raise AttributeError
-        sample = {key: torch.tensor(self.h5_file[key][idx][...]).long() for key in ["input_ids", "attention_mask"]}
+        sample = {
+            key: torch.tensor(self.h5_file[key][idx][...]).long()
+            for key in ["input_ids", "attention_mask"]
+        }
         sample["indices"] = torch.from_numpy(np.array([idx]))
         return sample
 
