@@ -17,6 +17,7 @@ def main(
     compression_type: Optional[str],
     compression_ratio: int,
 ):
+    print(tokenizer_path)
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_path)))
 
     H5Dataset.preprocess(
