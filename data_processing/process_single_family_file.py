@@ -39,7 +39,7 @@ if __name__ == "__main__":
         "-t",
         "--tokenizer_file",
         help="Path to tokenizer file",
-        default=(fp.parent.parent / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"),
+        default=(fp / fp.parent.parent / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"),
     )
     parser.add_argument(
         "-cr", "--compression_ratio", help="Compression ratio to use for the H5 file, (0-9)", type=int, default=6
