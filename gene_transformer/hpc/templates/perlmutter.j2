@@ -20,6 +20,8 @@ echo "MASTER_ADDR="$MASTER_ADDR
 export NCCL_DEBUG=INFO
 export PYTHONFAULTHANDLER=1
 
+export WANDB_ACTIVE=1
+
 shifter /bin/bash
 cd {{ workdir }}
 srun /opt/conda/bin/python -m gene_transformer.model -c {{ config }}
