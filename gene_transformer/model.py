@@ -200,9 +200,7 @@ def train(cfg: ModelSettings) -> None:
             f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}"
         )
         # # For some reason, this is how it looks on Polaris for global_rank zero
-        # if int(rank) == 0 and local_rank is None:
-        if wandb_active_env:
-            print("Found the right rank")
+        if (int(rank) == 0 and local_rank is None) or bool(wandb_active_env):
             wandb_logger = WandbLogger(
                 project=cfg.wandb_project_name,
                 entity=cfg.wandb_entity_name,
