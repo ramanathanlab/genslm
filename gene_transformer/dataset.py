@@ -323,10 +323,12 @@ class H5PreprocessMixin:
             # }
             print(f"Made h5 datasets {h5_datasets}")
 
+            prev_shape_counter = 0
             for h5_file in tqdm(h5_files):
                 for key, dset in h5_datasets.items():
                     inshape = h5_file[key].shape[0]
-                    dset.resize(dset.shape[0] + inshape, axis=0)
+                    dset.resize(prev_shape_counter + inshape, axis=0)
+                    prev_shape_counter += inshape
                     dset[-inshape:] = h5_file[key][...]
 
 
