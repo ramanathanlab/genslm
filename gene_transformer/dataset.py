@@ -310,10 +310,16 @@ class H5PreprocessMixin:
             fields = list(first.keys())
             shapes = {key: (None, *first[key].shape[1:]) for key in fields}
             print(f"Made shapes dict {shapes}")
-            h5_datasets = {
-                key: out_h5.create_dataset_like(key, first[key], maxshape=shapes[key])
-                for key in fields
-            }
+            h5_datasets = {}
+            for key in fields:
+                print(f"Creating dataset like with key: {key}")
+                h5_datasets[key] = out_h5.create_dataset_like(
+                    key, first[key], maxshape=shapes[key]
+                )
+            # h5_datasets = {
+            #     key: out_h5.create_dataset_like(key, first[key], maxshape=shapes[key])
+            #     for key in fields
+            # }
             print(f"Made h5 datasets {h5_datasets}")
 
             for h5_file in tqdm(h5_files):
