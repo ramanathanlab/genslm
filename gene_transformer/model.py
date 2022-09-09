@@ -34,8 +34,6 @@ from gene_transformer.utils import (
     ThroughputMonitor,
 )
 
-import wandb
-
 
 class DNATransformer(pl.LightningModule):
 
@@ -116,7 +114,14 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log(
+            "train/loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True,
+        )
         return loss
 
     def validation_step(
@@ -124,7 +129,9 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log(
+            "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True
+        )
         return loss
 
     def test_step(
@@ -132,7 +139,14 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log(
+            "test/loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True,
+        )
         return loss
 
     def predict_step(
@@ -181,7 +195,9 @@ def train(cfg: ModelSettings) -> None:
         slurm_procid = os.environ.get("SLURM_PROCID")
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
 
-        print(f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}")
+        print(
+            f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}"
+        )
         # For some reason, this is how it looks on Polaris for global_rank zero
         if int(rank) == 0 and local_rank is None:
             print("Found the right rank")
@@ -399,7 +415,7 @@ if __name__ == "__main__":
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
-    
+
     # check if we're computing throughput - this means a new config with specific settings - default is false
     if config.compute_throughput:
         warnings.warn(
