@@ -55,13 +55,13 @@ if __name__ == "__main__":
         "-cr",
         "--compression_ratio",
         help="Compression ratio to use for the H5 file, (0-9)",
-        type=int,
-        default=6,
+        type=Optional[int],
+        default=None,
     )
     parser.add_argument(
         "-ct",
         "--compression_type",
-        help="Compression ratio to use for the H5 file, (0-9)",
+        help="Compression type to use for the H5 file, (gzip, something else, None)",
         type=Optional[str],
         default=None,
     )
@@ -79,6 +79,6 @@ if __name__ == "__main__":
         args.output,
         args.tokenizer_file,
         args.block_size,
-        args.compression_ratio,
         args.compression_type,
+        args.compression_ratio,
     )

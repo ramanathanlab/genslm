@@ -172,7 +172,6 @@ class H5PreprocessMixin:
                 local_output_file = (
                     local_output_file.parent / split_name / local_output_file.name
                 )
-            print(f"{compression_type=}, {compression_ratio=}")
             with h5py.File(local_output_file, "w") as f:
                 str_dtype = h5py.string_dtype(encoding="utf-8")
                 create_dataset = functools.partial(
@@ -191,6 +190,10 @@ class H5PreprocessMixin:
                     "description", data=fields["description"], dtype=str_dtype
                 )
                 create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
+
+            print(
+                f"File saved to: {local_output_file}, {compression_type=}, {compression_ratio=}"
+            )
 
     @staticmethod
     def get_num_samples_in_file(file: Path, field: str) -> int:
