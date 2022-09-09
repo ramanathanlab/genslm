@@ -3,6 +3,7 @@ import warnings
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from contextlib import ExitStack
 from typing import Any, Dict, List, Optional, Tuple
 
 import h5py
@@ -178,8 +179,8 @@ class H5PreprocessMixin:
                     f.create_dataset,
                     fletcher32=True,
                     chunks=True,
-                    # compression=compression_type,
-                    # compression_opts=compression_ratio,
+                    compression=compression_type,
+                    compression_opts=compression_ratio,
                 )
                 create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
                 create_dataset(
@@ -280,6 +281,42 @@ class H5PreprocessMixin:
                 f.create_virtual_dataset(field, layouts[field])
 
         h5_file.close()
+
+    @staticmethod
+    def concatenate_h5(
+        input_files: List[Path],
+        output_file: Path,
+    ) -> None:
+        """Concatenate many HDF5 files into a single large HDF5 file.
+        .
+        Parameters
+        ----------
+        input_files : List[Path]
+            List of HDF5 file names to concatenate.
+        output_file : Path
+            Name of output virtual HDF5 file.
+        """
+        with ExitStack() as stack:
+            # Open all HDF5 files
+            h5_files = [stack.enter_context(h5py.File(f, "r")) for f in input_files]
+
+            # Open HDF5 file to write to
+            out_h5 = stack.enter_context(h5py.File(output_file, "w"))
+
+            # Compute max shapes with the first file
+            first = h5_files[0]
+            fields = list(first.keys())
+            shapes = {key: (None, *first[key].shape[1:]) for key in fields}
+            h5_datasets = {
+                key: out_h5.create_dataset_like(key, first[key], maxshape=shapes[key])
+                for key in fields
+            }
+
+            for h5_file in h5_files:
+                for key, dset in h5_datasets.items():
+                    inshape = h5_file[key].shape[0]
+                    dset.resize(dset.shape[0] + inshape, axis=0)
+                    dset[-inshape:] = h5_file[key][...]
 
 
 class H5Dataset(Dataset, H5PreprocessMixin):
