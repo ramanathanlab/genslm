@@ -314,7 +314,7 @@ class H5PreprocessMixin:
             for key in fields:
                 print(f"Creating dataset like with key: {key}")
                 h5_datasets[key] = out_h5.create_dataset_like(
-                    key, first[key], maxshape=shapes[key]
+                    key, first[key], maxshape=shapes[key], dtype=first[key].dtype
                 )
             # h5_datasets = {
             #     key: out_h5.create_dataset_like(key, first[key], maxshape=shapes[key])
