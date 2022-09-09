@@ -13,6 +13,7 @@ from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerFast
+from tqdm import tqdm
 
 from gene_transformer.config import PathLike
 
@@ -312,7 +313,7 @@ class H5PreprocessMixin:
                 for key in fields
             }
 
-            for h5_file in h5_files:
+            for h5_file in tqdm(h5_files):
                 for key, dset in h5_datasets.items():
                     inshape = h5_file[key].shape[0]
                     dset.resize(dset.shape[0] + inshape, axis=0)
