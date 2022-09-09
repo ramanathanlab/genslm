@@ -311,13 +311,16 @@ class H5Dataset(Dataset, H5PreprocessMixin):
 
 
 class CachingH5Dataset(Dataset, H5PreprocessMixin):
-    def __init__(self, file_path: PathLike, **extra: Any) -> None:
+    def __init__(self, file_path: PathLike, small_subset: int, **extra: Any) -> None:
         # Data is preprocessed and does not require tokenizer, etc
         self.file_path = file_path
 
         # Peek into file to get dataset length
         with h5py.File(file_path, "r") as f:
             self._len = f["input_ids"].shape[0]
+
+        if small_subset:
+            self._len = min(small_subset, self._len)
 
         # Cache the samples in memory
         self.samples: Dict[int, Dict[str, np.ndarray]] = {}
