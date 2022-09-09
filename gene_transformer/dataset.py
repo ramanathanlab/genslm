@@ -284,7 +284,17 @@ class H5PreprocessMixin:
         h5_file.close()
 
     @staticmethod
-    def concatenate_h5(input_files: List[Path], output_file: Path) -> None:
+    def read_h5_fields(input_file: Path) -> Dict[str, np.ndarray]:
+        with h5py.File(input_file, "r") as f:
+            return {key: f[key][...] for key in f.keys()}
+
+    @staticmethod
+    def concatenate_h5(
+        input_files: List[Path],
+        output_file: Path,
+        num_workers: int = 1,
+        files_per_write: int = 1,
+    ) -> None:
         """Concatenate many HDF5 files into a single large HDF5 file.
         .
         Parameters
@@ -293,24 +303,31 @@ class H5PreprocessMixin:
             List of HDF5 file names to concatenate.
         output_file : Path
             Name of output virtual HDF5 file.
+        num_workers : int, default=1
+            Number of process to use for reading the data lengths from each file.
+        files_per_write: int, default=1
+            To speed things up, set this to the maximum amount of files that can
+            be stored in memory before performing a write operation. Files will
+            be read in parallel with num_workers processes.
         """
         with ExitStack() as stack:
             # Open all HDF5 files
-            h5_files = [stack.enter_context(h5py.File(f, "r")) for f in input_files]
+            # h5_files = [stack.enter_context(h5py.File(f, "r")) for f in input_files]
+
+            in_h5 = stack.enter_context(h5py.File(input_files[0], "r"))
             # Open HDF5 file to write to
             out_h5 = stack.enter_context(h5py.File(output_file, "w"))
 
             # Compute max shapes with the first file
-            first = h5_files[0]
-            fields = list(first.keys())
+            fields = list(in_h5.keys())
             # Set max shape given the inner dimension of each field
-            maxshapes = {key: (None, *first[key].shape[1:]) for key in fields}
+            maxshapes = {key: (None, *in_h5[key].shape[1:]) for key in fields}
 
             h5_datasets = {
                 key: out_h5.create_dataset(
                     key,
-                    first[key].shape,
-                    dtype=first[key].dtype,
+                    in_h5[key].shape,
+                    dtype=in_h5[key].dtype,
                     maxshape=maxshapes[key],
                     fletcher32=True,
                     chunks=True,
@@ -320,14 +337,43 @@ class H5PreprocessMixin:
                 for key in fields
             }
 
+            pool = ProcessPoolExecutor(max_workers=num_workers)
+
             prev_shape_counter = 0
-            for h5_file in tqdm(h5_files):
-                # Length dimension of the incomming dataset
-                inshape = h5_file[fields[0]].shape[0]
+            for i in tqdm(range(0, len(input_files), files_per_write)):
+
+                # Read many smaller h5 files in parallel
+                all_dsets = []
+                for dsets in pool.map(
+                    H5PreprocessMixin.read_h5_fields,
+                    input_files[i : i + files_per_write],
+                ):
+                    all_dsets.append(dsets)
+
+                # Gather each dataset into a single array to make a single write
+                all_dsets = {
+                    key: np.concatenate([dsets[key] for dsets in all_dsets])
+                    for key in fields
+                }
+
+                # Concatenated length dimension of the incomming datasets
+                inshape = sum(dsets[fields[0]].shape[0] for dsets in all_dsets)
+
                 for key, dset in h5_datasets.items():
                     dset.resize(prev_shape_counter + inshape, axis=0)
-                    dset[-inshape:] = h5_file[key][...]
+                    dset[-inshape:] = all_dsets[key]  # Single write of many in-h5 files
                 prev_shape_counter += inshape
+
+            # prev_shape_counter = 0
+            # for h5_file in tqdm(h5_files):
+            #     # Length dimension of the incomming dataset
+            #     inshape = h5_file[fields[0]].shape[0]
+            #     for key, dset in h5_datasets.items():
+            #         dset.resize(prev_shape_counter + inshape, axis=0)
+            #         dset[-inshape:] = h5_file[key][...]
+            #     prev_shape_counter += inshape
+
+            pool.shutdown()
 
 
 class H5Dataset(Dataset, H5PreprocessMixin):
