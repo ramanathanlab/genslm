@@ -284,10 +284,7 @@ class H5PreprocessMixin:
         h5_file.close()
 
     @staticmethod
-    def concatenate_h5(
-        input_files: List[Path],
-        output_file: Path,
-    ) -> None:
+    def concatenate_h5(input_files: List[Path], output_file: Path) -> None:
         """Concatenate many HDF5 files into a single large HDF5 file.
         .
         Parameters
@@ -306,25 +303,28 @@ class H5PreprocessMixin:
             # Compute max shapes with the first file
             first = h5_files[0]
             fields = list(first.keys())
-            shapes = {key: (None, *first[key].shape[1:]) for key in fields}
-            create_dataset = functools.partial(
-                out_h5.create_dataset,
-                fletcher32=True,
-                chunks=True,
-                compression="gzip",
-                compression_opts=6,
-            )
+            # Set max shape given the inner dimension of each field
+            maxshapes = {key: (None, *first[key].shape[1:]) for key in fields}
+
             h5_datasets = {
-                key: create_dataset(
-                    key, first[key].shape, dtype=first[key].dtype, maxshape=shapes[key]
+                key: out_h5.create_dataset(
+                    key,
+                    first[key].shape,
+                    dtype=first[key].dtype,
+                    maxshape=maxshapes[key],
+                    fletcher32=True,
+                    chunks=True,
+                    compression="gzip",
+                    compression_opts=6,
                 )
                 for key in fields
             }
 
             prev_shape_counter = 0
             for h5_file in tqdm(h5_files):
+                # Length dimension of the incomming dataset
+                inshape = h5_file[fields[0]].shape[0]
                 for key, dset in h5_datasets.items():
-                    inshape = h5_file[key].shape[0]
                     dset.resize(prev_shape_counter + inshape, axis=0)
                     dset[-inshape:] = h5_file[key][...]
                 prev_shape_counter += inshape
