@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "--tokenizer_file",
         help="Path to tokenizer file",
         default=(
-            fp.parent.parent.resolve()
+            fp.parent.parent.parent.resolve()
             / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"
         ),
     )
