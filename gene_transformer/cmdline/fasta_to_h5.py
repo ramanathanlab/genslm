@@ -110,6 +110,11 @@ if __name__ == "__main__":
         help="Whether to gather existing h5 files, defaults false",
     )
     parser.add_argument(
+        "--concatenate",
+        action="store_true",
+        help="If set, we will create a single H5 file of all the h5 input files, defaults to virtual_file (False)",
+    )
+    parser.add_argument(
         "-h5o",
         "--h5_outfile",
         type=Path,
@@ -138,11 +143,15 @@ if __name__ == "__main__":
         if not args.h5_dir:
             raise ValueError("H5 in directory not present")
 
-        print("Gathering...")
         h5_files = list(args.h5_dir.glob("*.h5"))
-        H5Dataset.concatenate_virtual_h5(
-            h5_files, args.h5_outfile, num_workers=args.num_workers
-        )
+        if args.concatenate:
+            print("Gathering and full concatenating...")
+            H5Dataset.concatenate_h5(h5_files, args.h5_outfile)
+        else:
+            print("Gathering and virtual concatenating...")
+            H5Dataset.concatenate_virtual_h5(
+                h5_files, args.h5_outfile, num_workers=args.num_workers
+            )
         print(f"Completed gathering {len(h5_files)} files into {args.h5_outfile}")
         exit()
 
