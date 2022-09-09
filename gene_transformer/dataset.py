@@ -300,9 +300,10 @@ class H5PreprocessMixin:
         with ExitStack() as stack:
             # Open all HDF5 files
             h5_files = [stack.enter_context(h5py.File(f, "r")) for f in input_files]
-
+            print(f"Got all {len(h5_files)} files")
             # Open HDF5 file to write to
             out_h5 = stack.enter_context(h5py.File(output_file, "w"))
+            print(f"Opened out_h5")
 
             # Compute max shapes with the first file
             first = h5_files[0]
@@ -312,6 +313,7 @@ class H5PreprocessMixin:
                 key: out_h5.create_dataset_like(key, first[key], maxshape=shapes[key])
                 for key in fields
             }
+            print(f"Made h5 datasets {h5_datasets}")
 
             for h5_file in tqdm(h5_files):
                 for key, dset in h5_datasets.items():
