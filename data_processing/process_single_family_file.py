@@ -13,9 +13,9 @@ def main(
     input: Path,
     output: Path,
     tokenizer_path: Path,
-    compression_ratio: int,
     block_size: int,
-    compression_type: Optional[str] = None,
+    compression_type: Optional[str],
+    compression_ratio: int,
 ):
     tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_path)))
 
@@ -41,7 +41,14 @@ if __name__ == "__main__":
         default=(fp / "../" / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"),
     )
     parser.add_argument(
-        "-c", "--compression", help="Compression ratio to use for the H5 file, (0-9)", type=int, default=6
+        "-cr", "--compression_ratio", help="Compression ratio to use for the H5 file, (0-9)", type=int, default=6
+    )
+    parser.add_argument(
+        "-ct",
+        "--compression_type",
+        help="Compression ratio to use for the H5 file, (0-9)",
+        type=Optional[str],
+        default=None,
     )
     parser.add_argument(
         "-b",
@@ -52,4 +59,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.input, args.output, args.tokenizer_file, args.block_size)
+    main(args.input, args.output, args.tokenizer_file, args.block_size, args.compression_ratio, args.compression_type)
