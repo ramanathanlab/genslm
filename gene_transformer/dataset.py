@@ -357,7 +357,7 @@ class H5PreprocessMixin:
                 }
 
                 # Concatenated length dimension of the incomming datasets
-                inshape = sum(dsets[fields[0]].shape[0] for dsets in all_dsets)
+                inshape = all_dsets[fields[0]].shape[0]
 
                 for key, dset in h5_datasets.items():
                     dset.resize(prev_shape_counter + inshape, axis=0)
