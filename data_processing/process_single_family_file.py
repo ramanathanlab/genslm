@@ -33,7 +33,7 @@ def main(
 
 
 if __name__ == "__main__":
-    fp = Path(__file__)
+    fp = Path(__file__).resolve()
     parser = ArgumentParser()
     parser.add_argument(
         "-i", "--input", help="Path to input file", required=True, type=Path
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "--tokenizer_file",
         help="Path to tokenizer file",
         default=(
-            fp.parent.parent.parent.resolve()
+            fp.parent.parent
             / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"
         ),
     )
