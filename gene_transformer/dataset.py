@@ -172,15 +172,15 @@ class H5PreprocessMixin:
                 local_output_file = (
                     local_output_file.parent / split_name / local_output_file.name
                 )
-
+            print(f"{compression_type=}, {compression_ratio=}")
             with h5py.File(local_output_file, "w") as f:
                 str_dtype = h5py.string_dtype(encoding="utf-8")
                 create_dataset = functools.partial(
                     f.create_dataset,
                     fletcher32=True,
                     chunks=True,
-                    compression=compression_type,
-                    compression_opts=compression_ratio,
+                    # compression=compression_type,
+                    # compression_opts=compression_ratio,
                 )
                 create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
                 create_dataset(
