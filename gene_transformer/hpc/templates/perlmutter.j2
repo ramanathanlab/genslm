@@ -24,4 +24,5 @@ export WANDB_ACTIVE=1
 
 shifter /bin/bash
 cd {{ workdir }}
-srun /opt/conda/bin/python -m gene_transformer.model -c {{ config }}
+which python
+srun python -m gene_transformer.model -c {{ config }}
