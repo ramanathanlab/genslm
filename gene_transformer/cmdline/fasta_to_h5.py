@@ -146,7 +146,9 @@ if __name__ == "__main__":
         h5_files = list(args.h5_dir.glob("*.h5"))
         if args.concatenate:
             print("Gathering and full concatenating...")
-            H5Dataset.concatenate_h5(h5_files, args.h5_outfile)
+            H5Dataset.concatenate_h5(
+                h5_files, args.h5_outfile, num_workers=64, files_per_write=512
+            )
         else:
             print("Gathering and virtual concatenating...")
             H5Dataset.concatenate_virtual_h5(
