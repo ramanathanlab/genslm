@@ -2,8 +2,8 @@ import functools
 import warnings
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
-from pathlib import Path
 from contextlib import ExitStack
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import h5py
@@ -12,8 +12,8 @@ import torch
 from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
 from torch.utils.data import Dataset
-from transformers import PreTrainedTokenizerFast
 from tqdm import tqdm
+from transformers import PreTrainedTokenizerFast
 
 from gene_transformer.config import PathLike
 
@@ -300,16 +300,13 @@ class H5PreprocessMixin:
         with ExitStack() as stack:
             # Open all HDF5 files
             h5_files = [stack.enter_context(h5py.File(f, "r")) for f in input_files]
-            print(f"Got all {len(h5_files)} files")
             # Open HDF5 file to write to
             out_h5 = stack.enter_context(h5py.File(output_file, "w"))
-            print(f"Opened out_h5")
 
             # Compute max shapes with the first file
             first = h5_files[0]
             fields = list(first.keys())
             shapes = {key: (None, *first[key].shape[1:]) for key in fields}
-            print(f"Made shapes dict {shapes}")
             create_dataset = functools.partial(
                 out_h5.create_dataset,
                 fletcher32=True,
@@ -323,7 +320,6 @@ class H5PreprocessMixin:
                 )
                 for key in fields
             }
-            print(f"Made h5 datasets {h5_datasets}")
 
             prev_shape_counter = 0
             for h5_file in tqdm(h5_files):
