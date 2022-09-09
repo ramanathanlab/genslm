@@ -1,4 +1,5 @@
 import functools
+import time
 import warnings
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -342,6 +343,8 @@ class H5PreprocessMixin:
             prev_shape_counter = 0
             for i in tqdm(range(0, len(input_files), files_per_write)):
 
+                start = time.time()
+
                 # Read many smaller h5 files in parallel
                 all_dsets = []
                 for dsets in pool.map(
@@ -350,18 +353,36 @@ class H5PreprocessMixin:
                 ):
                     all_dsets.append(dsets)
 
+                print("Read time:", time.time() - start)
+
+                start = time.time()
+
                 # Gather each dataset into a single array to make a single write
                 all_dsets = {
                     key: np.concatenate([dsets[key] for dsets in all_dsets])
                     for key in fields
                 }
 
+                print("Gather time:", time.time() - start)
+                start = time.time()
+                resize_total_time = 0
+                write_total_time = 0
+
                 # Concatenated length dimension of the incomming datasets
                 inshape = all_dsets[fields[0]].shape[0]
-
+                start = time.time()
                 for key, dset in h5_datasets.items():
+                    t_resize = time.time()
                     dset.resize(prev_shape_counter + inshape, axis=0)
+                    resize_total_time += time.time() - t_resize
+
+                    t_write = time.time()
                     dset[-inshape:] = all_dsets[key]  # Single write of many in-h5 files
+                    write_total_time += time.time() - t_write
+
+                print("Write time: ", time.time() - start)
+                print("Write only time: ", write_total_time)
+                print("Resize only time: ", resize_total_time)
                 prev_shape_counter += inshape
 
             # prev_shape_counter = 0
