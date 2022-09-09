@@ -18,7 +18,10 @@ def main(
     compression_ratio: int,
 ):
     print(tokenizer_path)
-    tokenizer = PreTrainedTokenizerFast(tokenizer_object=Tokenizer.from_file(str(tokenizer_path)))
+    tokenizer = PreTrainedTokenizerFast(
+        tokenizer_object=Tokenizer.from_file(str(tokenizer_path))
+    )
+    tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
     H5Dataset.preprocess(
         input,
@@ -31,23 +34,34 @@ def main(
 
 
 if __name__ == "__main__":
-    fp = Path(__file__)
+    fp = Path(__file__).resolve()
     parser = ArgumentParser()
-    parser.add_argument("-i", "--input", help="Path to input file", required=True, type=Path),
-    parser.add_argument("-o", "--output", help="Path to output h5 file", required=True, type=Path)
+    parser.add_argument(
+        "-i", "--input", help="Path to input file", required=True, type=Path
+    ),
+    parser.add_argument(
+        "-o", "--output", help="Path to output h5 file", required=True, type=Path
+    )
     parser.add_argument(
         "-t",
         "--tokenizer_file",
         help="Path to tokenizer file",
-        default=(fp.parent.parent.resolve() / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"),
+        default=(
+            fp.parent.parent
+            / "gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json"
+        ),
     )
     parser.add_argument(
-        "-cr", "--compression_ratio", help="Compression ratio to use for the H5 file, (0-9)", type=int, default=6
+        "-cr",
+        "--compression_ratio",
+        help="Compression ratio to use for the H5 file, (0-9)",
+        type=Optional[int],
+        default=None,
     )
     parser.add_argument(
         "-ct",
         "--compression_type",
-        help="Compression ratio to use for the H5 file, (0-9)",
+        help="Compression type to use for the H5 file, (gzip, something else, None)",
         type=Optional[str],
         default=None,
     )
@@ -60,4 +74,11 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.input, args.output, args.tokenizer_file, args.block_size, args.compression_ratio, args.compression_type)
+    main(
+        args.input,
+        args.output,
+        args.tokenizer_file,
+        args.block_size,
+        args.compression_type,
+        args.compression_ratio,
+    )
