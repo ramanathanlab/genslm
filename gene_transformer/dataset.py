@@ -328,8 +328,8 @@ class H5PreprocessMixin:
                 for key, dset in h5_datasets.items():
                     inshape = h5_file[key].shape[0]
                     dset.resize(prev_shape_counter + inshape, axis=0)
-                    prev_shape_counter += inshape
                     dset[-inshape:] = h5_file[key][...]
+                prev_shape_counter += inshape
 
 
 class H5Dataset(Dataset, H5PreprocessMixin):
