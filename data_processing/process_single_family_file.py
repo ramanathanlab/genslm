@@ -21,6 +21,7 @@ def main(
     tokenizer = PreTrainedTokenizerFast(
         tokenizer_object=Tokenizer.from_file(str(tokenizer_path))
     )
+    tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
     H5Dataset.preprocess(
         input,
