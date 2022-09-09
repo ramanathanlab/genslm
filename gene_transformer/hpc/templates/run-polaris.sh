@@ -6,8 +6,8 @@ export RANK=$((${PMI_RANK} % ${NRANKS})) # Experimental wandb fix
 # perform logic check to find rank zero - if rank is zero and local rank is none
 if [ $RANK == 0 ] && [ -z "$LOCAL_RANK" ]
 then
-  WANDB_ACTIVE=1
+  export WANDB_ACTIVE=1
 else
-  WANDB_ACTIVE=0
+  export WANDB_ACTIVE=0
 fi
 exec "$@"
