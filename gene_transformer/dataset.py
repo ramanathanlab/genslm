@@ -310,8 +310,15 @@ class H5PreprocessMixin:
             fields = list(first.keys())
             shapes = {key: (None, *first[key].shape[1:]) for key in fields}
             print(f"Made shapes dict {shapes}")
+            create_dataset = functools.partial(
+                out_h5.create_dataset,
+                fletcher32=True,
+                chunks=True,
+                compression="gzip",
+                compression_opts=6,
+            )
             h5_datasets = {
-                key: out_h5.create_dataset(
+                key: create_dataset(
                     key, first[key].shape, dtype=first[key].dtype, maxshape=shapes[key]
                 )
                 for key in fields
