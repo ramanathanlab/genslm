@@ -48,6 +48,9 @@ module load conda/2022-07-19
 conda activate gene_transformer
 # IMPORTANT NOTE: This requires having a conda environment called gene_transformer
 
+# Logging
+echo "$(df -h /dev/shm)"
+
 # For applications that internally handle binding MPI/OpenMP processes to GPUs
 mpiexec \
   -n ${NTOTRANKS} \
