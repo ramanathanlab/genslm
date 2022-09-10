@@ -130,8 +130,6 @@ if __name__ == "__main__":
     train_val_test_split = {"train": 0.8, "val": 0.1, "test": 0.1}
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-    print(args)
-    exit()
 
     if args.check_length:
         input_files = list(args.h5_dir.glob("*.h5"))
