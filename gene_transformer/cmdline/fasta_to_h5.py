@@ -1,5 +1,6 @@
 import functools
 import os
+import time
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -138,6 +139,9 @@ if __name__ == "__main__":
         exit()
 
     if args.gather:
+        if not os.environ.get("NODE_RANK", 0) == 0:
+            while True:
+                time.sleep(10)
         if not args.h5_outfile:
             raise ValueError("H5 outfile not present")
         if not args.h5_dir:
