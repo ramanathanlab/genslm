@@ -132,6 +132,7 @@ if __name__ == "__main__":
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
+    print("We made it to the top")
     if args.check_length:
         input_files = list(args.h5_dir.glob("*.h5"))
         lengths = H5Dataset.get_num_samples(input_files, "sequences", args.num_workers)
@@ -139,8 +140,6 @@ if __name__ == "__main__":
         exit()
 
     if args.gather:
-        node_rank = os.environ.get("NODE_RANK")
-        print(f"Node rank: {node_rank}")
         if node_rank != 0:
             while True:
                 time.sleep(10)
