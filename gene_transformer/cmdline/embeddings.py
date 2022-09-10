@@ -3,15 +3,9 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import numpy as np
-import numpy.typing as npt
 import pytorch_lightning as pl
-import torch
 from pydantic import root_validator, validator
-from pytorch_lightning.strategies import DeepSpeedStrategy
-from torch.utils.data import DataLoader, Subset
-from transformers import AutoConfig, AutoModelForCausalLM
-from transformers.utils import ModelOutput
+from torch.utils.data import DataLoader  # Subset
 
 import gene_transformer
 from gene_transformer.config import BaseSettings, WarmupLRSettings
@@ -28,7 +22,7 @@ class InferenceConfig(BaseSettings):
     data_file: Path
     """Data file to run inference on (HDF5)."""
     embeddings_out_path: Path
-    """Output path to write embeddings to (npy)."""
+    """Directory to write embeddings to."""
     model_config_json: Path
     """Huggingface json dict to load AutoConfig from."""
     load_pt_checkpoint: Optional[Path] = None
@@ -41,11 +35,11 @@ class InferenceConfig(BaseSettings):
     """Number of nodes to use for inference."""
     batch_size: int = 32
     """Batch size to use for inference."""
-    num_data_workers: int = 0
+    num_data_workers: int = 4
     """Number of subprocesses to use for data loading."""
     prefetch_factor: int = 2
     """Number of batches loaded in advance by each worker."""
-    pin_memory: bool = False
+    pin_memory: bool = True
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
 
     # Parameters needed to initialize DNATransformer (not used for inference)
@@ -85,12 +79,6 @@ class InferenceConfig(BaseSettings):
             raise FileNotFoundError(f"load_ds_checkpoint path does not exist {v}.")
         return v
 
-    @validator("embeddings_out_path")
-    def assert_embeddings_out_path_npy(cls, v: Path) -> Path:
-        if v.suffix != ".npy":
-            raise ValueError("embeddings_out_path must have a .npy extension")
-        return v
-
 
 # class DNATransformer(pl.LightningModule):
 #     def __init__(self, cfg: InferenceConfig) -> None:
@@ -114,10 +102,10 @@ class InferenceConfig(BaseSettings):
 #         return self(batch, output_hidden_states=True)
 
 
-def main(config: InferenceConfig) -> npt.ArrayLike:
+def main(config: InferenceConfig) -> None:
     # Setup torch environment
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-    torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
+    # torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
     if config.load_pt_checkpoint:
@@ -127,17 +115,13 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
 
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 
-    embedding_callback = EmbeddingsCallback()
+    embedding_callback = EmbeddingsCallback(save_dir=config.embeddings_out_path)
     trainer = pl.Trainer(
         gpus=-1,
         precision=config.precision,
         num_nodes=config.num_nodes,
         callbacks=[embedding_callback],
-        strategy=DeepSpeedStrategy(
-            stage=3,
-            # offload_parameters=True,
-            logging_batch_size_per_gpu=config.batch_size,
-        ),
+        strategy="ddp",
     )
 
     dataset = FileBackedH5Dataset(config.data_file)
@@ -152,14 +136,6 @@ def main(config: InferenceConfig) -> npt.ArrayLike:
 
     print(f"Running inference with dataset length {len(dataloader)}")
     trainer.predict(model, dataloaders=dataloader)
-
-    embeddings = embedding_callback.embeddings
-
-    if trainer.is_global_zero:
-        print(f"Embeddings shape: {embeddings.shape}")
-        np.save(config.embeddings_out_path, embeddings)
-
-    return embeddings
 
 
 if __name__ == "__main__":

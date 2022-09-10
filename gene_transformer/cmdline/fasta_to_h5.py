@@ -1,5 +1,6 @@
 import functools
 import os
+import time
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -87,7 +88,7 @@ def process_dataset(
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta_dir", type=Path)
-    parser.add_argument("-h5", "--h5_dir", type=Path)
+    parser.add_argument("-h5i", "--h5_dir", type=Path)
     parser.add_argument(
         "-g",
         "--glob",
@@ -110,12 +111,23 @@ if __name__ == "__main__":
         help="Whether to gather existing h5 files, defaults false",
     )
     parser.add_argument(
+        "--concatenate",
+        action="store_true",
+        help="If set, we will create a single H5 file of all the h5 input files, defaults to virtual_file (False)",
+    )
+    parser.add_argument(
         "-h5o",
         "--h5_outfile",
         type=Path,
         help="Path to the h5 outfile, only specify when gathering",
     )
     parser.add_argument("-c", "--check_length", action="store_true")
+    parser.add_argument(
+        "--files_per_write",
+        type=int,
+        default=2048,
+        help="Number of files to get before writing them to disk (only for h5 full concatenation)",
+    )
 
     args = parser.parse_args()
 
@@ -133,16 +145,30 @@ if __name__ == "__main__":
         exit()
 
     if args.gather:
+        if node_rank != 0:
+            while True:
+                time.sleep(10)
+
+        print(f"Running on node: {node_rank}")
         if not args.h5_outfile:
             raise ValueError("H5 outfile not present")
         if not args.h5_dir:
             raise ValueError("H5 in directory not present")
 
-        print("Gathering...")
         h5_files = list(args.h5_dir.glob("*.h5"))
-        H5Dataset.concatenate_virtual_h5(
-            h5_files, args.h5_outfile, num_workers=args.num_workers
-        )
+        if args.concatenate:
+            print("Gathering and full concatenating...")
+            H5Dataset.concatenate_h5(
+                h5_files,
+                args.h5_outfile,
+                num_workers=32,
+                files_per_write=args.files_per_write,
+            )
+        else:
+            print("Gathering and virtual concatenating...")
+            H5Dataset.concatenate_virtual_h5(
+                h5_files, args.h5_outfile, num_workers=args.num_workers
+            )
         print(f"Completed gathering {len(h5_files)} files into {args.h5_outfile}")
         exit()
 

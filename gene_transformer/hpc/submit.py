@@ -15,6 +15,7 @@ class HPCSettings(BaseModel):
     time: str
     nodes: int
     job_name: str
+    reservation: str = ""
     workdir: Path
     module: str
     """Module path to python entry point."""
@@ -69,6 +70,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--time", default="01:00:00")
     parser.add_argument("-n", "--nodes", default=1, type=int)
     parser.add_argument("-j", "--job_name", default="gene_transformer")
+    parser.add_argument("-r", "--reservation", default="")
     parser.add_argument("-w", "--workdir", default=Path("."), type=Path)
     parser.add_argument("-m", "--module", default="gene_transformer.model")
     parser.add_argument("-c", "--config", required=True, type=Path)
@@ -80,6 +82,7 @@ if __name__ == "__main__":
         time=args.time,
         nodes=args.nodes,
         job_name=args.job_name,
+        reservation=args.reservation,
         workdir=args.workdir,
         module=args.module,
         config=args.config,

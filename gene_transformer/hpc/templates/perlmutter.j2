@@ -10,6 +10,9 @@
 #SBATCH -c 32
 #SBATCH --output={{ workdir / job_name }}.out
 #SBATCH --error={{ workdir / job_name }}.err
+{% if reservation %}
+#SBATCH --reservation={{ reservation }}
+{% endif %}
 export MASTER_PORT=1234
 export WORLD_SIZE={{ nodes * 4 }}
 {% raw %}echo "NODELIST="${{SLURM_NODELIST}}{% endraw %}
