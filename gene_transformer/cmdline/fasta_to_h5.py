@@ -87,7 +87,7 @@ def process_dataset(
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta_dir", type=Path)
-    parser.add_argument("-h5", "--h5_dir", type=Path)
+    parser.add_argument("-h5i", "--h5_dir", type=Path)
     parser.add_argument(
         "-g",
         "--glob",
@@ -130,6 +130,8 @@ if __name__ == "__main__":
     train_val_test_split = {"train": 0.8, "val": 0.1, "test": 0.1}
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    print(args)
+    exit()
 
     if args.check_length:
         input_files = list(args.h5_dir.glob("*.h5"))
