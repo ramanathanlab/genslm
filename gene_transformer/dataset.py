@@ -85,6 +85,7 @@ class FastaDataset(Dataset):
             sample = {
                 "input_ids": batch_encoding["input_ids"].squeeze(),
                 "attention_mask": batch_encoding["attention_mask"],
+                "indices": torch.from_numpy(np.array([idx])),
             }
             self.samples[idx] = sample
             return sample
