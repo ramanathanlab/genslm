@@ -140,6 +140,7 @@ if __name__ == "__main__":
 
     if args.gather:
         node_rank = os.environ.get("NODE_RANK")
+        print(f"Node rank: {node_rank}")
         if not node_rank == 0:
             while True:
                 time.sleep(10)
