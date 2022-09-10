@@ -37,6 +37,6 @@ mpiexec \
     python -m gene_transformer.cmdline.fasta_to_h5 \
     --h5_dir /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts/train/ \
     --h5_outfile /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts/combined_train.h5 \
-    --files_per_write 512 \ 
+    --files_per_write=512 \ 
     --gather \
     --concatenate
