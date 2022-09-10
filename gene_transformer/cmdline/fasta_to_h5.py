@@ -139,9 +139,12 @@ if __name__ == "__main__":
         exit()
 
     if args.gather:
-        if not os.environ.get("NODE_RANK", 0) == 0:
+        node_rank = os.environ.get("NODE_RANK")
+        if not node_rank == 0:
             while True:
                 time.sleep(10)
+
+        print(f"Running on node: {node_rank}")
         if not args.h5_outfile:
             raise ValueError("H5 outfile not present")
         if not args.h5_dir:
