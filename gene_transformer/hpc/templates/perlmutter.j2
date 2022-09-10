@@ -25,6 +25,4 @@ export PYTHONFAULTHANDLER=1
 
 export WANDB_ACTIVE=1
 
-#cd {{ workdir }}
-#which python
 srun shifter /opt/conda/bin/python -m gene_transformer.model -c {{ config }}
