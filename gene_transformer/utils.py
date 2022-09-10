@@ -329,8 +329,8 @@ class ThroughputMonitor(Callback):
             avg_batch_time = mean(self.batch_times)
             avg_epoch_throughput = self.macro_batch_size / avg_batch_time
             avg_secs_per_sample = avg_batch_time / self.macro_batch_size
-            pl_module.log("stats/average_epoch_throughput", avg_epoch_throughput)
-            pl_module.log("stats/average_secs_per_sample", avg_secs_per_sample)
+            # pl_module.log("stats/average_epoch_throughput", avg_epoch_throughput)
+            # pl_module.log("stats/average_secs_per_sample", avg_secs_per_sample)
             self.epoch_throughputs.append(avg_epoch_throughput)
             self.epoch_sample_times.append(avg_secs_per_sample)
             self.batch_times = []  # Reset for next epoch
