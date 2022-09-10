@@ -147,7 +147,7 @@ if __name__ == "__main__":
         if args.concatenate:
             print("Gathering and full concatenating...")
             H5Dataset.concatenate_h5(
-                h5_files, args.h5_outfile, num_workers=32, files_per_write=512
+                h5_files, args.h5_outfile, num_workers=32, files_per_write=2048
             )
         else:
             print("Gathering and virtual concatenating...")
