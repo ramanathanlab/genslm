@@ -1,13 +1,13 @@
 #!/bin/sh
-#PBS -l select=1:system=polaris
+#PBS -l select=25:system=polaris
 #PBS -l place=scatter
-#PBS -l walltime=01:00:00
+#PBS -l walltime=12:00:00
 #PBS -N process_gene_data
-#PBS -q debug
+#PBS -q prod
 #PBS -A RL-fold
 #PBS -k doe
-#PBS -o concat.out
-#PBS -e concat.err
+#PBS -o concat_train.out
+#PBS -e concat_train.err
 
 
 # Change to working directory
@@ -35,7 +35,7 @@ mpiexec \
     --hostfile $PBS_NODEFILE \
     $PBS_O_WORKDIR/run-polaris.sh \
     python -m gene_transformer.cmdline.fasta_to_h5 \
-    --h5_dir /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts/val/ \
-    --h5_outfile /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts/combined_val.h5 \
+    --h5_dir /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts/train/ \
+    --h5_outfile /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts/combined_train.h5 \
     --gather \
     --concatenate
