@@ -123,7 +123,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-c", "--check_length", action="store_true")
     parser.add_argument(
-        "-fpw",
         "--files_per_write",
         type=int,
         default=2048,
