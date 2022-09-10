@@ -17,11 +17,11 @@ master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
 echo "MASTER_ADDR="$MASTER_ADDR
 
-#export NCCL_DEBUG=INFO
+export NCCL_DEBUG=WARN
 export PYTHONFAULTHANDLER=1
 
 export WANDB_ACTIVE=1
 
 #cd {{ workdir }}
-which python
+#which python
 srun shifter /opt/conda/bin/python -m gene_transformer.model -c {{ config }}
