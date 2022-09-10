@@ -144,7 +144,7 @@ def main(config: InferenceConfig) -> None:
     )
 
     print(f"Running inference with dataset length {len(dataloader)}")
-    trainer.predict(model, dataloaders=dataloader)
+    trainer.predict(model, dataloaders=dataloader, return_predictions=False)
 
 
 if __name__ == "__main__":
