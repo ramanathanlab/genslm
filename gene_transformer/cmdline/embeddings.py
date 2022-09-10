@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader  # Subset
 
 import gene_transformer
 from gene_transformer.config import BaseSettings, WarmupLRSettings
-from gene_transformer.dataset import FileBackedH5Dataset
+from gene_transformer.dataset import FastaDataset, FileBackedH5Dataset
 from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
     EmbeddingsCallback,
@@ -41,6 +41,8 @@ class InferenceConfig(BaseSettings):
     """Number of batches loaded in advance by each worker."""
     pin_memory: bool = True
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
+    block_size: int = 2048
+    """Only used when processing a directory of fasta files."""
 
     # Parameters needed to initialize DNATransformer (not used for inference)
     tokenizer_file: Path = (
@@ -124,7 +126,14 @@ def main(config: InferenceConfig) -> None:
         strategy="ddp",
     )
 
-    dataset = FileBackedH5Dataset(config.data_file)
+    # Select datset type based on data_file type
+    if config.data_file.suffix == ".h5":
+        dataset = FileBackedH5Dataset(config.data_file)
+    elif config.data_file.is_dir():
+        dataset = FastaDataset(config.data_file, config.block_size, model.tokenizer)
+    else:
+        raise ValueError(f"Couldn't process data_file: {config.data_file}")
+
     # dataset = Subset(dataset, np.arange(512))  # for testing
     dataloader = DataLoader(
         dataset,
@@ -135,7 +144,7 @@ def main(config: InferenceConfig) -> None:
     )
 
     print(f"Running inference with dataset length {len(dataloader)}")
-    trainer.predict(model, dataloaders=dataloader)
+    trainer.predict(model, dataloaders=dataloader, return_predictions=False)
 
 
 if __name__ == "__main__":
