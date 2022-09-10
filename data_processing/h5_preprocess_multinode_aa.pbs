@@ -1,0 +1,43 @@
+#!/bin/sh
+#PBS -l select=64:system=polaris
+#PBS -l place=scatter
+#PBS -l walltime=02:00:00
+#PBS -N process_gene_data
+#PBS -q prod
+#PBS -A RL-fold
+#PBS -k doe
+#PBS -o process_aa_data.out
+#PBS -e process_aa_data.err
+
+
+# Change to working directory
+cd $PBS_O_WORKDIR
+
+# MPI and OpenMP settings
+NNODES=`wc -l < $PBS_NODEFILE`
+NRANKS_PER_NODE=1
+NDEPTH=64
+
+NTOTRANKS=$(( NNODES * NRANKS_PER_NODE ))
+echo "NUM_OF_NODES= ${NNODES} TOTAL_NUM_RANKS= ${NTOTRANKS} RANKS_PER_NODE= ${NRANKS_PER_NODE}"
+echo < $PBS_NODEFILE
+
+# This environment should get passed through mpiexec
+module load conda/2022-07-19
+conda activate gene_transformer
+
+
+mpiexec \
+    -n ${NTOTRANKS} \
+    --ppn ${NRANKS_PER_NODE} \
+    --depth=${NDEPTH} \
+    --cpu-bind depth \
+    --hostfile $PBS_NODEFILE \
+    $PBS_O_WORKDIR/run-polaris.sh \
+    python -m gene_transformer.cmdline.fasta_to_h5 \
+    -f /lus/eagle/projects/CVD-Mol-AI/genome-data/patric_89M/pgfam_30k  \
+    --glob *.ffa
+    -h5 /lus/eagle/projects/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts_aa \
+    -n 16 \
+    -t /home/hippekp/github/gene_transformer/gene_transformer/tokenizer_files/protein_alphabet_wordlevel.json \
+    -b 2048
