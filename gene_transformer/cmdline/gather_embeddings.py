@@ -9,8 +9,10 @@ def gather_embeddings(input_dir: Path, output_path: Optional[Path] = None) -> No
     """Gather embeddings produced via DDP into a single sorted numpy array."""
 
     # Glob embedding and index files written by each rank
-    index_files = list(input_dir.glob("indices-*.npy"))
-    embedding_files = list(input_dir.glob("embeddings-*.npy"))
+    # (need to sort by uuid's to match the rank-label between indices and
+    # embeddings files)
+    index_files = sorted(input_dir.glob("indices-*.npy"))
+    embedding_files = sorted(input_dir.glob("embeddings-*.npy"))
 
     # Load all index and embedding files into memory (fp16 means they are not large))
     indices = np.concatenate([np.load(f) for f in index_files])
