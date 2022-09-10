@@ -385,40 +385,7 @@ class H5PreprocessMixin:
                 print("Resize only time: ", resize_total_time)
                 prev_shape_counter += inshape
 
-            # prev_shape_counter = 0
-            # for h5_file in tqdm(h5_files):
-            #     # Length dimension of the incomming dataset
-            #     inshape = h5_file[fields[0]].shape[0]
-            #     for key, dset in h5_datasets.items():
-            #         dset.resize(prev_shape_counter + inshape, axis=0)
-            #         dset[-inshape:] = h5_file[key][...]
-            #     prev_shape_counter += inshape
-
             pool.shutdown()
-
-    @staticmethod
-    def copy_virtual_h5_file(input_file: Path, output_file: Path) -> None:
-        with h5py.File(output_file, "w") as f_dest:
-            with h5py.File(input_file, "r") as f_src:
-
-                for key in f_src.keys():
-                    f_dest.create_dataset(
-                        key,
-                        f_src[key].shape,
-                        # dtype=f_src[key].dtype,
-                        # fletcher32=True,
-                        # chunks=True,
-                        # compression="gzip",
-                        # compression_opts=6,
-                    )
-
-                for key in tqdm(f_src.keys()):
-                    f_src.copy(
-                        f_src[key],
-                        f_dest[key],
-                        expand_external=True,
-                        expand_refs=True,
-                    )
 
     @staticmethod
     def read_h5_to_fasta_entries(input_file: Path, num_slice: int = 1) -> List[str]:
