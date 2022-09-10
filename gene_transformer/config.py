@@ -169,7 +169,7 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
         4: 3200,
         8: 6400,
         128: 28_000,
-        256: 28_000,
+        256: 100_000,
     }
     new_config.small_subset = nodes_to_sample_size.get(cfg.num_nodes, 16_000)
     return new_config
