@@ -400,12 +400,12 @@ class H5PreprocessMixin:
     def copy_virtual_h5_file(input_file: Path, output_file: Path) -> None:
         with h5py.File(output_file, "w") as f_dest:
             with h5py.File(input_file, "r") as f_src:
-                for key in f_src.keys():
+                for key in tqdm(f_src.keys()):
                     f_src.copy(
                         f_src[key],
                         f_dest[key],
-                        expand_external=False,
-                        expand_refs=False,
+                        expand_external=True,
+                        expand_refs=True,
                     )
 
 
