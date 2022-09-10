@@ -247,10 +247,6 @@ class H5PreprocessMixin:
         if not fields:
             raise ValueError("No fields found in HDF5 file.")
 
-        # for file in input_files:
-        #     with h5py.File(file, "r") as f:
-        #         lengths.append(f[fields[0]].shape[0])
-        # print(f"Total lengths {total_length}, num files: {len(input_files)}")
         lengths = H5PreprocessMixin.get_num_samples(input_files, fields[0], num_workers)
 
         total_length = sum(lengths)
