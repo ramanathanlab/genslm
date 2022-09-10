@@ -186,6 +186,8 @@ def train(cfg: ModelSettings) -> None:
         model = DNATransformer(cfg)
 
     callbacks: List[Callback] = []
+    print(f"Number of model parameters: {sum(p.numel() for p in model.parameters())}")
+
     # Setup wandb
     wandb_logger = None
     if cfg.wandb_active:
@@ -346,7 +348,11 @@ def inference(
     embedding_callback = EmbeddingsCallback()
     trainer = pl.Trainer(
         gpus=-1,
-        strategy=DeepSpeedStrategy(stage=3),
+        # default_root_dir=str(cfg.checkpoint_dir),
+        # strategy=DeepSpeedStrategy(stage=3),
+        strategy="ddp",
+        # accumulate_grad_batches=cfg.accumulate_grad_batches,
+        # num_sanity_val_steps=2,
         precision=cfg.precision,
         num_nodes=cfg.num_nodes,
         callbacks=[embedding_callback],
