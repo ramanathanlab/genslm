@@ -194,7 +194,7 @@ def train(cfg: ModelSettings) -> None:
         local_rank = os.environ.get("LOCAL_RANK")
         slurm_procid = os.environ.get("SLURM_PROCID")
         jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
-        wandb_active_env = os.environ.get("WANDB_ACTIVE")
+        wandb_active_env = os.environ.get("PERLMUTTER_WANDB")
 
         print(
             f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}"
