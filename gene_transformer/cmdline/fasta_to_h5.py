@@ -122,6 +122,13 @@ if __name__ == "__main__":
         help="Path to the h5 outfile, only specify when gathering",
     )
     parser.add_argument("-c", "--check_length", action="store_true")
+    parser.add_argument(
+        "-fpw",
+        "--files_per_write",
+        type=int,
+        default=2048,
+        help="Number of files to get before writing them to disk (only for h5 full concatenation)",
+    )
 
     args = parser.parse_args()
 
@@ -132,7 +139,6 @@ if __name__ == "__main__":
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-    print("We made it to the top")
     if args.check_length:
         input_files = list(args.h5_dir.glob("*.h5"))
         lengths = H5Dataset.get_num_samples(input_files, "sequences", args.num_workers)
@@ -154,7 +160,10 @@ if __name__ == "__main__":
         if args.concatenate:
             print("Gathering and full concatenating...")
             H5Dataset.concatenate_h5(
-                h5_files, args.h5_outfile, num_workers=32, files_per_write=2048
+                h5_files,
+                args.h5_outfile,
+                num_workers=32,
+                files_per_write=args.files_per_write,
             )
         else:
             print("Gathering and virtual concatenating...")
