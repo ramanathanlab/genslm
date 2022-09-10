@@ -114,7 +114,14 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log(
+            "train/loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True,
+        )
         return loss
 
     def validation_step(
@@ -122,7 +129,9 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log(
+            "val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True
+        )
         return loss
 
     def test_step(
@@ -130,7 +139,14 @@ class DNATransformer(pl.LightningModule):
     ) -> torch.FloatTensor:
         outputs = self(batch)
         loss = outputs.loss
-        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log(
+            "test/loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True,
+        )
         return loss
 
     def predict_step(
@@ -173,10 +189,20 @@ def train(cfg: ModelSettings) -> None:
     # Setup wandb
     wandb_logger = None
     if cfg.wandb_active:
-        node_rank = os.environ.get("NODE_RANK", 0)
-        print(f"Node rank: {node_rank}")
-        if node_rank == 1:
-            print("Using Weights and Biases for logging...")
+        node_rank = os.environ.get("NODE_RANK")
+        rank = os.environ.get("RANK")
+        local_rank = os.environ.get("LOCAL_RANK")
+        slurm_procid = os.environ.get("SLURM_PROCID")
+        jsm_namespace = os.environ.get("JSM_NAMESPACE_RANK")
+        wandb_active_env = os.environ.get("WANDB_ACTIVE")
+
+        print(
+            f"{rank=}, {local_rank=}, {slurm_procid=}, {jsm_namespace=}, {node_rank=}"
+        )
+        # # For some reason, this is how it looks on Polaris for global_rank zero
+        if rank is not None:
+            rank = int(rank)
+        if (rank == 0 and local_rank is None) or bool(wandb_active_env):
             wandb_logger = WandbLogger(
                 project=cfg.wandb_project_name,
                 entity=cfg.wandb_entity_name,
