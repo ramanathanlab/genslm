@@ -1,5 +1,6 @@
-from pathlib import Path
 from argparse import ArgumentParser
+from pathlib import Path
+
 from gene_transformer.dataset import H5Dataset
 
 if __name__ == "__main__":

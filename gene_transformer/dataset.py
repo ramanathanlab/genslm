@@ -405,11 +405,11 @@ class H5PreprocessMixin:
                     f_dest.create_dataset(
                         key,
                         f_src[key].shape,
-                        dtype=f_src[key].dtype,
-                        fletcher32=True,
-                        chunks=True,
-                        compression="gzip",
-                        compression_opts=6,
+                        # dtype=f_src[key].dtype,
+                        # fletcher32=True,
+                        # chunks=True,
+                        # compression="gzip",
+                        # compression_opts=6,
                     )
 
                 for key in tqdm(f_src.keys()):
@@ -419,6 +419,35 @@ class H5PreprocessMixin:
                         expand_external=True,
                         expand_refs=True,
                     )
+
+    @staticmethod
+    def read_h5_to_fasta_entries(input_file: Path, num_slice: int = 1) -> List[str]:
+        """Returns a list of fasta entries >description\nsequence"""
+        with h5py.File(input_file, "r") as f:
+            descriptions = f["description"][0:-1:num_slice]
+            sequences = f["sequence"][0:-1:num_slice]
+
+        return [
+            f'>{d.decode("utf-8")}\n{s.decode("utf-8")}\n'
+            for d, s in zip(descriptions, sequences)
+        ]
+
+    @staticmethod
+    def h5_to_fasta(
+        input_files: List[Path],
+        output_fasta: Path,
+        num_workers: int = 1,
+        num_slice: int = 1,
+    ) -> None:
+
+        read_h5_seq_desc = functools.partial(
+            H5PreprocessMixin.read_h5_to_fasta_entries, num_slice=num_slice
+        )
+
+        with open(output_fasta, "w") as f:
+            with ProcessPoolExecutor(max_workers=num_workers) as pool:
+                for fasta_lines in pool.map(read_h5_seq_desc, input_files):
+                    f.writelines(fasta_lines)
 
 
 class H5Dataset(Dataset, H5PreprocessMixin):
