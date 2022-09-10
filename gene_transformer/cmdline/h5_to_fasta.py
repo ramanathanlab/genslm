@@ -1,0 +1,17 @@
+from argparse import ArgumentParser
+from pathlib import Path
+
+from gene_transformer.dataset import H5Dataset
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("-i", "--h5_dir", type=str, help="Directory with *.h5 files")
+    parser.add_argument("-o", "--output_file", type=Path, help="fasta file.")
+    parser.add_argument("-n", "--num_workers", type=int, default=1)
+    parser.add_argument("-n", "--num_slice", type=int, default=1)
+    args = parser.parse_args()
+
+    input_files = list(Path(args.h5_dir).glob("*.h5"))
+    H5Dataset.h5_to_fasta(
+        args.input_file, args.output_file, args.num_workers, args.num_slice
+    )
