@@ -14,5 +14,5 @@ if __name__ == "__main__":
 
     input_files = list(Path(args.h5_dir).glob("*.h5"))
     H5Dataset.h5_to_fasta(
-        args.h5_dir, args.output_file, args.num_workers, args.num_slice
+        input_files, args.output_file, args.num_workers, args.num_slice
     )
