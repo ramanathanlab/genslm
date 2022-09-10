@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader  # Subset
 
 import gene_transformer
 from gene_transformer.config import BaseSettings, WarmupLRSettings
-from gene_transformer.dataset import FileBackedH5Dataset, FastaDataset
+from gene_transformer.dataset import FastaDataset, FileBackedH5Dataset
 from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
     EmbeddingsCallback,
