@@ -15,7 +15,7 @@
 {% endif %}
 export MASTER_PORT=1234
 export WORLD_SIZE={{ nodes * 4 }}
-{% raw %}echo "NODELIST="${{SLURM_NODELIST}}{% endraw %}
+{% raw %}echo "NODELIST="${SLURM_NODELIST}{% endraw %}
 
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
