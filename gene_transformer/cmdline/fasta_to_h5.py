@@ -1,5 +1,6 @@
 import functools
 import os
+import time
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -87,7 +88,7 @@ def process_dataset(
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta_dir", type=Path)
-    parser.add_argument("-h5", "--h5_dir", type=Path)
+    parser.add_argument("-h5i", "--h5_dir", type=Path)
     parser.add_argument(
         "-g",
         "--glob",
@@ -131,6 +132,7 @@ if __name__ == "__main__":
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
+    print("We made it to the top")
     if args.check_length:
         input_files = list(args.h5_dir.glob("*.h5"))
         lengths = H5Dataset.get_num_samples(input_files, "sequences", args.num_workers)
@@ -138,6 +140,11 @@ if __name__ == "__main__":
         exit()
 
     if args.gather:
+        if node_rank != 0:
+            while True:
+                time.sleep(10)
+
+        print(f"Running on node: {node_rank}")
         if not args.h5_outfile:
             raise ValueError("H5 outfile not present")
         if not args.h5_dir:
