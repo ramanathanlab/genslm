@@ -354,9 +354,20 @@ class H5PreprocessMixin:
 
                 start = time.time()
 
+                bad_dsets_inds = []
+                for i, dset in range(all_dsets):
+                    for key in fields:
+                        if key not in dset:
+                            bad_dsets_inds.append(i)
                 # Gather each dataset into a single array to make a single write
                 all_dsets = {
-                    key: np.concatenate([dsets[key] for dsets in all_dsets])
+                    key: np.concatenate(
+                        [
+                            dsets[key]
+                            for i, dsets in enumerate(all_dsets)
+                            if i not in bad_dsets_inds
+                        ]
+                    )
                     for key in fields
                 }
 
