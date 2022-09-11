@@ -22,6 +22,7 @@ def process_dataset(
     train_val_test_split: Optional[Dict[str, float]],
     node_rank: int,
     num_nodes: int,
+    subsample: int,
 ) -> None:
 
     if not fasta_dir:
@@ -76,6 +77,7 @@ def process_dataset(
         tokenizer=tokenizer,
         block_size=tokenizer_blocksize,
         train_val_test_split=train_val_test_split,
+        subsample=subsample,
     )
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
@@ -104,6 +106,13 @@ if __name__ == "__main__":
         type=int,
         help="Block size for the tokenizer",
         default=2048,
+    )
+    parser.add_argument(
+        "-s",
+        "--subsample",
+        type=int,
+        help="Subsample data such that it takes every `subsample` sequence from each fasta.",
+        default=1,
     )
     parser.add_argument(
         "--gather",
@@ -182,4 +191,5 @@ if __name__ == "__main__":
         train_val_test_split,
         node_rank,
         num_nodes,
+        args.subsample,
     )
