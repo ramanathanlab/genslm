@@ -134,7 +134,13 @@ if __name__ == "__main__":
         help="Block size for the tokenizer",
         default=2048,
     )
-    parser.add_argument("-k", "--kmer_size", help="KMER size", type=int)
+    parser.add_argument(
+        "-k",
+        "--kmer_size",
+        help="KMER size (set to 1 for AA, 3 for codon)",
+        type=int,
+        default=3,
+    )
     parser.add_argument(
         "-s",
         "--subsample",
