@@ -118,6 +118,7 @@ class H5PreprocessMixin:
         compression_type: Optional[str] = "gzip",
         compression_ratio: int = 6,
         train_val_test_split: Optional[Dict[str, float]] = None,
+        subsample: int = 1,
     ) -> None:
         if train_val_test_split is not None:
             if sum(train_val_test_split.values()) != 1:
@@ -125,7 +126,8 @@ class H5PreprocessMixin:
                     f"Train test val split percentages {train_val_test_split} do not add up to 100%"
                 )
 
-        sequences = list(SeqIO.parse(fasta_file, "fasta"))
+        # Load in sequences and take an even subsample
+        sequences = list(SeqIO.parse(fasta_file, "fasta"))[::subsample]
         print(f"File: {fasta_file}, num sequences: {len(sequences)}")
 
         sequence_splits = {}
