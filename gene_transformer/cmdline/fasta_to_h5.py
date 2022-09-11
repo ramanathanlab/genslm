@@ -88,9 +88,34 @@ def process_dataset(
 
 
 if __name__ == "__main__":
+    """
+    Examples:
+
+    Construct individual h5 files from a directory of Fasta files: 
+    ```
+    python -m gene_transformer.cmdline.fasta_to_h5 --fasta $FASTA_DIR --h5_dir $H5_OUTDIR --tokenizer_file $TOKENIZER_JSON --num_workers $NUM_WORKERS
+    ```
+
+    Gather the files from the step above into a single virtual or combined h5 file
+    ```
+    # Gather into true combined h5 file
+    python -m gene_transformer.cmdline.fasta_to_h5 \
+    --h5_dir $H5_DIR \ # same h5dir as above, should have more than 1 h5 file in it. All files in dir will be combined
+    --h5_outfile $H5_OUTFILE \ # path to save the combined file to
+    --gather \
+    --concatenate
+    ```
+    ```
+    # Gather into virtual combined h5 file 
+    python -m gene_transformer.cmdline.fasta_to_h5 \
+    --h5_dir $H5_DIR \ # same h5dir as above, should have more than 1 h5 file in it. All files in dir will be combined
+    --h5_outfile $H5_OUTFILE \ # path to save the combined file to
+    --gather \
+    ```
+    """
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta_dir", type=Path)
-    parser.add_argument("-h5i", "--h5_dir", type=Path)
+    parser.add_argument("-h5", "--h5_dir", type=Path)
     parser.add_argument(
         "-g",
         "--glob",
