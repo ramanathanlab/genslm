@@ -1,4 +1,5 @@
 import os
+import shutil
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -6,6 +7,7 @@ from typing import Any, Dict, Optional
 import pytorch_lightning as pl
 from pydantic import root_validator, validator
 from torch.utils.data import DataLoader  # Subset
+import numpy as np
 
 import gene_transformer
 from gene_transformer.config import BaseSettings, WarmupLRSettings
@@ -104,6 +106,29 @@ class InferenceConfig(BaseSettings):
 #         return self(batch, output_hidden_states=True)
 
 
+def gather_embeddings(input_dir: Path, output_path: Optional[Path] = None) -> None:
+    """Gather embeddings produced via DDP into a single sorted numpy array."""
+
+    # Glob embedding and index files written by each rank
+    # (need to sort by uuid's to match the rank-label between indices and
+    # embeddings files)
+    index_files = sorted(input_dir.glob("indices-*.npy"))
+    embedding_files = sorted(input_dir.glob("embeddings-*.npy"))
+
+    # Load all index and embedding files into memory (fp16 means they are not large))
+    indices = np.concatenate([np.load(f) for f in index_files])
+    embeddings = np.concatenate([np.load(f) for f in embedding_files])
+
+    # Sort scattered indices
+    sort_inds = np.argsort(indices)
+    embeddings = embeddings[sort_inds]
+
+    if output_path is not None:
+        np.save(output_path, embeddings)
+
+    return embeddings
+
+
 def main(config: InferenceConfig) -> None:
     # Setup torch environment
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -117,7 +142,8 @@ def main(config: InferenceConfig) -> None:
 
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 
-    embedding_callback = EmbeddingsCallback(save_dir=config.embeddings_out_path)
+    tmp_embeddings_dir = config.embeddings_out_path.with_suffix("")
+    embedding_callback = EmbeddingsCallback(save_dir=tmp_embeddings_dir)
     trainer = pl.Trainer(
         gpus=-1,
         precision=config.precision,
@@ -145,6 +171,10 @@ def main(config: InferenceConfig) -> None:
 
     print(f"Running inference with dataset length {len(dataloader)}")
     trainer.predict(model, dataloaders=dataloader, return_predictions=False)
+
+    if trainer.is_global_zero:
+        gather_embeddings(tmp_embeddings_dir, config.embeddings_out_path)
+        shutil.rmtree(tmp_embeddings_dir)
 
 
 if __name__ == "__main__":
