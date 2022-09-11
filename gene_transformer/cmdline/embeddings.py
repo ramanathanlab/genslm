@@ -1,5 +1,4 @@
 import os
-import shutil
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Optional

@@ -74,8 +74,8 @@ class ModelSettings(BaseSettings):
     check_val_every_n_steps: int = 2500
     """Run validation set each n steps"""
     limit_val_batches: int = 32
-    """Limit validation batches to this many batches - (num_ranks * mini_batch) * limit_val_batches = 
-    total_val_samples """
+    """Limit validation batches to this many batches:
+    total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
 
     # data settings
     tokenizer_file: Path = (
