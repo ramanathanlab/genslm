@@ -357,7 +357,7 @@ class H5PreprocessMixin:
                 start = time.time()
 
                 bad_dsets_inds = []
-                for i, dset in range(all_dsets):
+                for i, dset in enumerate(all_dsets):
                     for key in fields:
                         if key not in dset:
                             bad_dsets_inds.append(i)
