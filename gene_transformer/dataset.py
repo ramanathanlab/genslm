@@ -109,14 +109,29 @@ class H5PreprocessMixin:
         return split
 
     @staticmethod
+    def write_h5(ouput_file: PathLike, data: Dict[str, np.ndarray]) -> None:
+        with h5py.File(ouput_file, "w") as f:
+            str_dtype = h5py.string_dtype(encoding="utf-8")
+            create_dataset = functools.partial(
+                f.create_dataset,
+                fletcher32=True,
+                chunks=True,
+                compression="gzip",
+                compression_opts=6,
+            )
+            create_dataset("input_ids", data=data["input_ids"], dtype="i8")
+            create_dataset("attention_mask", data=data["attention_mask"], dtype="i8")
+            create_dataset("id", data=data["id"], dtype=str_dtype)
+            create_dataset("description", data=data["description"], dtype=str_dtype)
+            create_dataset("sequence", data=data["sequence"], dtype=str_dtype)
+
+    @staticmethod
     def preprocess(
         fasta_file: PathLike,
         output_file: PathLike,
         tokenizer: PreTrainedTokenizerFast,
         block_size: int = 2048,
         kmer_size: int = 3,
-        compression_type: Optional[str] = "gzip",
-        compression_ratio: int = 6,
         train_val_test_split: Optional[Dict[str, float]] = None,
         subsample: int = 1,
     ) -> None:
@@ -178,28 +193,10 @@ class H5PreprocessMixin:
                 local_output_file = (
                     local_output_file.parent / split_name / local_output_file.name
                 )
-            with h5py.File(local_output_file, "w") as f:
-                str_dtype = h5py.string_dtype(encoding="utf-8")
-                create_dataset = functools.partial(
-                    f.create_dataset,
-                    fletcher32=True,
-                    chunks=True,
-                    compression=compression_type,
-                    compression_opts=compression_ratio,
-                )
-                create_dataset("input_ids", data=fields["input_ids"], dtype="i8")
-                create_dataset(
-                    "attention_mask", data=fields["attention_mask"], dtype="i8"
-                )
-                create_dataset("id", data=fields["id"], dtype=str_dtype)
-                create_dataset(
-                    "description", data=fields["description"], dtype=str_dtype
-                )
-                create_dataset("sequence", data=fields["sequence"], dtype=str_dtype)
 
-            print(
-                f"File saved to: {local_output_file}, {compression_type=}, {compression_ratio=}"
-            )
+            H5PreprocessMixin.write_h5(local_output_file, fields)
+
+            print(f"File saved to: {local_output_file}")
 
     @staticmethod
     def get_num_samples_in_file(file: Path, field: str) -> int:
