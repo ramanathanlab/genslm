@@ -35,7 +35,7 @@ mpiexec \
     --hostfile $PBS_NODEFILE \
     $PBS_O_WORKDIR/run-polaris.sh \
     python -m gene_transformer.cmdline.fasta_to_h5 \
-    --h5_dir /home/hippekp/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts_aatrain/ \
+    --h5_dir /home/hippekp/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts_aa/train/ \
     --h5_outfile /home/hippekp/CVD-Mol-AI/hippekp/pgfam_30k_h5_tts_aa/combined_train.h5 \
     --gather \
     --concatenate \
