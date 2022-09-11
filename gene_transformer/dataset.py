@@ -115,7 +115,7 @@ class H5PreprocessMixin:
         tokenizer: PreTrainedTokenizerFast,
         block_size: int = 2048,
         kmer_size: int = 3,
-        compression_type: Optional[str] = None,
+        compression_type: Optional[str] = "gzip",
         compression_ratio: int = 6,
         train_val_test_split: Optional[Dict[str, float]] = None,
     ) -> None:
