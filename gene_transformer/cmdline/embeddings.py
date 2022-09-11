@@ -4,10 +4,10 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pytorch_lightning as pl
 from pydantic import root_validator, validator
 from torch.utils.data import DataLoader  # Subset
-import numpy as np
 
 import gene_transformer
 from gene_transformer.config import BaseSettings, WarmupLRSettings

@@ -204,7 +204,7 @@ class H5PreprocessMixin:
         kmer_size: int,
         block_size: int,
     ) -> Dict[str, List[Any]]:
-        data = defaultdict(list)
+
         batch_encoding = tokenizer(
             group_by_kmer(seq_record, kmer_size),
             max_length=block_size,
@@ -212,11 +212,13 @@ class H5PreprocessMixin:
             return_tensors="np",
             truncation=True,
         )
+
+        data = {}
         for field in ["input_ids", "attention_mask"]:
-            data[field].append(batch_encoding[field].astype(np.int8))
-        data["id"].append(seq_record.id)
-        data["description"].append(seq_record.description)
-        data["sequence"].append(str(seq_record.seq).upper())
+            data[field] = batch_encoding[field].astype(np.int8)
+        data["id"] = seq_record.id
+        data["description"] = seq_record.description
+        data["sequence"] = str(seq_record.seq).upper()
         return data
 
     @staticmethod
