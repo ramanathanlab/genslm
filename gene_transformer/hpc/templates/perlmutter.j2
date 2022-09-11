@@ -26,4 +26,4 @@ export PYTHONFAULTHANDLER=1
 
 export PERLMUTTER_WANDB=1
 
-srun shifter /opt/conda/bin/python -m gene_transformer.model -c {{ config }}
+srun shifter /opt/conda/bin/python -m {{ module }} {{ module_args }}

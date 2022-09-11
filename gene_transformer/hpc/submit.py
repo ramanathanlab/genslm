@@ -19,14 +19,9 @@ class HPCSettings(BaseModel):
     workdir: Path
     module: str
     """Module path to python entry point."""
-    config: Path
+    module_args: str
+    """CLI arguments for specified module."""
     gene_transformer_path: Path = Path(gene_transformer.__file__).parent
-
-    @validator("config")
-    def config_exists(cls, v: Path) -> Path:
-        if not v.exists():
-            raise FileNotFoundError(f"Config file does not exist: {v}")
-        return v.resolve()
 
     @validator("workdir")
     def workdir_exists(cls, v: Path) -> Path:
@@ -73,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--reservation", default="")
     parser.add_argument("-w", "--workdir", default=Path("."), type=Path)
     parser.add_argument("-m", "--module", default="gene_transformer.model")
-    parser.add_argument("-c", "--config", required=True, type=Path)
+    parser.add_argument("-v", "--vars", default="", help="module arguments in qoutes.")
     args = parser.parse_args()
 
     settings = HPCSettings(
@@ -85,7 +80,7 @@ if __name__ == "__main__":
         reservation=args.reservation,
         workdir=args.workdir,
         module=args.module,
-        config=args.config,
+        module_args=args.vars,
     )
 
     # Log command for reproducibility
