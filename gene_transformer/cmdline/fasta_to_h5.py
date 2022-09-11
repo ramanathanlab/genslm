@@ -19,6 +19,7 @@ def process_dataset(
     num_workers: int,
     tokenizer_file: Path,
     tokenizer_blocksize: int,
+    kmer_size: int,
     train_val_test_split: Optional[Dict[str, float]],
     node_rank: int,
     num_nodes: int,
@@ -78,6 +79,7 @@ def process_dataset(
         block_size=tokenizer_blocksize,
         train_val_test_split=train_val_test_split,
         subsample=subsample,
+        kmer_size=kmer_size,
     )
 
     with ProcessPoolExecutor(max_workers=num_workers) as pool:
@@ -132,6 +134,7 @@ if __name__ == "__main__":
         help="Block size for the tokenizer",
         default=2048,
     )
+    parser.add_argument("-k", "--kmer_size", help="KMER size", type=int)
     parser.add_argument(
         "-s",
         "--subsample",
@@ -213,6 +216,7 @@ if __name__ == "__main__":
         args.num_workers,
         args.tokenizer,
         args.block_size,
+        args.kmer_size,
         train_val_test_split,
         node_rank,
         num_nodes,
