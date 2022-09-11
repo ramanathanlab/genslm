@@ -9,7 +9,7 @@ from gene_transformer.dataset import H5PreprocessMixin
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--fasta", type=Path, required=True)
-    parser.add_argument("-h", "--h5", type=Path, required=True)
+    parser.add_argument("-o", "--h5", type=Path, required=True)
     parser.add_argument("-t", "--tokenizer", type=str, help="Path to tokenizer file")
     parser.add_argument(
         "-b",
