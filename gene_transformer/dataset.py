@@ -199,6 +199,65 @@ class H5PreprocessMixin:
             print(f"File saved to: {local_output_file}")
 
     @staticmethod
+    def _parallel_preprocess_helper(
+        seq_record: SeqIO.SeqRecord,
+        tokenizer: PreTrainedTokenizerFast,
+        kmer_size: int,
+        block_size: int,
+    ) -> Dict[str, List[Any]]:
+        data = defaultdict(list)
+        batch_encoding = tokenizer(
+            group_by_kmer(seq_record, kmer_size),
+            max_length=block_size,
+            padding="max_length",
+            return_tensors="np",
+            truncation=True,
+        )
+        for field in ["input_ids", "attention_mask"]:
+            data[field].append(batch_encoding[field].astype(np.int8))
+        data["id"].append(seq_record.id)
+        data["description"].append(seq_record.description)
+        data["sequence"].append(str(seq_record.seq).upper())
+        return data
+
+    @staticmethod
+    def parallel_preprocess(
+        fasta_file: PathLike,
+        output_file: PathLike,
+        tokenizer: PreTrainedTokenizerFast,
+        block_size: int = 2048,
+        kmer_size: int = 3,
+        subsample: int = 1,
+        num_workers: int = 1,
+    ) -> None:
+
+        # Load in sequences and take an even subsample
+        sequences = list(SeqIO.parse(fasta_file, "fasta"))[::subsample]
+        print(f"File: {fasta_file}, num sequences: {len(sequences)}")
+
+        func = functools.partial(
+            H5PreprocessMixin._parallel_preprocess_helper,
+            tokenizer=tokenizer,
+            kmer_size=kmer_size,
+            block_size=block_size,
+        )
+
+        data = defaultdict(list)
+        chunksize = max(1, len(sequences) // num_workers)
+        with ProcessPoolExecutor(max_workers=num_workers) as pool:
+            for datum in pool.map(func, sequences, chunksize=chunksize):
+                for key in datum:
+                    data[key].append(datum[key])
+
+        # Gather model input into numpy arrays
+        for key in ["input_ids", "attention_mask"]:
+            data[key] = np.concatenate(data[key])
+
+        H5PreprocessMixin.write_h5(output_file, data)
+
+        print(f"File saved to: {output_file}")
+
+    @staticmethod
     def get_num_samples_in_file(file: Path, field: str) -> int:
         with h5py.File(file, "r") as f:
             return f[field].shape[0]
