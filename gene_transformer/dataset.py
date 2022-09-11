@@ -114,7 +114,6 @@ class H5PreprocessMixin:
             str_dtype = h5py.string_dtype(encoding="utf-8")
             create_dataset = functools.partial(
                 f.create_dataset,
-                fletcher32=True,
                 chunks=True,
                 compression="gzip",
                 compression_opts=6,
@@ -385,7 +384,6 @@ class H5PreprocessMixin:
                     in_h5[key].shape,
                     dtype=in_h5[key].dtype,
                     maxshape=maxshapes[key],
-                    fletcher32=True,
                     chunks=True,
                     compression="gzip",
                     compression_opts=6,
