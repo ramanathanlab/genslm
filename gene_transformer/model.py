@@ -95,7 +95,7 @@ class DNATransformer(pl.LightningModule):
 
     def val_dataloader(self) -> DataLoader:
         self.val_dataset = self.get_dataset(self.cfg.val_file)
-        return self.get_dataloader(self.val_dataset, shuffle=False)
+        return self.get_dataloader(self.val_dataset, shuffle=True)
 
     def test_dataloader(self) -> DataLoader:
         self.test_dataset = self.get_dataset(self.cfg.test_file)
@@ -253,7 +253,7 @@ def train(cfg: ModelSettings) -> None:
         )
 
     if cfg.enable_perplexity:
-        callbacks.append(PerplexityCallback(log_steps=cfg.perplexity_log_steps))
+        callbacks.append(PerplexityCallback(log_steps=cfg.log_every_n_steps))
 
     if cfg.compute_throughput:
         # Remove other callbacks
@@ -301,6 +301,9 @@ def train(cfg: ModelSettings) -> None:
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
         check_val_every_n_epoch=cfg.check_val_every_n_epoch,
+        val_check_interval=cfg.check_val_every_n_steps,
+        log_every_n_steps=cfg.log_every_n_steps,
+        limit_val_batches=cfg.limit_val_batches,
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
 

@@ -69,8 +69,13 @@ class ModelSettings(BaseSettings):
     """Set to path if we want to run pytorch profiler"""
     enable_perplexity: bool = True
     """Enable logging of model perplexity"""
-    perplexity_log_steps: int = 0
-    """Number of training steps to log perplexity on, default logging to end of epoch"""
+    log_every_n_steps: int = 50
+    """Perform logging and perplexity checks every n steps"""
+    check_val_every_n_steps: int = 2500
+    """Run validation set each n steps"""
+    limit_val_batches: int = 32
+    """Limit validation batches to this many batches - (num_ranks * mini_batch) * limit_val_batches = 
+    total_val_samples """
 
     # data settings
     tokenizer_file: Path = (
