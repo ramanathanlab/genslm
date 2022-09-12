@@ -27,6 +27,12 @@ if __name__ == "__main__":
         default=1,
     )
     parser.add_argument("-n", "--num_workers", type=int, default=1)
+    parser.add_argument(
+        "-tvts",
+        "--train_val_test_split",
+        help="Whether or not to split files in to individual train/test/split h5 files (Will default to 0.8 train 0.1 val 0.1 test)",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     tokenizer = PreTrainedTokenizerFast(
@@ -34,6 +40,10 @@ if __name__ == "__main__":
     )
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
+    if args.train_val_test_split:
+        train_test_val_split = {"train": 0.8, "val": 0.1, "test": 0.1}
+    else:
+        train_test_val_split = None
     H5PreprocessMixin.parallel_preprocess(
         args.fasta,
         args.h5,
@@ -42,4 +52,5 @@ if __name__ == "__main__":
         args.kmer_size,
         args.subsample,
         args.num_workers,
+        train_val_test_split=train_test_val_split,
     )

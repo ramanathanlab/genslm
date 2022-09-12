@@ -230,11 +230,25 @@ class H5PreprocessMixin:
         kmer_size: int = 3,
         subsample: int = 1,
         num_workers: int = 1,
+        train_val_test_split: Optional[Dict[str, float]] = None,
     ) -> None:
 
         # Load in sequences and take an even subsample
         sequences = list(SeqIO.parse(fasta_file, "fasta"))[::subsample]
         print(f"File: {fasta_file}, num sequences: {len(sequences)}")
+
+        if train_val_test_split is not None:
+            train_percentage = train_val_test_split["train"]
+            val_percentage = train_val_test_split["val"]
+            sequence_splits = H5PreprocessMixin.train_val_test_split(
+                sequences, train_percentage, val_percentage
+            )
+
+            split_length = sum(len(split) for split in sequence_splits.values())
+            assert split_length == len(sequences)
+
+        else:
+            sequence_splits["all"] = sequences
 
         func = functools.partial(
             H5PreprocessMixin._parallel_preprocess_helper,
@@ -243,20 +257,33 @@ class H5PreprocessMixin:
             block_size=block_size,
         )
 
-        data = defaultdict(list)
-        chunksize = max(1, len(sequences) // num_workers)
-        with ProcessPoolExecutor(max_workers=num_workers) as pool:
-            for datum in pool.map(func, sequences, chunksize=chunksize):
-                for key in datum:
-                    data[key].append(datum[key])
+        for split_name, split_sequences in sequence_splits.items():
+            if not split_sequences:
+                warnings.warn(
+                    f"{fasta_file}: {split_name} split led to empty input array"
+                )
+                continue
 
-        # Gather model input into numpy arrays
-        for key in ["input_ids", "attention_mask"]:
-            data[key] = np.concatenate(data[key])
+            data = defaultdict(list)
+            chunksize = max(1, len(split_sequences) // num_workers)
+            with ProcessPoolExecutor(max_workers=num_workers) as pool:
+                for datum in pool.map(func, split_sequences, chunksize=chunksize):
+                    for key in datum:
+                        data[key].append(datum[key])
 
-        H5PreprocessMixin.write_h5(output_file, data)
+            # Gather model input into numpy arrays
+            for key in ["input_ids", "attention_mask"]:
+                data[key] = np.concatenate(data[key])
 
-        print(f"File saved to: {output_file}")
+            local_output_file = Path(output_file)
+            if split_name != "all":
+                local_output_file = (
+                    local_output_file.parent
+                    / f"{local_output_file.stem}_{split_name}{local_output_file.suffix}"
+                )
+            H5PreprocessMixin.write_h5(local_output_file, data)
+
+            print(f"File saved to: {local_output_file}")
 
     @staticmethod
     def get_num_samples_in_file(file: Path, field: str) -> int:
