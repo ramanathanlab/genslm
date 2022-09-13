@@ -1,0 +1,39 @@
+#!/bin/sh
+#PBS -l select=1:system=polaris
+#PBS -l place=scatter
+#PBS -l walltime=01:00:00
+#PBS -N process_gene_data
+#PBS -q debug
+#PBS -A RL-fold
+#PBS -k doe
+#PBS -o concat_val.out
+#PBS -e concat_val.err
+
+# Change to working directory
+cd $PBS_O_WORKDIR
+
+# MPI and OpenMP settings
+NNODES=$(wc -l <$PBS_NODEFILE)
+NRANKS_PER_NODE=1
+NDEPTH=64
+
+NTOTRANKS=$((NNODES * NRANKS_PER_NODE))
+echo "NUM_OF_NODES= ${NNODES} TOTAL_NUM_RANKS= ${NTOTRANKS} RANKS_PER_NODE= ${NRANKS_PER_NODE}"
+echo <$PBS_NODEFILE
+
+# This environment should get passed through mpiexec
+module load conda/2022-07-19
+conda activate gene_transformer
+
+mpiexec \
+    -n ${NTOTRANKS} \
+    --ppn ${NRANKS_PER_NODE} \
+    --depth=${NDEPTH} \
+    --cpu-bind depth \
+    --hostfile $PBS_NODEFILE \
+    $PBS_O_WORKDIR/run-polaris.sh \
+    python -m gene_transformer.cmdline.fasta_to_h5 \
+    --h5_dir /home/hippekp/CVD-Mol-AI/hippekp/filtered_bvbrc_orfs_h5s/val/ \
+    --h5_outfile /home/hippekp/CVD-Mol-AI/hippekp/filtered_bvbrc_orfs_h5s/combined_val.h5 \
+    --gather \
+    --concatenate
