@@ -67,8 +67,6 @@ class ModelSettings(BaseSettings):
     """Team name for wandb logging."""
     wandb_model_tag: Optional[str] = None
     """Model tag for wandb labeling and resuming."""
-    checkpoint_every_n_train_steps: Optional[int] = None
-    """Number of training steps to perform model checkpointing"""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None
@@ -87,13 +85,15 @@ class ModelSettings(BaseSettings):
     """Enable logging of model perplexity"""
     log_every_n_steps: int = 50
     """Perform logging and perplexity checks every n steps"""
-    check_val_every_n_steps: int = 2500
+    check_val_every_n_steps: Optional[int] = None
     """Run validation set each n steps"""
     limit_val_batches: Optional[int] = None
     """Limit validation batches to this many batches:
     total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
     check_val_every_n_epoch: int = 1
     """Run validation every n number of epochs"""
+    checkpoint_every_n_train_steps: Optional[int] = None
+    """Number of training steps to perform model checkpointing"""
 
     # data settings
     tokenizer_file: Path = (
