@@ -204,7 +204,7 @@ if __name__ == "__main__":
             H5Dataset.concatenate_h5(
                 h5_files,
                 args.h5_outfile,
-                num_workers=32,
+                num_workers=args.num_workers,
                 files_per_write=args.files_per_write,
             )
         else:
