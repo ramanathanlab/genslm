@@ -94,6 +94,8 @@ class ModelSettings(BaseSettings):
     """Run validation every n number of epochs"""
     checkpoint_every_n_train_steps: Optional[int] = None
     """Number of training steps to perform model checkpointing"""
+    checkpoint_every_n_epochs: Optional[int] = None
+    """Number of training epochs to perform model checkpointing"""
 
     # data settings
     tokenizer_file: Path = (
@@ -176,6 +178,21 @@ class ModelSettings(BaseSettings):
                 "Both load_pt_checkpoint and load_ds_checkpoint are "
                 "specified in the configuration. Loading from load_pt_checkpoint."
             )
+        return values
+
+    @root_validator
+    def warn_checkpoint_steps(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        checkpoint_every_n_train_steps = values.get("checkpoint_every_n_train_steps")
+        checkpoint_every_n_epochs = values.get("checkpoint_every_n_epochs")
+        if (
+            checkpoint_every_n_train_steps is not None
+            and checkpoint_every_n_epochs is not None
+        ):
+            warnings.warn(
+                "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
+                "specified in the configuration. Using checkpoint_every_n_train_steps."
+            )
+            values["checkpoint_every_n_epochs"] = None
         return values
 
 
