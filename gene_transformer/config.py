@@ -89,9 +89,11 @@ class ModelSettings(BaseSettings):
     """Perform logging and perplexity checks every n steps"""
     check_val_every_n_steps: int = 2500
     """Run validation set each n steps"""
-    limit_val_batches: int = 32
+    limit_val_batches: Optional[int] = None
     """Limit validation batches to this many batches:
     total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
+    check_val_every_n_epoch: int = 1
+    """Run validation every n number of epochs"""
 
     # data settings
     tokenizer_file: Path = (
@@ -142,8 +144,6 @@ class ModelSettings(BaseSettings):
     """If specified, will use a LR plateau scheduler."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
-    check_val_every_n_epoch: int = 1
-    """Run validation every n number of epochs"""
 
     # generation settings
     num_test_seqs_per_gpu: int = 0
