@@ -63,6 +63,9 @@ class DNATransformer(pl.LightningModule):
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
+        if cfg.deepspeed_flops_profile:
+            self.flops_profiler = FlopsProfiler(self.model)
+
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
 
@@ -104,12 +107,20 @@ class DNATransformer(pl.LightningModule):
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
-        return self.model(
+        if self.cfg.deepspeed_flops_profile:
+            self.flops_profiler.start_profile()
+        out = self.model(
             batch["input_ids"],
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
             **kwargs,
         )
+        if self.cfg.deepspeed_flops_profile:
+            self.flops_profiler.stop_profile()
+            flops = self.flops_profiler.get_total_flops()
+            macs = self.flops_profiler.get_total_macs()
+            params = self.flops_profiler.get_total_params()
+            print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
 
     def training_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
@@ -326,13 +337,8 @@ def train(cfg: ModelSettings) -> None:
     trainer.fit(model)
 
     if cfg.deepspeed_flops_profile and trainer.is_global_zero:
-        flops_profiler.stop_profile()
-        flops = flops_profiler.get_total_flops()
-        macs = flops_profiler.get_total_macs()
-        params = prof.get_total_params()
-        print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
-        flops_profiler.print_model_profile()
-        flops_profiler.end_profile()
+        model.flops_profiler.print_model_profile()
+        model.flops_profiler.end_profile()
 
     if cfg.compute_throughput:
         return
