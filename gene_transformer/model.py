@@ -121,6 +121,7 @@ class DNATransformer(pl.LightningModule):
             macs = self.flops_profiler.get_total_macs()
             params = self.flops_profiler.get_total_params()
             print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
+        return out
 
     def training_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
