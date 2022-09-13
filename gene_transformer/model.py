@@ -177,8 +177,8 @@ class DNATransformer(pl.LightningModule):
 
         return optimizer
 
-    def lr_scheduler_step(self, scheduler, optimizer_idx, metric) -> None:
-        scheduler.step()
+    # def lr_scheduler_step(self, scheduler, optimizer_idx, metric) -> None:
+    #     scheduler.step(metric)
 
 
 def train(cfg: ModelSettings) -> None:
