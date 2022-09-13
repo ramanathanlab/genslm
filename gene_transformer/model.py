@@ -10,17 +10,18 @@ import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
+from deepspeed.profiling.flops_profiler.profiler import FlopsProfiler
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.profiler import PyTorchProfiler
 from pytorch_lightning.strategies import DeepSpeedStrategy
 from tokenizers import Tokenizer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
@@ -282,6 +283,11 @@ def train(cfg: ModelSettings) -> None:
             },
         )
 
+    if cfg.deepspeed_flops_profile:
+        # just profiling the torch.nn.module
+        flops_profiler = FlopsProfiler(model.model)
+        flops_profiler.start_profile()
+
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
@@ -318,6 +324,16 @@ def train(cfg: ModelSettings) -> None:
     )
 
     trainer.fit(model)
+
+    if cfg.deepspeed_flops_profile and trainer.is_global_zero:
+        flops_profiler.stop_profile()
+        flops = flops_profiler.get_total_flops()
+        macs = flops_profiler.get_total_macs()
+        params = prof.get_total_params()
+        print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
+        flops_profiler.print_model_profile()
+        flops_profiler.end_profile()
+
     if cfg.compute_throughput:
         return
 

@@ -94,6 +94,8 @@ class ModelSettings(BaseSettings):
     total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
     check_val_every_n_epoch: int = 1
     """Run validation every n number of epochs"""
+    deepspeed_flops_profile: bool = False
+    """Flag to set whether or not to run deepspeed profiling on training"""
 
     # data settings
     tokenizer_file: Path = (
