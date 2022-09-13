@@ -107,7 +107,8 @@ class DNATransformer(pl.LightningModule):
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
-        if self.cfg.deepspeed_flops_profile:
+        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
+            print("Profiling")
             self.flops_profiler.start_profile()
         out = self.model(
             batch["input_ids"],
@@ -115,12 +116,8 @@ class DNATransformer(pl.LightningModule):
             attention_mask=batch["attention_mask"],
             **kwargs,
         )
-        if self.cfg.deepspeed_flops_profile:
+        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
             self.flops_profiler.stop_profile()
-            flops = self.flops_profiler.get_total_flops()
-            macs = self.flops_profiler.get_total_macs()
-            params = self.flops_profiler.get_total_params()
-            print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
         return out
 
     def training_step(
@@ -330,16 +327,16 @@ def train(cfg: ModelSettings) -> None:
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
 
-    if cfg.deepspeed_flops_profile:
-        # just profiling the torch.nn.module
-        flops_profiler = FlopsProfiler(model.model)
-        flops_profiler.start_profile()
-
     trainer.fit(model)
 
     if cfg.deepspeed_flops_profile and trainer.is_global_zero:
+        flops = model.flops_profiler.get_total_flops()
+        macs = model.flops_profiler.get_total_macs()
+        params = model.flops_profiler.get_total_params()
+        print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
         model.flops_profiler.print_model_profile()
         model.flops_profiler.end_profile()
+        return
 
     if cfg.compute_throughput:
         return
