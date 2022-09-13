@@ -171,7 +171,9 @@ class DNATransformer(pl.LightningModule):
             scheduler = ReduceLROnPlateau(
                 optimizer=optimizer, **self.cfg.lr_plateau.dict(), verbose=True
             )
-            return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
+            return [optimizer], [
+                {"scheduler": scheduler, "interval": "epoch", "monitor": "val/loss"}
+            ]
 
         return optimizer
 
