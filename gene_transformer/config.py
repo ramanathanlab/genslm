@@ -45,7 +45,10 @@ class ReduceLROnPlateauSettings(BaseSettings):
     factor: float = 0.1
     """Factor to decrease learning rate by upon plateau"""
     patience: int = 10
-    "Number of epochs with no improvement after which learning rate will be reduced. For example, if patience = 2, then we will ignore the first 2 epochs with no improvement, and will only decrease the LR after the 3rd epoch if the loss still hasn’t improved then. Default: 10."
+    """Number of epochs with no improvement after which learning rate will be reduced.
+       For example, if patience = 2, then we will ignore the first 2 epochs with no 
+       improvement, and will only decrease the LR after the 3rd epoch if the loss still hasn’t 
+       improved then. Default: 10."""
     threshold: float = 1e-4
     """Threshold for measuring the new optimum, to only focus on significant changes. Default: 1e-4."""
     eps: float = 1e-8

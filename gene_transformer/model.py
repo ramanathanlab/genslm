@@ -169,14 +169,9 @@ class DNATransformer(pl.LightningModule):
 
         if self.cfg.lr_plateau is not None:
             scheduler = ReduceLROnPlateau(
-                optimizer=optimizer,
-                mode=self.cfg.lr_plateau.mode,
-                factor=self.cfg.lr_plateau.factor,
-                patience=self.cfg.lr_plateau.patience,
-                threshold=self.cfg.lr_plateau.threshold,
-                eps=self.cfg.lr_plateau.eps,
+                optimizer=optimizer, **self.cfg.lr_plateau.dict(), verbose=True
             )
-            return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
+            return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
 
         return optimizer
 
