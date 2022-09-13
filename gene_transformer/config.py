@@ -193,6 +193,13 @@ class ModelSettings(BaseSettings):
                 "specified in the configuration. Using checkpoint_every_n_train_steps."
             )
             values["checkpoint_every_n_epochs"] = None
+        elif (
+            checkpoint_every_n_train_steps is None and checkpoint_every_n_epochs is None
+        ):
+            warnings.warn(
+                "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
+                "missing in the configuration. PLease specify one of these to log checkpoints."
+            )
         return values
 
 
