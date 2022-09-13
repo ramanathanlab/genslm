@@ -334,7 +334,7 @@ def train(cfg: ModelSettings) -> None:
         macs = model.flops_profiler.get_total_macs()
         params = model.flops_profiler.get_total_params()
         print("Flops: {}, macs: {}, params: {}".format(flops, macs, params))
-        model.flops_profiler.print_model_profile()
+        model.flops_profiler.print_model_profile(profile_step=5)
         model.flops_profiler.end_profile()
         return
 
