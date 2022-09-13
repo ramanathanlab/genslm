@@ -283,11 +283,6 @@ def train(cfg: ModelSettings) -> None:
             },
         )
 
-    if cfg.deepspeed_flops_profile:
-        # just profiling the torch.nn.module
-        flops_profiler = FlopsProfiler(model.model)
-        flops_profiler.start_profile()
-
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
@@ -322,6 +317,11 @@ def train(cfg: ModelSettings) -> None:
         limit_val_batches=cfg.limit_val_batches,
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
+
+    if cfg.deepspeed_flops_profile:
+        # just profiling the torch.nn.module
+        flops_profiler = FlopsProfiler(model.model)
+        flops_profiler.start_profile()
 
     trainer.fit(model)
 
