@@ -20,6 +20,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
@@ -166,6 +167,17 @@ class DNATransformer(pl.LightningModule):
             )
             return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
+        if self.cfg.lr_plateau is not None:
+            scheduler = ReduceLROnPlateau(
+                optimizer=optimizer,
+                mode=self.cfg.lr_plateau.mode,
+                factor=self.cfg.lr_plateau.factor,
+                patience=self.cfg.lr_plateau.patience,
+                threshold=self.cfg.lr_plateau.threshold,
+                eps=self.cfg.lr_plateau.eps,
+            )
+            return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
+
         return optimizer
 
     def lr_scheduler_step(self, scheduler, optimizer_idx, metric) -> None:
@@ -272,6 +284,7 @@ def train(cfg: ModelSettings) -> None:
                 "on_trace_ready": torch.profiler.tensorboard_trace_handler("./"),
             },
         )
+
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,

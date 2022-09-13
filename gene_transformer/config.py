@@ -39,6 +39,19 @@ class WarmupLRSettings(BaseSettings):
     """Steps to warm up for."""
 
 
+class ReduceLROnPlateauSettings(BaseSettings):
+    mode: str = "min"
+    """LR will adjust based on minimizing/maximizing a metric"""
+    factor: float = 0.1
+    """Factor to decrease learning rate by upon plateau"""
+    patience: int = 10
+    "Number of epochs with no improvement after which learning rate will be reduced. For example, if patience = 2, then we will ignore the first 2 epochs with no improvement, and will only decrease the LR after the 3rd epoch if the loss still hasn’t improved then. Default: 10."
+    threshold: float = 1e-4
+    """Threshold for measuring the new optimum, to only focus on significant changes. Default: 1e-4."""
+    eps: float = 1e-8
+    """Minimal decay applied to lr. If the difference between new and old lr is smaller than eps, the update is ignored. Default: 1e-8."""
+
+
 class ModelSettings(BaseSettings):
     """Settings for the DNATransformer model."""
 
@@ -122,6 +135,8 @@ class ModelSettings(BaseSettings):
     """Training precision."""
     warm_up_lr: Optional[WarmupLRSettings] = None
     """If specified, will use a learning rate warmup scheduler."""
+    lr_plateau: Optional[ReduceLROnPlateauSettings] = None
+    """If specified, will use a LR plateau scheduler."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
     check_val_every_n_epoch: int = 1
