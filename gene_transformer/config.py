@@ -167,6 +167,7 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.checkpoint_dir = None
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
+    new_config.limit_val_batches = 0
     # Select size of subset to use, more ranks require more data to compute stats.
     nodes_to_sample_size = {
         1: 1600,
