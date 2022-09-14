@@ -158,4 +158,4 @@ module load conda/2022-07-19
 conda activate gene_transformer
 python -m gene_transformer.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -v "-c config.yaml" 
 ```
-*Argument configs are passed verbatim after the `-v` flag*
+*Module specific arguments are passed verbatim by the `-v` flag, args must be inside quotes*
