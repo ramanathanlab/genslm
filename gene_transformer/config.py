@@ -46,8 +46,8 @@ class ReduceLROnPlateauSettings(BaseSettings):
     """Factor to decrease learning rate by upon plateau"""
     patience: int = 10
     """Number of epochs with no improvement after which learning rate will be reduced.
-       For example, if patience = 2, then we will ignore the first 2 epochs with no 
-       improvement, and will only decrease the LR after the 3rd epoch if the loss still hasn’t 
+       For example, if patience = 2, then we will ignore the first 2 epochs with no
+       improvement, and will only decrease the LR after the 3rd epoch if the loss still hasn't
        improved then. Default: 10."""
     threshold: float = 1e-4
     """Threshold for measuring the new optimum, to only focus on significant changes. Default: 1e-4."""
@@ -67,8 +67,6 @@ class ModelSettings(BaseSettings):
     """Team name for wandb logging."""
     wandb_model_tag: Optional[str] = None
     """Model tag for wandb labeling and resuming."""
-    checkpoint_every_n_train_steps: Optional[int] = None
-    """Number of training steps to perform model checkpointing"""
     checkpoint_dir: Optional[Path] = Path("codon_transformer")
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None
@@ -87,13 +85,17 @@ class ModelSettings(BaseSettings):
     """Enable logging of model perplexity"""
     log_every_n_steps: int = 50
     """Perform logging and perplexity checks every n steps"""
-    check_val_every_n_steps: int = 2500
+    check_val_every_n_steps: Optional[int] = None
     """Run validation set each n steps"""
     limit_val_batches: Optional[int] = None
     """Limit validation batches to this many batches:
     total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
     check_val_every_n_epoch: int = 1
     """Run validation every n number of epochs"""
+    checkpoint_every_n_train_steps: Optional[int] = None
+    """Number of training steps to perform model checkpointing"""
+    checkpoint_every_n_epochs: Optional[int] = None
+    """Number of training epochs to perform model checkpointing"""
 
     # data settings
     tokenizer_file: Path = (
@@ -175,6 +177,28 @@ class ModelSettings(BaseSettings):
             warnings.warn(
                 "Both load_pt_checkpoint and load_ds_checkpoint are "
                 "specified in the configuration. Loading from load_pt_checkpoint."
+            )
+        return values
+
+    @root_validator
+    def warn_checkpoint_steps(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        checkpoint_every_n_train_steps = values.get("checkpoint_every_n_train_steps")
+        checkpoint_every_n_epochs = values.get("checkpoint_every_n_epochs")
+        if (
+            checkpoint_every_n_train_steps is not None
+            and checkpoint_every_n_epochs is not None
+        ):
+            warnings.warn(
+                "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
+                "specified in the configuration. Using checkpoint_every_n_train_steps."
+            )
+            values["checkpoint_every_n_epochs"] = None
+        elif (
+            checkpoint_every_n_train_steps is None and checkpoint_every_n_epochs is None
+        ):
+            warnings.warn(
+                "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
+                "missing in the configuration. PLease specify one of these to log checkpoints."
             )
         return values
 
