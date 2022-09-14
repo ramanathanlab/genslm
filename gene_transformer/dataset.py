@@ -248,7 +248,7 @@ class H5PreprocessMixin:
             assert split_length == len(sequences)
 
         else:
-            sequence_splits["all"] = sequences
+            sequence_splits = {"all": sequences}
 
         func = functools.partial(
             H5PreprocessMixin._parallel_preprocess_helper,

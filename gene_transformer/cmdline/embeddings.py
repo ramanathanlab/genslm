@@ -170,6 +170,7 @@ def main(config: InferenceConfig) -> None:
 
     print(f"Running inference with dataset length {len(dataloader)}")
     trainer.predict(model, dataloaders=dataloader, return_predictions=False)
+    print("Done")
 
     # if trainer.is_global_zero:
     #    gather_embeddings(tmp_embeddings_dir, config.embeddings_out_path)
