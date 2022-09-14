@@ -9,6 +9,7 @@ import numpy as np
 import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
+import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
@@ -62,6 +63,7 @@ class DNATransformer(pl.LightningModule):
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
         # self.model = AutoModelForCausalLM.from_config(self.base_config)
 
+    @deepspeed.zero.Init()
     def configure_sharded_model(self):
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
