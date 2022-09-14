@@ -1,7 +1,8 @@
-import torch
 import itertools
 from argparse import ArgumentParser
 from pathlib import Path
+
+import torch
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )

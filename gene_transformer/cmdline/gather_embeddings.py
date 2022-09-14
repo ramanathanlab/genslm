@@ -5,7 +5,9 @@ from typing import Optional
 import numpy as np
 
 
-def gather_embeddings(input_dir: Path, output_path: Optional[Path] = None) -> None:
+def gather_embeddings(
+    input_dir: Path, output_path: Optional[Path] = None
+) -> np.ndarray:
     """Gather embeddings produced via DDP into a single sorted numpy array."""
 
     # Glob embedding and index files written by each rank

@@ -9,7 +9,6 @@ import numpy as np
 import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
-import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
@@ -17,11 +16,11 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.profiler import PyTorchProfiler
 from pytorch_lightning.strategies import DeepSpeedStrategy
 from tokenizers import Tokenizer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
