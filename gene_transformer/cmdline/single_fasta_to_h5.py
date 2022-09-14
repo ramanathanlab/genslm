@@ -44,6 +44,7 @@ if __name__ == "__main__":
         train_test_val_split = {"train": 0.8, "val": 0.1, "test": 0.1}
     else:
         train_test_val_split = None
+
     H5PreprocessMixin.parallel_preprocess(
         args.fasta,
         args.h5,
