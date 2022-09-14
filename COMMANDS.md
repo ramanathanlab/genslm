@@ -1,5 +1,19 @@
 Helpful commands for `gene_transformer`
 
+### Submitting to Polaris (TODO: perlmutter)
+
+Here is an example for submitting to Polaris. This assumes you are in the working directory where `config.yaml` is.
+```bash 
+python -m gene_transformer.hpc.submit \
+  -T polaris \
+  -a $ALLOCATION_NAME \
+  -q prod \
+  -t 06:00:00 \
+  -n 16 \
+  -j genome_finetune_run1 \
+  -v "-c config.yaml" 
+```
+
 ### Data processing 
 
 Converting a directory of fasta files into a directory of h5 files (Step one of data preprocessing for pretraining, output of this step needs to be combined into single files to be fed to models) 
@@ -32,5 +46,3 @@ python -m gene_transformer.cmdline.single_fasta_to_h5 \
   --train_val_test_split
 ```
 *`--train_val_test_split` is a bool flag, if set it will save three files \*\_train.h5, \*\_val.h5 \*\_test.h5 with 0.8/0.1/0.1 split*
-
-Converting direc
