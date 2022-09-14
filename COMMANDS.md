@@ -14,6 +14,48 @@ python -m gene_transformer.hpc.submit \
   -v "-c config.yaml" 
 ```
 
+### Generating Embeddings 
+
+1. Convert model weights into PT (optionally remove the attention_weight.bias, it is recomended to not use these files however)
+
+```bash
+python -m gene_transformer.cmdline.remove_neox_attention_bias \
+  -d /home/hippekp/CVD-Mol-AI/hippekp/model_training/genome_finetuning_25m/checkpoints_run1/model-epoch69-val_loss0.01.ckpt/ \
+  -o /home/hippekp/CVD-Mol-AI/hippekp/model_training/25m_genome_embeddings/genome_ft_25m_epoch69.pt
+```
+*This saves 2 files, one to the input deepspeed dir (as a .pt file) and one as the output file you specify, without the attentionweight.bias layers. This might be a bad thing to run inference on...*
+
+2. Setup a config file that looks like this: 
+```
+load_pt_checkpoint: /home/hippekp/CVD-Mol-AI/hippekp/model_training/25m_genome_embeddings/model-epoch69-val_loss0.01.pt
+tokenizer_file: /home/hippekp/github/gene_transformer/gene_transformer/tokenizer_files/codon_wordlevel_100vocab.json
+data_file: $DATA.h5
+embeddings_out_path: /home/hippekp/CVD-Mol-AI/hippekp/model_training/25m_genome_embeddings/train_embeddings/
+model_config_json: /lus/eagle/projects/CVD-Mol-AI/hippekp/model_training/genome_finetuning_25m/config/neox_25,290,752.json
+num_nodes: 8
+batch_size: 2
+block_size: 10240
+num_data_workers: 16
+prefetch_factor: 16
+```
+And submit like this: 
+```bash 
+python -m gene_transformer.hpc.submit \
+  -T polaris \
+  -a RL-fold \
+  -q debug-scaling \
+  -t 00:30:00 \
+  -n 8 \
+  -m gene_transformer.cmdline.embeddings \
+  -v "-c config.yaml"
+```
+3. Gather them into a single *.npy file
+```
+python -m gene_transformer.cmdline.gather_embeddings \
+  -i train_embeddings/ \
+  -o 25m_genome_train_embeddings.npy
+```
+
 ### Data processing 
 
 Converting a directory of fasta files into a directory of h5 files (Step one of data preprocessing for pretraining, output of this step needs to be combined into single files to be fed to models) 
