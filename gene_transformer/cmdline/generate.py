@@ -54,7 +54,7 @@ if __name__ == "__main__":
         model.tokenizer,
         num_seqs=args.num_seqs,
         known_sequence_files=args.known_sequence_files,
-        start_sequence=None,
+        start_sequence="GGC",
         to_stop_codon=False,
         max_length=config.block_size,
         write_to_file=args.output_fasta,
