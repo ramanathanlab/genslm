@@ -185,6 +185,7 @@ def non_redundant_generation(
         seq = tokens_to_sequences(
             tokens, tokenizer=tokenizer, to_stop_codon=to_stop_codon
         )[0]
+        print(seq)
         all_generated_seqs.append(seq)
         found_existing = seq in known_sequences
         if not found_existing and len(seq) > length_cutoff:
