@@ -95,7 +95,7 @@ def tokens_to_sequences(
     tokens: torch.Tensor, tokenizer: PreTrainedTokenizerFast, to_stop_codon: bool = True
 ) -> List[str]:
     # Decode tokens to codon strings
-    seqs = tokenizer.batch_decode(tokens, skip_special_tokens=True)
+    seqs = tokenizer.batch_decode(tokens, skip_special_tokens=False)
     # Convert from tokens to string
     seq_strings = []
     for s in seqs:
