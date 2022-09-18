@@ -146,6 +146,10 @@ class ModelSettings(BaseSettings):
     """If specified, will use a LR plateau scheduler."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
+    offload_parameters: Optional[bool] = False
+    """Whether or not to offload parameters using DeepSpeed to the CPU"""
+    offload_optimizer: Optional[bool] = False
+    """Whether or not to offload optimizer using DeepSpeed to the CPU"""
 
     # generation settings
     num_test_seqs_per_gpu: int = 0

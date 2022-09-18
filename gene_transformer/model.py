@@ -157,8 +157,10 @@ class DNATransformer(pl.LightningModule):
         return self(batch, output_hidden_states=True)
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
-        # optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
-        optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
+        if self.cfg.offload_optimizer:
+            optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
+        else:
+            optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
         if self.cfg.warm_up_lr is not None:
             scheduler = WarmupLR(
                 optimizer,
@@ -289,11 +291,11 @@ def train(cfg: ModelSettings) -> None:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedStrategy(
             stage=3,
-            # offload_optimizer=True,
-            # offload_parameters=True,
-            # remote_device="cpu",
-            # offload_params_device="cpu",
-            # offload_optimizer_device="nvme",
+            offload_optimizer=cfg.offload_optimizer,
+            offload_parameters=cfg.offload_parameters,
+            remote_device="cpu",
+            offload_params_device="cpu",
+            offload_optimizer_device="cpu",
             # nvme_path="/tmp",
             logging_batch_size_per_gpu=cfg.batch_size,
             # add the option to load a config from json file with more deepspeed options
