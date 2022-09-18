@@ -305,7 +305,7 @@ def train(cfg: ModelSettings) -> None:
         logger=wandb_logger,
         profiler=profiler,
         accumulate_grad_batches=cfg.accumulate_grad_batches,
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=2,
         precision=cfg.precision,
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
