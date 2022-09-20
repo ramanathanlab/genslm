@@ -21,6 +21,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
+from lightning_transformers.utilities.deepspeed import (
+    enable_transformers_pretrained_deepspeed_sharding,
+)
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
@@ -60,11 +63,14 @@ class DNATransformer(pl.LightningModule):
 
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
-        self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     # @deepspeed.zero.Init()
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
+    def setup(self, stage):
+        if not hasattr(self, "model"):
+            enable_transformers_pretrained_deepspeed_sharding(self)
+            self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     def get_dataset(self, data_path: PathLike) -> CachingH5Dataset:
         """Helper function to generate dataset."""
