@@ -17,6 +17,7 @@ class HPCSettings(BaseModel):
     job_name: str
     reservation: str = ""
     workdir: Path
+    filesystems: str = "home:grand:eagle"
     module: str
     """Module path to python entry point."""
     module_args: str
@@ -87,6 +88,7 @@ if __name__ == "__main__":
         workdir=args.workdir,
         module=args.module,
         module_args=args.vars,
+        filesystems=args.filesystems,
     )
 
     # Log command for reproducibility
