@@ -68,7 +68,13 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--reservation", default="")
     parser.add_argument("-w", "--workdir", default=Path("."), type=Path)
     parser.add_argument("-m", "--module", default="gene_transformer.model")
-    parser.add_argument("-v", "--vars", default="", help="module arguments in qoutes.")
+    parser.add_argument("-v", "--vars", default="", help="module arguments in quotes.")
+    parser.add_aragument(
+        "-f",
+        "--filesystems",
+        default="home:grand:eagle:swift",
+        help="Specify filesystems for polaris",
+    )
     args = parser.parse_args()
 
     settings = HPCSettings(

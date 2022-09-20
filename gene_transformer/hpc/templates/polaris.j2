@@ -1,6 +1,7 @@
 #!/bin/sh
 #PBS -l select={{ nodes }}:system=polaris
 #PBS -l place=scatter
+#PBS -l filesystems={{ filesystems }}
 #PBS -l walltime={{ time }}
 #PBS -q {{ queue }}
 #PBS -A {{ allocation }}
