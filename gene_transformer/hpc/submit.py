@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--workdir", default=Path("."), type=Path)
     parser.add_argument("-m", "--module", default="gene_transformer.model")
     parser.add_argument("-v", "--vars", default="", help="module arguments in quotes.")
-    parser.add_aragument(
+    parser.add_argument(
         "-f",
         "--filesystems",
         default="home:grand:eagle:swift",
