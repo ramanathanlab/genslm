@@ -151,8 +151,9 @@ class ModelSettings(BaseSettings):
     offload_optimizer: Optional[bool] = False
     """Whether or not to offload optimizer using DeepSpeed to the CPU"""
     offload_device: Optional[str] = "cpu"
-    """The device to offload parameters using DeepSpeed"""
+    """The device to offload parameters using DeepSpeed - defaults to cpu"""
     nvme_path: Optional[str] = "/local/scratch"
+    """The path to the nvme drive"""
 
     # generation settings
     num_test_seqs_per_gpu: int = 0
