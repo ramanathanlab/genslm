@@ -299,10 +299,10 @@ def train(cfg: ModelSettings) -> None:
             stage=3,
             offload_optimizer=cfg.offload_optimizer,
             offload_parameters=cfg.offload_parameters,
-            remote_device="cpu",
-            offload_params_device="cpu",
-            offload_optimizer_device="cpu",
-            # nvme_path="/tmp",
+            remote_device=cfg.offload_device,
+            offload_params_device=cfg.offload_device,
+            offload_optimizer_device=cfg.offload_device,
+            nvme_path=cfg.nvme_path,
             logging_batch_size_per_gpu=cfg.batch_size,
             # add the option to load a config from json file with more deepspeed options
             # note that if supplied all defaults are ignored - model settings defaults this arg to None
