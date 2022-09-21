@@ -30,9 +30,13 @@ if __name__ == "__main__":
 
     # Check to make sure we have a valid checkpoint file to load from
     if config.load_pt_checkpoint is not None:
-        load_strategy = LoadPTCheckpointStrategy(config.load_pt_checkpoint, cfg=config)
+        load_strategy = LoadPTCheckpointStrategy(
+            config.load_pt_checkpoint, cfg=config, generation_flag=True
+        )
     elif config.load_ds_checkpoint is not None:
-        load_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
+        load_strategy = LoadDeepSpeedStrategy(
+            config.load_ds_checkpoint, cfg=config, generation_flag=True
+        )
     else:
         raise ValueError(
             "load_ds_checkpoint or load_pt_checkpoint must be set in the config file"

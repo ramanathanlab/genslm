@@ -46,7 +46,7 @@ class DNATransformer(pl.LightningModule):
     val_dataset: CachingH5Dataset
     test_dataset: CachingH5Dataset
 
-    def __init__(self, cfg: ModelSettings) -> None:
+    def __init__(self, cfg: ModelSettings, generation_flag: bool = False) -> None:
         super().__init__()
 
         settings_dict = cfg.dict()
@@ -63,6 +63,10 @@ class DNATransformer(pl.LightningModule):
 
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
+
+        # if generating, need to set up the model in the init
+        if generation_flag:
+            self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     # @deepspeed.zero.Init()
     # def configure_sharded_model(self):
