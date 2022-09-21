@@ -64,7 +64,7 @@ mpiexec \
   --cpu-bind none \
   --mem-bind none \
   --hostfile $PBS_NODEFILE  \
-  {{ gene_transformer_path / "hpc" / "templates" / "affinity.sh" }} \
+  {{ gene_transformer_path / "hpc" / "templates" / "run-polaris.sh" }} \
   python -m {{ module }} {{ module_args }}
 
 
