@@ -50,15 +50,23 @@ conda activate gene_transformer
 # IMPORTANT NOTE: This requires having a conda environment called gene_transformer
 
 # Logging
-echo "$(df -h /dev/shm)"
+echo "$(df -h /local/scratch)"
+
+# NCCL settings
+export NCCL_DEBUG=info
+export NCCL_NET_GDR_LEVEL=PHB
 
 # For applications that internally handle binding MPI/OpenMP processes to GPUs
 mpiexec \
   -n ${NTOTRANKS} \
   --ppn ${NRANKS_PER_NODE} \
   --depth=${NDEPTH} \
-  --cpu-bind depth \
+  --cpu-bind none \
+  --mem-bind none \
   --hostfile $PBS_NODEFILE  \
-  {{ gene_transformer_path / "hpc" / "templates" / "run-polaris.sh" }} \
+  {{ gene_transformer_path / "hpc" / "templates" / "affinity.sh" }} \
   python -m {{ module }} {{ module_args }}
 
+
+#  --cpu-bind depth \
+#  {{ gene_transformer_path / "hpc" / "templates" / "run-polaris.sh" }} \
