@@ -171,13 +171,14 @@ class DNATransformer(pl.LightningModule):
         if self.cfg.offload_optimizer:
             optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
         else:
-            # optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
-            optimizer = ZeroOneAdam(
-                self.parameters(),
-                lr=self.cfg.learning_rate,
-                cuda_aware=False,
-                comm_backend_name="mpi",
-            )
+            optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
+            # zero one not working for either nccl or mpi
+            # optimizer = ZeroOneAdam(
+            #     self.parameters(),
+            #     lr=self.cfg.learning_rate,
+            #     cuda_aware=False,
+            #     comm_backend_name="mpi",
+            # )
         if self.cfg.warm_up_lr is not None:
             scheduler = WarmupLR(
                 optimizer,
