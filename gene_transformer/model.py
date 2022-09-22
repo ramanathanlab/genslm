@@ -10,6 +10,7 @@ import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
+from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -170,7 +171,8 @@ class DNATransformer(pl.LightningModule):
         if self.cfg.offload_optimizer:
             optimizer = DeepSpeedCPUAdam(self.parameters(), lr=self.cfg.learning_rate)
         else:
-            optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
+            # optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
+            optimizer = ZeroOneAdam(self.parameters(), lr=self.cfg.learning_rate)
         if self.cfg.warm_up_lr is not None:
             scheduler = WarmupLR(
                 optimizer,
