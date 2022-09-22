@@ -175,8 +175,8 @@ class DNATransformer(pl.LightningModule):
             optimizer = ZeroOneAdam(
                 self.parameters(),
                 lr=self.cfg.learning_rate,
-                cuda_aware=True,
-                comm_backend_name="nccl",
+                cuda_aware=False,
+                comm_backend_name="mpi",
             )
         if self.cfg.warm_up_lr is not None:
             scheduler = WarmupLR(
