@@ -318,8 +318,8 @@ def train(cfg: ModelSettings) -> None:
             logging_batch_size_per_gpu=cfg.batch_size,
             partition_activations=cfg.partition_activations,
             cpu_checkpointing=True,
-            allgather_bucket_size=1e9,
-            reduce_bucket_size=1e9,
+            allgather_bucket_size=5e8,
+            reduce_bucket_size=5e8,
             pin_memory=True,
             contiguous_memory_optimization=False
             # add the option to load a config from json file with more deepspeed options
