@@ -321,7 +321,7 @@ def train(cfg: ModelSettings) -> None:
             allgather_bucket_size=1e9,
             reduce_bucket_size=1e9,
             pin_memory=True,
-            contiguous_memory_optimization=True
+            contiguous_memory_optimization=False
             # add the option to load a config from json file with more deepspeed options
             # note that if supplied all defaults are ignored - model settings defaults this arg to None
             # config=cfg.deepspeed_cfg_file
