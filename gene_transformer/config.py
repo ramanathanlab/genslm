@@ -154,6 +154,8 @@ class ModelSettings(BaseSettings):
     """The device to offload parameters using DeepSpeed - defaults to cpu"""
     nvme_path: Optional[str] = "/local/scratch"
     """The path to the nvme drive"""
+    partition_activations: Optional[bool] = False
+    """Whether or not activations are being checkpointed"""
 
     # generation settings
     num_test_seqs_per_gpu: int = 0

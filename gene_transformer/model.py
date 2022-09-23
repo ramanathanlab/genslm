@@ -316,6 +316,12 @@ def train(cfg: ModelSettings) -> None:
             offload_optimizer_device=cfg.offload_device,
             nvme_path=cfg.nvme_path,
             logging_batch_size_per_gpu=cfg.batch_size,
+            partition_activations=cfg.partition_activations,
+            cpu_checkpointing=True,
+            allgather_bucket_size=1e9,
+            reduce_bucket_size=1e9,
+            pin_memory=True,
+            contiguous_memory_optimization=True
             # add the option to load a config from json file with more deepspeed options
             # note that if supplied all defaults are ignored - model settings defaults this arg to None
             # config=cfg.deepspeed_cfg_file
