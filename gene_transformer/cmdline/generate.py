@@ -24,6 +24,13 @@ def main():
         nargs="+",
         help="Space separated list of known sequence files.",
     )
+    parser.add_argument(
+        "-g",
+        "--selected_gpu",
+        type=int,
+        default=0,
+        help="Which gpu to run generation on",
+    )
     args = parser.parse_args()
 
     # Load the model settings file
@@ -44,7 +51,7 @@ def main():
         )
 
     model = load_strategy.get_model(DNATransformer)
-    model.cuda()
+    model.cuda(args.selected_gpu)
     # need to make sure we're in inference mode
     model.eval()
 
