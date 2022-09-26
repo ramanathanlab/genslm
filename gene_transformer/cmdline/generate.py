@@ -10,7 +10,8 @@ from gene_transformer.utils import (
     seqs_to_fasta,
 )
 
-if __name__ == "__main__":
+
+def main():
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", type=Path, required=True)
     parser.add_argument("-o", "--output_fasta", type=Path, required=True)
@@ -21,7 +22,7 @@ if __name__ == "__main__":
         "--known_sequence_files",
         required=False,
         nargs="+",
-        help="Space seperated list of known sequence files.",
+        help="Space separated list of known sequence files.",
     )
     args = parser.parse_args()
 
@@ -69,3 +70,7 @@ if __name__ == "__main__":
 
     # Write fasta with unique sequences to disk
     seqs_to_fasta(unique_seqs, args.output_fasta, custom_seq_name=args.name_prefix)
+
+
+if __name__ == "__main__":
+    main()
