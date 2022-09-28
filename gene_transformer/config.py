@@ -221,15 +221,24 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.check_val_every_n_epoch = 7
     new_config.limit_val_batches = 0.0
     # Select size of subset to use, more ranks require more data to compute stats.
+    # nodes_to_sample_size = {
+    #     1: 1600,
+    #     2: 1600,
+    #     4: 3200,
+    #     8: 6400,
+    #     128: 28_000,
+    #     256: 100_000,
+    # }
+    # for 25B model - 30 seconds per iteration
     nodes_to_sample_size = {
-        1: 1600,
-        2: 1600,
-        4: 3200,
-        8: 6400,
-        128: 28_000,
-        256: 100_000,
+        1: 128,
+        2: 128,
+        4: 256,
+        8: 512,
+        128: 1024,
+        256: 2048,
     }
-    new_config.small_subset = nodes_to_sample_size.get(cfg.num_nodes, 16_000)
+    new_config.small_subset = nodes_to_sample_size.get(cfg.num_nodes, 1024)
     return new_config
 
 
