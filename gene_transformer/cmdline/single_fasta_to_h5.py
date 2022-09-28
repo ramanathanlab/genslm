@@ -33,6 +33,12 @@ if __name__ == "__main__":
         help="Whether or not to split files in to individual train/test/split h5 files (Will default to 0.8 train 0.1 val 0.1 test)",
         action="store_true",
     )
+    parser.add_argument(
+        "-jv",
+        "--just_validation_split",
+        help="Whether to not have test, but only validation split with 20%",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     tokenizer = PreTrainedTokenizerFast(
@@ -42,6 +48,8 @@ if __name__ == "__main__":
 
     if args.train_val_test_split:
         train_test_val_split = {"train": 0.8, "val": 0.1, "test": 0.1}
+    elif args.just_validation_split:
+        train_test_val_split = {"train": 0.8, "val": 0.2, "test": 0.0}
     else:
         train_test_val_split = None
 
