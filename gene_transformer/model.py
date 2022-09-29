@@ -311,6 +311,14 @@ def train(cfg: ModelSettings) -> None:
             },
         )
 
+    # do we limit max number of steps - yes if deepspeed flops profiling
+    if cfg.deepspeed_flops_profile:
+        max_steps = 6
+    else:
+        max_steps = (
+            -1
+        )  # disable, see https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#max-steps
+
     trainer = pl.Trainer(
         # use all available gpus
         gpus=-1,
@@ -349,6 +357,7 @@ def train(cfg: ModelSettings) -> None:
         val_check_interval=cfg.check_val_every_n_steps,
         log_every_n_steps=cfg.log_every_n_steps,
         limit_val_batches=cfg.limit_val_batches,
+        max_steps=max_steps
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
 
