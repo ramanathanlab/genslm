@@ -78,7 +78,7 @@ class DNATransformer(pl.LightningModule):
         if not hasattr(self, "model"):
             enable_transformers_pretrained_deepspeed_sharding(self)
             self.model = AutoModelForCausalLM.from_config(self.base_config)
-            if cfg.deepspeed_flops_profile:
+            if self.cfg.deepspeed_flops_profile:
                 self.flops_profiler = FlopsProfiler(self.model)
 
     def get_dataset(self, data_path: PathLike) -> CachingH5Dataset:
