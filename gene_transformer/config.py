@@ -96,8 +96,6 @@ class ModelSettings(BaseSettings):
     """Number of training steps to perform model checkpointing"""
     checkpoint_every_n_epochs: Optional[int] = None
     """Number of training epochs to perform model checkpointing"""
-    deepspeed_flops_profile: bool = False
-    """Flag to set whether or not to run deepspeed profiling on training"""
 
     # data settings
     tokenizer_file: Path = (
