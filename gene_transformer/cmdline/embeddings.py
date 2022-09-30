@@ -111,9 +111,13 @@ def main(config: InferenceConfig) -> None:
     pl.seed_everything(0)
 
     if config.load_pt_checkpoint:
-        model_strategy = LoadPTCheckpointStrategy(config.load_pt_checkpoint, cfg=config)
+        model_strategy = LoadPTCheckpointStrategy(
+            config.load_pt_checkpoint, cfg=config, generation_flag=True
+        )
     else:
-        model_strategy = LoadDeepSpeedStrategy(config.load_ds_checkpoint, cfg=config)
+        model_strategy = LoadDeepSpeedStrategy(
+            config.load_ds_checkpoint, cfg=config, generation_flag=True
+        )
 
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 

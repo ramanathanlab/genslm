@@ -76,7 +76,12 @@ class DNATransformer(pl.LightningModule):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
     def setup(self, stage):
         if not hasattr(self, "model"):
-            enable_transformers_pretrained_deepspeed_sharding(self)
+            try:
+                enable_transformers_pretrained_deepspeed_sharding(self)
+            except AttributeError:
+                logging.warning(
+                    "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
+                )
             self.model = AutoModelForCausalLM.from_config(self.base_config)
             if self.cfg.deepspeed_flops_profile:
                 self.flops_profiler = FlopsProfiler(self.model)
