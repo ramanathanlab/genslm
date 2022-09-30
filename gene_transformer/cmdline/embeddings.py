@@ -43,6 +43,8 @@ class InferenceConfig(BaseSettings):
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
     block_size: int = 2048
     """Only used when processing a directory of fasta files."""
+    deepspeed_flops_profile: bool = False
+    """Always false when computing embeddings"""
 
     # Parameters needed to initialize DNATransformer (not used for inference)
     tokenizer_file: Path = (
