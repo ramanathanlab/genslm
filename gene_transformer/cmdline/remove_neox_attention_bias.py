@@ -6,13 +6,7 @@ import torch
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-
-
-def deepspeed_to_pt(weight_path: Path) -> Path:
-    pt_file = weight_path.with_suffix(".pt")
-    # Perform the conversion from deepspeed to pt weights
-    convert_zero_checkpoint_to_fp32_state_dict(weight_path, pt_file)
-    return pt_file
+from gene_transformer.cmdline.deepspeed_to_pt import deepspeed_to_pt
 
 
 def fix_gptneox_weights(input_path: Path, output_path: Path) -> None:
