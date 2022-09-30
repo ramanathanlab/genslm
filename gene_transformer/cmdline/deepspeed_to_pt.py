@@ -19,4 +19,5 @@ if __name__ == "__main__":
     on multi rank systems"""
     parser = ArgumentParser()
     parser.add_argument("-d", "--deepspeed_weights", type=Path)
+    args = parser.parse_args()
     deepspeed_to_pt(args.deepspeed_weights)
