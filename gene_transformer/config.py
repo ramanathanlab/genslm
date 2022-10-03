@@ -86,7 +86,7 @@ class ModelSettings(BaseSettings):
     """Enable logging of model perplexity"""
     log_every_n_steps: int = 50
     """Perform logging and perplexity checks every n steps"""
-    check_val_every_n_steps: Optional[int, float] = None
+    val_check_interval: Optional[int, float] = None
     """Run validation set each n steps - pass an int for every n steps and a float for every percent of training"""
     limit_val_batches: Optional[int] = None
     """Limit validation batches to this many batches:

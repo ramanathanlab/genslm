@@ -360,7 +360,7 @@ def train(cfg: ModelSettings) -> None:
         max_epochs=cfg.epochs,
         num_nodes=cfg.num_nodes,
         check_val_every_n_epoch=cfg.check_val_every_n_epoch,
-        val_check_interval=cfg.check_val_every_n_steps,
+        val_check_interval=cfg.val_check_interval,
         log_every_n_steps=cfg.log_every_n_steps,
         limit_val_batches=cfg.limit_val_batches,
         max_steps=max_steps
