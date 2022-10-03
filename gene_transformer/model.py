@@ -66,25 +66,25 @@ class DNATransformer(pl.LightningModule):
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
 
-        # # if generating, need to set up the model in the init
-        # if generation_flag:
+        try:
+            enable_transformers_pretrained_deepspeed_sharding(self)
+        except AttributeError:
+            logging.warning(
+                "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
+            )
         self.model = AutoModelForCausalLM.from_config(self.base_config)
+
+        if self.cfg.deepspeed_flops_profile:
+            self.flops_profiler = FlopsProfiler(self.model)
 
     # @deepspeed.zero.Init()
 
     # def configure_sharded_model(self):
     #     self.model = AutoModelForCausalLM.from_config(self.base_config)
-    def setup(self, stage):
-        if not hasattr(self, "model"):
-            try:
-                enable_transformers_pretrained_deepspeed_sharding(self)
-            except AttributeError:
-                logging.warning(
-                    "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
-                )
-            # self.model = AutoModelForCausalLM.from_config(self.base_config)
-            if self.cfg.deepspeed_flops_profile:
-                self.flops_profiler = FlopsProfiler(self.model)
+    # def setup(self, stage):
+    #     if not hasattr(self, "model"):
+    #
+    #         # self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     def get_dataset(self, data_path: PathLike) -> CachingH5Dataset:
         """Helper function to generate dataset."""
