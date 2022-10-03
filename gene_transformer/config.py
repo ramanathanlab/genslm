@@ -91,7 +91,7 @@ class ModelSettings(BaseSettings):
     limit_val_batches: Optional[int] = None
     """Limit validation batches to this many batches:
     total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
-    check_val_every_n_epoch: int = 1
+    check_val_every_n_epoch: int = 1.0
     """Run validation every n number of epochs"""
     checkpoint_every_n_train_steps: Optional[int] = None
     """Number of training steps to perform model checkpointing"""
