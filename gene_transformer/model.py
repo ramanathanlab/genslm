@@ -70,9 +70,10 @@ class DNATransformer(pl.LightningModule):
         try:
             enable_transformers_pretrained_deepspeed_sharding(self)
         except AttributeError:
-            logging.warning(
+            pl.utilities.rank_zero.rank_zero_warn(
                 "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
             )
+            # logging.warning()
         self.model = AutoModelForCausalLM.from_config(self.base_config)
 
         if self.cfg.deepspeed_flops_profile:
