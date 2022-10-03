@@ -66,9 +66,9 @@ class DNATransformer(pl.LightningModule):
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(self.cfg.model_config_json)
 
-        # if generating, need to set up the model in the init
-        if generation_flag:
-            self.model = AutoModelForCausalLM.from_config(self.base_config)
+        # # if generating, need to set up the model in the init
+        # if generation_flag:
+        self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     # @deepspeed.zero.Init()
 
@@ -82,7 +82,7 @@ class DNATransformer(pl.LightningModule):
                 logging.warning(
                     "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
                 )
-            self.model = AutoModelForCausalLM.from_config(self.base_config)
+            # self.model = AutoModelForCausalLM.from_config(self.base_config)
             if self.cfg.deepspeed_flops_profile:
                 self.flops_profiler = FlopsProfiler(self.model)
 
