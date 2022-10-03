@@ -331,7 +331,7 @@ def train(cfg: ModelSettings) -> None:
         # Use NVMe offloading on other clusters see more here:
         # https://pytorch-lightning.readthedocs.io/en/stable/advanced/advanced_gpu.html#deepspeed-infinity-nvme-offloading
         strategy=DeepSpeedStrategy(
-            stage=3,
+            stage=cfg.deepspeed_stage,
             offload_optimizer=cfg.offload_optimizer,
             offload_parameters=cfg.offload_parameters,
             remote_device=cfg.offload_device,

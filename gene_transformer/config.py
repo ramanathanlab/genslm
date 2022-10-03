@@ -52,7 +52,8 @@ class ReduceLROnPlateauSettings(BaseSettings):
     threshold: float = 1e-4
     """Threshold for measuring the new optimum, to only focus on significant changes. Default: 1e-4."""
     eps: float = 1e-8
-    """Minimal decay applied to lr. If the difference between new and old lr is smaller than eps, the update is ignored. Default: 1e-8."""
+    """Minimal decay applied to lr. If the difference between new and old lr is smaller than eps, the update is 
+    ignored. Default: 1e-8."""
 
 
 class ModelSettings(BaseSettings):
@@ -148,6 +149,8 @@ class ModelSettings(BaseSettings):
     """If specified, will use a LR plateau scheduler."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
+    deepspeed_stage: int = 3
+    """Which deepspeed stage to use"""
     offload_parameters: Optional[bool] = False
     """Whether or not to offload parameters using DeepSpeed to the CPU"""
     offload_optimizer: Optional[bool] = False
