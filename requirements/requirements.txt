@@ -1,4 +1,4 @@
-pytorch-lightning==1.7.5
+pytorch-lightning==1.6.5
 wandb==0.13.3
 pydantic==1.10.2
 biopython==1.79
