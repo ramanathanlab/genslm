@@ -210,7 +210,12 @@ class DNATransformer(pl.LightningModule):
                 optimizer=optimizer, **self.cfg.lr_plateau.dict(), verbose=True
             )
             return [optimizer], [
-                {"scheduler": scheduler, "interval": "step", "monitor": "val/loss"}
+                {
+                    "scheduler": scheduler,
+                    "interval": "step",
+                    "monitor": "val/loss",
+                    frequency: self.cfg.val_check_interval,
+                }
             ]
 
         return optimizer
