@@ -2,7 +2,7 @@
     "architectures": [
         "GPTNeoXForCausalLM"
     ],
-    "hidden_size": 8096,
+    "hidden_size": 8196,
     "num_attention_heads": 64,
     "num_hidden_layers": 64,
     "intermediate_size": 8000,
