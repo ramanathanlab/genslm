@@ -27,6 +27,7 @@ from transformers.utils import ModelOutput
 from lightning_transformers.utilities.deepspeed import (
     enable_transformers_pretrained_deepspeed_sharding,
 )
+import torch.multiprocessing as mp
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
@@ -508,6 +509,9 @@ if __name__ == "__main__":
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
+
+    # potential polaris fix for connection reset error
+    mp.set_start_method("spawn")
 
     # check if we're computing throughput - this means a new config with specific settings - default is false
     if config.compute_throughput:
