@@ -219,7 +219,7 @@ class DNATransformer(pl.LightningModule):
                     "scheduler": scheduler,
                     "interval": "step",
                     "monitor": "val/loss",
-                    frequency: self.cfg.val_check_interval,
+                    "frequency": self.cfg.val_check_interval,
                 }
             ]
 
