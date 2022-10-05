@@ -18,6 +18,13 @@ def main():
     parser.add_argument("-n", "--num_seqs", type=int, required=True)
     parser.add_argument("-s", "--name_prefix", type=str, default="SyntheticSeq")
     parser.add_argument(
+        "-t",
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Temperature argument to pass to generate",
+    )
+    parser.add_argument(
         "-k",
         "--known_sequence_files",
         required=False,
@@ -71,6 +78,7 @@ def main():
         max_length=config.block_size,
         write_to_file=args.output_fasta,
         custom_seq_name=args.name_prefix,
+        temperature=args.temperature,
     )
     unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
     print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")

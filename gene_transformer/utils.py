@@ -58,6 +58,7 @@ def generate_dna(
     num_seqs: int = 5,
     remove_invalid_values: bool = True,
     start_sequence: Optional[str] = "ATG",
+    temperature: Optional[float] = 1.0,
 ) -> torch.Tensor:
     # remove_invalid_values slows down the calculation
     # but is more robust for the reformer model.
@@ -78,6 +79,7 @@ def generate_dna(
         remove_invalid_values=remove_invalid_values,
         use_cache=True,
         pad_token_id=tokenizer.encode("[PAD]")[0],
+        temperature=temperature,
         #        stopping_criteria=stopping_criteria,
     )
 
@@ -140,6 +142,7 @@ def non_redundant_generation(
     max_length: int = 512,
     top_k: int = 50,
     top_p: float = 0.95,
+    temperature: float = 1.0,
     num_seqs: int = 5,
     known_sequence_files: Optional[List[str]] = None,
     start_sequence: str = "ATG",
@@ -181,6 +184,7 @@ def non_redundant_generation(
             top_p=top_p,
             num_seqs=1,
             start_sequence=start_sequence,
+            temperature=temperature,
         )
         seq = tokens_to_sequences(
             tokens, tokenizer=tokenizer, to_stop_codon=to_stop_codon
