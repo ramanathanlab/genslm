@@ -133,24 +133,24 @@ class DNATransformer(pl.LightningModule):
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]) -> ModelOutput:  # type: ignore[override]
-        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
-            print("Profiling")
-            self.flops_profiler.start_profile()
         out = self.model(
             batch["input_ids"],
             labels=batch["input_ids"],
             attention_mask=batch["attention_mask"],
             **kwargs,
         )
-        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
-            self.flops_profiler.stop_profile()
         return out
 
     def training_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.FloatTensor:
+        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
+            print("Profiling")
+            self.flops_profiler.start_profile()
         outputs = self(batch)
         loss = outputs.loss
+        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
+            self.flops_profiler.stop_profile()
         self.log(
             "train/loss",
             loss,
