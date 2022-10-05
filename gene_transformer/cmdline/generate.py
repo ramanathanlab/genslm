@@ -35,7 +35,7 @@ def main():
         "-g",
         "--selected_gpu",
         type=int,
-        default=0,
+        required=True,
         help="Which gpu to run generation on",
     )
     args = parser.parse_args()
