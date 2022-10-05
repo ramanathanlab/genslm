@@ -75,11 +75,8 @@ class DNATransformer(pl.LightningModule):
         #         "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
         #     )
         # # needed to load from checkpoint
-        if generation_flag or self.cfg.deepspeed_flops_profile:
+        if generation_flag:
             self.model = AutoModelForCausalLM.from_config(self.base_config)
-
-        if self.cfg.deepspeed_flops_profile:
-            self.flops_profiler = FlopsProfiler(self.model)
 
     # @deepspeed.zero.Init()
 
@@ -94,6 +91,8 @@ class DNATransformer(pl.LightningModule):
                     "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
                 )
             self.model = AutoModelForCausalLM.from_config(self.base_config)
+        if self.cfg.deepspeed_flops_profile:
+            self.flops_profiler = FlopsProfiler(self.model)
 
     def get_dataset(self, data_path: PathLike) -> CachingH5Dataset:
         """Helper function to generate dataset."""
