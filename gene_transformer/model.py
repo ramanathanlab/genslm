@@ -75,7 +75,7 @@ class DNATransformer(pl.LightningModule):
         #         "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
         #     )
         # # needed to load from checkpoint
-        if generation_flag:
+        if generation_flag or self.cfg.deepspeed_flops_profile:
             self.model = AutoModelForCausalLM.from_config(self.base_config)
 
         if self.cfg.deepspeed_flops_profile:
