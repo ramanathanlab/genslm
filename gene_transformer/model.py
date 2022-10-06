@@ -76,6 +76,12 @@ class DNATransformer(pl.LightningModule):
         #     )
         # # needed to load from checkpoint
         if generation_flag:
+            try:
+                enable_transformers_pretrained_deepspeed_sharding(self)
+            except AttributeError:
+                pl.utilities.rank_zero.rank_zero_warn(
+                    "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
+                )
             self.model = AutoModelForCausalLM.from_config(self.base_config)
 
     # @deepspeed.zero.Init()
@@ -229,7 +235,9 @@ class DNATransformer(pl.LightningModule):
 
 def train(cfg: ModelSettings) -> None:
     if cfg.load_pt_checkpoint is not None:
-        load_strategy = LoadPTCheckpointStrategy(cfg.load_pt_checkpoint, cfg=cfg)
+        load_strategy = LoadPTCheckpointStrategy(
+            cfg.load_pt_checkpoint, cfg=cfg, generation_flag=True
+        )
         model = load_strategy.get_model(DNATransformer)
     elif cfg.load_ds_checkpoint is not None:
         # Check if loading from checkpoint - this assumes that you're
