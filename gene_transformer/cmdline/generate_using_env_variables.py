@@ -34,7 +34,7 @@ def main():
         help="Space separated list of known sequence files.",
     )
     parser.add_argument("--top_k", default=50, type=int)
-    parser.add_argument("--top_p", defualt=0.95, type=float)
+    parser.add_argument("--top_p", default=0.95, type=float)
     args = parser.parse_args()
 
     gpu_number = os.environ.get("SUBNODE_RANK")
