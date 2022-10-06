@@ -38,6 +38,8 @@ def main():
     gpu_number = os.environ.get("SUBNODE_RANK")
     pmi_rank = os.environ.get("PMI_RANK")
 
+    os.mkdir(args.output_folder, exist_ok=True)
+
     output_fasta = args.output_folder / "rank{}.fasta".format(pmi_rank)
     seq_name = args.name_prefix + "_{}".format(pmi_rank)
 
@@ -74,7 +76,7 @@ def main():
             gpu_number,
             socket.gethostname(),
         )
-        print("Running ono CPU.... don't expect any sequences out of this one.")
+        print("Running on CPU.... don't expect any sequences out of this one.")
     # need to make sure we're in inference mode
     model.eval()
 

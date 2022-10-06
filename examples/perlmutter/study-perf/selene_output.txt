@@ -1,0 +1,55 @@
+gene_transformer.20m.2048.selene.128x8.3064394.out:AVERAGE THROUGHPUT: 18635.29296875 +- 60.02495193481445  samples/second over 1024 ranks
+gene_transformer.20m.2048.selene.16x8.3064391.out:AVERAGE THROUGHPUT: 6276.427734375 +- 14.634765625  samples/second over 128 ranks
+gene_transformer.20m.2048.selene.1x8.3064387.out:AVERAGE THROUGHPUT: 463.0650634765625 +- 2.099397659301758  samples/second over 8 ranks
+gene_transformer.20m.2048.selene.2x8.3064388.out:AVERAGE THROUGHPUT: 919.8955078125 +- 2.5944573879241943  samples/second over 16 ranks
+gene_transformer.20m.2048.selene.32x8.3064392.out:AVERAGE THROUGHPUT: 10619.8828125 +- 29.150588989257812  samples/second over 256 ranks
+gene_transformer.20m.2048.selene.4x8.3064389.out:AVERAGE THROUGHPUT: 1793.3394775390625 +- 9.464877128601074  samples/second over 32 ranks
+gene_transformer.20m.2048.selene.64x8.3064393.out:AVERAGE THROUGHPUT: 16527.193359375 +- 52.535369873046875  samples/second over 512 ranks
+gene_transformer.20m.2048.selene.8x8.3064390.out:AVERAGE THROUGHPUT: 3443.26123046875 +- 9.2846097946167  samples/second over 64 ranks
+
+gene_transformer.250m.2048.selene.128x8.3065940.out:AVERAGE THROUGHPUT: 6651.95068359375 +- 6.022434234619141  samples/second over 1024 ranks
+gene_transformer.250m.2048.selene.16x8.3064401.out:AVERAGE THROUGHPUT: 1509.3763427734375 +- 1.323586106300354  samples/second over 128 ranks
+gene_transformer.250m.2048.selene.1x8.3064397.out:AVERAGE THROUGHPUT: 106.22932434082031 +- 0.12551812827587128  samples/second over 8 ranks
+gene_transformer.250m.2048.selene.2x8.3064398.out:AVERAGE THROUGHPUT: 210.12054443359375 +- 0.26740238070487976  samples/second over 16 ranks
+gene_transformer.250m.2048.selene.32x8.3064402.out:AVERAGE THROUGHPUT: 2741.310546875 +- 2.218536376953125  samples/second over 256 ranks
+gene_transformer.250m.2048.selene.4x8.3064399.out:AVERAGE THROUGHPUT: 413.3418273925781 +- 0.6579219102859497  samples/second over 32 ranks
+gene_transformer.250m.2048.selene.512x8.3064406.out:AVERAGE THROUGHPUT: 7999.9169921875 +- 26.11962890625  samples/second over 4096 ranks
+gene_transformer.250m.2048.selene.64x8.3064403.out:AVERAGE THROUGHPUT: 4517.8857421875 +- 2.9362423419952393  samples/second over 512 ranks
+gene_transformer.250m.2048.selene.8x8.3064400.out:AVERAGE THROUGHPUT: 808.8739624023438 +- 0.5957449078559875  samples/second over 64 ranks
+
+gene_transformer.25b.2048.selene.128x8.3064485.out:AVERAGE THROUGHPUT: 73.89842987060547 +- 0.003361350856721401  samples/second over 1024 ranks
+gene_transformer.25b.2048.selene.16x8.3064482.out:AVERAGE THROUGHPUT: 12.915300369262695 +- 0.0009548288071528077  samples/second over 128 ranks
+gene_transformer.25b.2048.selene.1x8.3064478.out:AVERAGE THROUGHPUT: 0.3592131435871124 +- 1.940057882166002e-05  samples/second over 8 ranks
+gene_transformer.25b.2048.selene.2x8.3064479.out:AVERAGE THROUGHPUT: 0.9496495723724365 +- 5.6284017773577943e-05  samples/second over 16 ranks
+gene_transformer.25b.2048.selene.32x8.3064483.out:AVERAGE THROUGHPUT: 25.85223388671875 +- 0.0019195249769836664  samples/second over 256 ranks
+gene_transformer.25b.2048.selene.4x8.3064480.out:AVERAGE THROUGHPUT: 2.55142879486084 +- 0.0001784945634426549  samples/second over 32 ranks
+gene_transformer.25b.2048.selene.64x8.3064484.out:AVERAGE THROUGHPUT: 46.03468322753906 +- 0.002148309489712119  samples/second over 512 ranks
+gene_transformer.25b.2048.selene.8x8.3064481.out:AVERAGE THROUGHPUT: 5.779571533203125 +- 0.0004053756420034915  samples/second over 64 ranks
+
+gene_transformer.2b.2048.selene.128x8.3064414.out:AVERAGE THROUGHPUT: 1052.9979248046875 +- 0.22187502682209015  samples/second over 1024 ranks
+gene_transformer.2b.2048.selene.16x8.3064411.out:AVERAGE THROUGHPUT: 276.24676513671875 +- 0.15705685317516327  samples/second over 128 ranks
+gene_transformer.2b.2048.selene.1x8.3064407.out:AVERAGE THROUGHPUT: 11.821931838989258 +- 0.005764264613389969  samples/second over 8 ranks
+gene_transformer.2b.2048.selene.2x8.3064408.out:AVERAGE THROUGHPUT: 28.282629013061523 +- 0.01240044180303812  samples/second over 16 ranks
+gene_transformer.2b.2048.selene.32x8.3064412.out:AVERAGE THROUGHPUT: 489.10040283203125 +- 0.19046907126903534  samples/second over 256 ranks
+gene_transformer.2b.2048.selene.4x8.3064409.out:AVERAGE THROUGHPUT: 65.58942413330078 +- 0.029915591701865196  samples/second over 32 ranks
+gene_transformer.2b.2048.selene.64x8.3064413.out:AVERAGE THROUGHPUT: 749.0272827148438 +- 0.17522358894348145  samples/second over 512 ranks
+gene_transformer.2b.2048.selene.8x8.3064410.out:AVERAGE THROUGHPUT: 139.28562927246094 +- 0.07004363089799881  samples/second over 64 ranks
+
+gene_transformer.20m.10240.selene.128x8.3064528.out:AVERAGE THROUGHPUT: 702.0673828125 +- 0.33434367179870605  samples/second over 1024 ranks
+gene_transformer.20m.10240.selene.16x8.3064525.out:AVERAGE THROUGHPUT: 294.78582763671875 +- 0.3438829183578491  samples/second over 128 ranks
+gene_transformer.20m.10240.selene.1x8.3064490.out:AVERAGE THROUGHPUT: 23.793071746826172 +- 0.06697947531938553  samples/second over 8 ranks
+gene_transformer.20m.10240.selene.2x8.3064522.out:AVERAGE THROUGHPUT: 46.96818542480469 +- 0.10731932520866394  samples/second over 16 ranks
+gene_transformer.20m.10240.selene.32x8.3064526.out:AVERAGE THROUGHPUT: 476.21954345703125 +- 0.4173676371574402  samples/second over 256 ranks
+gene_transformer.20m.10240.selene.4x8.3064523.out:AVERAGE THROUGHPUT: 90.84505462646484 +- 0.1489221155643463  samples/second over 32 ranks
+gene_transformer.20m.10240.selene.512x8.3064530.out:AVERAGE THROUGHPUT: 759.150390625 +- 0.13545364141464233  samples/second over 4096 ranks
+gene_transformer.20m.10240.selene.64x8.3064527.out:AVERAGE THROUGHPUT: 666.1752319335938 +- 0.46820977330207825  samples/second over 512 ranks
+gene_transformer.20m.10240.selene.8x8.3064524.out:AVERAGE THROUGHPUT: 165.4554901123047 +- 0.29629331827163696  samples/second over 64 ranks
+
+gene_transformer.250m.10240.selene.128x8.3064537.out:AVERAGE THROUGHPUT: 145.60702514648438 +- 0.015213781036436558  samples/second over 1024 ranks
+gene_transformer.250m.10240.selene.16x8.3064534.out:AVERAGE THROUGHPUT: 22.113792419433594 +- 0.001573490328155458  samples/second over 128 ranks
+gene_transformer.250m.10240.selene.1x8.3064491.out:AVERAGE THROUGHPUT: 1.4741902351379395 +- 0.00024133434635587037  samples/second over 8 ranks
+gene_transformer.250m.10240.selene.2x8.3064531.out:AVERAGE THROUGHPUT: 2.8717598915100098 +- 0.00026955752400681376  samples/second over 16 ranks
+gene_transformer.250m.10240.selene.32x8.3064535.out:AVERAGE THROUGHPUT: 42.87007141113281 +- 0.0033940772991627455  samples/second over 256 ranks
+gene_transformer.250m.10240.selene.4x8.3064532.out:AVERAGE THROUGHPUT: 5.769410133361816 +- 0.00044715209514833987  samples/second over 32 ranks
+gene_transformer.250m.10240.selene.64x8.3064536.out:AVERAGE THROUGHPUT: 81.26564025878906 +- 0.007113874424248934  samples/second over 512 ranks
+gene_transformer.250m.10240.selene.8x8.3064533.out:AVERAGE THROUGHPUT: 11.290216445922852 +- 0.0009085932397283614  samples/second over 64 ranks
