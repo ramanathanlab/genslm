@@ -38,7 +38,7 @@ def main():
     gpu_number = os.environ.get("SUBNODE_RANK")
     pmi_rank = os.environ.get("PMI_RANK")
 
-    os.mkdir(args.output_folder, exist_ok=True)
+    os.mkdirs(args.output_folder, exist_ok=True)
 
     output_fasta = args.output_folder / "rank{}.fasta".format(pmi_rank)
     seq_name = args.name_prefix + "_{}".format(pmi_rank)
