@@ -84,23 +84,28 @@ def main():
         print("Using known sequence files: {}".format(args.known_sequence_files))
 
     # Generate sequences using the model
-    results = non_redundant_generation(
-        model.model,
-        model.tokenizer,
-        num_seqs=args.num_seqs,
-        known_sequence_files=args.known_sequence_files,
-        start_sequence=None,
-        to_stop_codon=False,
-        max_length=config.block_size,
-        write_to_file=output_fasta,
-        custom_seq_name=seq_name,
-        temperature=args.temperature,
-    )
-    unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
-    print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
+    try:
+        results = non_redundant_generation(
+            model.model,
+            model.tokenizer,
+            num_seqs=args.num_seqs,
+            known_sequence_files=args.known_sequence_files,
+            start_sequence=None,
+            to_stop_codon=False,
+            max_length=config.block_size,
+            write_to_file=output_fasta,
+            custom_seq_name=seq_name,
+            temperature=args.temperature,
+        )
+        unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
+        print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
 
-    # Write fasta with unique sequences to disk
-    seqs_to_fasta(unique_seqs, args.output_fasta, custom_seq_name=args.name_prefix)
+        # Write fasta with unique sequences to disk
+        seqs_to_fasta(unique_seqs, args.output_fasta, custom_seq_name=args.name_prefix)
+    except:
+        print(
+            "Failure generating on {}, rank {}".format(socket.gethostname(), pmi_rank)
+        )
 
 
 if __name__ == "__main__":
