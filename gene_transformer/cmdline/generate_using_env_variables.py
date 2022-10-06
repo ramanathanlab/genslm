@@ -66,7 +66,15 @@ def main():
         )
 
     model = load_strategy.get_model(DNATransformer)
-    model.cuda(int(gpu_number))
+    try:
+        model.cuda(gpu_number)
+    except:
+        print(
+            "ERROR: ",
+            gpu_number,
+            socket.gethostname(),
+        )
+        print("Running ono CPU.... don't expect any sequences out of this one.")
     # need to make sure we're in inference mode
     model.eval()
 
