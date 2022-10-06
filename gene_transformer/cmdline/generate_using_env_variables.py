@@ -33,6 +33,8 @@ def main():
         nargs="+",
         help="Space separated list of known sequence files.",
     )
+    parser.add_argument("--top_k", default=50, type=int)
+    parser.add_argument("--top_p", defualt=0.95, type=float)
     args = parser.parse_args()
 
     gpu_number = os.environ.get("SUBNODE_RANK")
@@ -98,6 +100,8 @@ def main():
             write_to_file=output_fasta,
             custom_seq_name=seq_name,
             temperature=args.temperature,
+            top_p=args.top_p,
+            top_k=args.top_k,
         )
         unique_seqs, all_seqs = results["unique_seqs"], results["all_generated_seqs"]
         print(f"Proportion of unique seqs: {len(unique_seqs) / len(all_seqs)}")
