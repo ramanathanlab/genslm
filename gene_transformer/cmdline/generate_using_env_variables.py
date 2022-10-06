@@ -10,6 +10,7 @@ from gene_transformer.utils import (
     seqs_to_fasta,
 )
 import os
+import socket
 
 
 def main():
@@ -55,6 +56,13 @@ def main():
     else:
         raise ValueError(
             "load_ds_checkpoint or load_pt_checkpoint must be set in the config file"
+        )
+
+    gpu_number = int(gpu_number)
+    if gpu_number not in [0, 1, 2, 3]:
+        print(
+            gpu_number,
+            socket.gethostname(),
         )
 
     model = load_strategy.get_model(DNATransformer)
