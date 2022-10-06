@@ -38,7 +38,7 @@ def main():
     pmi_rank = os.environ.get("PMI_RANK")
 
     output_fasta = args.output_folder / "rank{}.fasta".format(pmi_rank)
-    seq_name = args.name_prefix + "{_rank}".format(pmi_rank)
+    seq_name = args.name_prefix + "_{}".format(pmi_rank)
 
     # Load the model settings file
     config = ModelSettings.from_yaml(args.config)
