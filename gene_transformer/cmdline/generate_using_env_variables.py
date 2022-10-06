@@ -58,7 +58,7 @@ def main():
         )
 
     model = load_strategy.get_model(DNATransformer)
-    model.cuda(gpu_number)
+    model.cuda(int(gpu_number))
     # need to make sure we're in inference mode
     model.eval()
 
