@@ -75,7 +75,7 @@ class DNATransformer(pl.LightningModule):
         #         "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
         #     )
         # # needed to load from checkpoint
-        if generation_flag:
+        if generation_flag and self.global_rank == 0:
             try:
                 enable_transformers_pretrained_deepspeed_sharding(self)
             except AttributeError:
