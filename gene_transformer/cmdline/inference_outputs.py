@@ -166,7 +166,7 @@ def main(config: InferenceConfig) -> None:
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
-    parser.add_arguument("-a", "--attention", action="store_true", default=False)
+    parser.add_argument("-a", "--attention", action="store_true", default=False)
     args = parser.parse_args()
     config = InferenceConfig.from_yaml(args.config)
     main(config)
