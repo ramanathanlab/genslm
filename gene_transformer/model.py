@@ -152,11 +152,11 @@ class DNATransformer(pl.LightningModule):
         if self.cfg.deepspeed_flops_profile and self.global_step == 5:
             print("Profiling")
             self.flops_profiler.start_profile()
-        outputs = self(batch)
-        loss = outputs.loss
-        # stop the profiling after the whole step has run
+        # stop the profiling after the whole step has run, including backward pass
         if self.cfg.deepspeed_flops_profile and self.global_step == 6:
             self.flops_profiler.stop_profile()
+        outputs = self(batch)
+        loss = outputs.loss
         self.log(
             "train/loss",
             loss,
