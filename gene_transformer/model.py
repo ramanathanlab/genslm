@@ -154,7 +154,8 @@ class DNATransformer(pl.LightningModule):
             self.flops_profiler.start_profile()
         outputs = self(batch)
         loss = outputs.loss
-        if self.cfg.deepspeed_flops_profile and self.global_step == 5:
+        # stop the profiling after the whole step has run
+        if self.cfg.deepspeed_flops_profile and self.global_step == 6:
             self.flops_profiler.stop_profile()
         self.log(
             "train/loss",
@@ -339,7 +340,7 @@ def train(cfg: ModelSettings) -> None:
 
     # do we limit max number of steps - yes if deepspeed flops profiling
     if cfg.deepspeed_flops_profile:
-        max_steps = 6
+        max_steps = 7
     else:
         max_steps = (
             -1
