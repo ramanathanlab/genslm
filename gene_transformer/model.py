@@ -194,7 +194,7 @@ class DNATransformer(pl.LightningModule):
     def predict_step(
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> ModelOutput:
-        return self(batch, output_hidden_states=True)
+        return self(batch, output_hidden_states=True, output_attentions=True)
 
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         if self.cfg.offload_optimizer:
