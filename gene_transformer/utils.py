@@ -575,7 +575,7 @@ class OutputsCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        if output_attentions:
+        if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu(), dim=0)
             self.attentions.append(attend)
         else:
