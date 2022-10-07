@@ -577,7 +577,7 @@ class OutputsCallback(Callback):
         else:
             embed = outputs.hidden_states[0].detach().cpu()
 
-        attend = torch.stack(outputs.attentions).detach().cpu()
+        attend = outputs.attentions[0].detach().cpu()
 
         self.embeddings.append(embed)
         self.attentions.append(attend)
