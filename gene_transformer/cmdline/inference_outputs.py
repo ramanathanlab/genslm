@@ -131,7 +131,9 @@ def main(config: InferenceConfig) -> None:
         print("Generating embeddings values...")
 
     embedding_callback = OutputsCallback(
-        save_dir=tmp_embeddings_dir, output_attentions=args.attention
+        save_dir=tmp_embeddings_dir,
+        output_attentions=args.attention,
+        output_logits=args.logits,
     )
     trainer = pl.Trainer(
         gpus=-1,
@@ -172,6 +174,8 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("-a", "--attention", action="store_true")
+    parser.add_argument("-l", "--logits", action="store_true")
     args = parser.parse_args()
+    assert not (args.attention and args.logits)
     config = InferenceConfig.from_yaml(args.config)
     main(config)
