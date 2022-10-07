@@ -125,7 +125,7 @@ def main(config: InferenceConfig) -> None:
 
     tmp_embeddings_dir = config.embeddings_out_path.with_suffix("")
 
-    if self.args_attention:
+    if args.attention:
         print("Generating attention values...")
     else:
         print("Generating embeddings values...")
