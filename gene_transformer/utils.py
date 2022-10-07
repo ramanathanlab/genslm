@@ -145,11 +145,12 @@ def non_redundant_generation(
     temperature: float = 1.0,
     num_seqs: int = 5,
     known_sequence_files: Optional[List[str]] = None,
-    start_sequence: str = "ATG",
+    start_sequence: Optional[str] = "ATG",
     to_stop_codon: bool = True,
     length_cutoff: bool = False,
     write_to_file: Optional[Path] = None,
     custom_seq_name: Optional[str] = "SyntheticSeq",
+    maximum_iterations: Optional[int] = None,
 ) -> Dict[str, List[str]]:
     """Utility which will generate unique sequences which are not duplicates of each other nor found within the
     training dataset (optional). Returns a dictionary of unique sequences, all generated sequences, and time required.
@@ -171,7 +172,11 @@ def non_redundant_generation(
     print(f"Using length cutoff of {length_cutoff} - {length_cutoff // 3} tokens.")
 
     # begin generation loop
+    iterations = 0
     while len(unique_seqs) < num_seqs:
+        if maximum_iterations is not None:
+            if iterations >= maximum_iterations:
+                break
         print(
             f"Current number of unique sequences meeting criteria: {len(unique_seqs)}"
         )
@@ -202,6 +207,7 @@ def non_redundant_generation(
                 print("Wrote {} seqs to {}...".format(len(unique_seqs), write_to_file))
         print("Found Existing: {}".format(found_existing))
         print("Sequence Length: {}".format(len(seq)))
+        iterations += 1
 
     # create dictionary of results
     results = {
