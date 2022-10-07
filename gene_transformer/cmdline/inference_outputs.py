@@ -125,6 +125,11 @@ def main(config: InferenceConfig) -> None:
 
     tmp_embeddings_dir = config.embeddings_out_path.with_suffix("")
 
+    if self.args_attention:
+        print("Generating attention values...")
+    else:
+        print("Generating embeddings values...")
+
     embedding_callback = OutputsCallback(
         save_dir=tmp_embeddings_dir, output_attentions=args.attention
     )
@@ -166,7 +171,7 @@ def main(config: InferenceConfig) -> None:
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
-    parser.add_argument("-a", "--attention", action="store_true", default=False)
+    parser.add_argument("-a", "--attention", action="store_true")
     args = parser.parse_args()
     config = InferenceConfig.from_yaml(args.config)
     main(config)

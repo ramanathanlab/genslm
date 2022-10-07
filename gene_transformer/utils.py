@@ -540,22 +540,27 @@ class OutputsCallback(Callback):
         compute_mean: bool = True,
         save_dir: Path = Path("./outputs"),
         output_attentions=False,
+        output_logits=False,
     ) -> None:
         self.compute_mean = compute_mean
         self.output_attentions = output_attentions
+        self.output_logits = output_logits
         self.save_dir = save_dir
-        self.embeddings, self.attentions, self.indices = [], [], []
+        self.embeddings, self.attentions, self.logits, self.indices = [], [], [], []
         save_dir.mkdir(exist_ok=True)
 
     def _gather_data(self) -> None:
         self.embeddings = torch.cat(self.embeddings).numpy()
         self.attentions = torch.cat(self.attentions).numpy()
+        self.logits = torch.cat(self.logits).numpy()
         self.indices = torch.cat(self.indices).numpy().squeeze()
 
     def _save_embeddings(self) -> None:
         rank_label = uuid.uuid4()
         if self.output_attentions:
             np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
+        elif self.output_logits:
+            np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
         else:
             np.save(self.save_dir / f"embeddings-{rank_label}.npy", self.embeddings)
         np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
