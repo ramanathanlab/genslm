@@ -12,7 +12,7 @@ from gene_transformer.config import BaseSettings, WarmupLRSettings
 from gene_transformer.dataset import FastaDataset, FileBackedH5Dataset
 from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
-    EmbeddingsCallback,
+    OutputsCallback,
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
 )
@@ -124,7 +124,7 @@ def main(config: InferenceConfig) -> None:
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 
     tmp_embeddings_dir = config.embeddings_out_path.with_suffix("")
-    embedding_callback = EmbeddingsCallback(save_dir=tmp_embeddings_dir)
+    embedding_callback = OutputsCallback(save_dir=tmp_embeddings_dir)
     trainer = pl.Trainer(
         gpus=-1,
         precision=config.precision,
