@@ -550,9 +550,12 @@ class OutputsCallback(Callback):
         save_dir.mkdir(exist_ok=True)
 
     def _gather_data(self) -> None:
-        self.embeddings = torch.cat(self.embeddings).numpy()
-        self.attentions = torch.cat(self.attentions).numpy()
-        self.logits = torch.cat(self.logits).numpy()
+        if self.output_attentions:
+            self.attentions = torch.cat(self.attentions).numpy()
+        elif self.output_logits:
+            self.logits = torch.cat(self.logits).numpy()
+        else:
+            self.embeddings = torch.cat(self.embeddings).numpy()
         self.indices = torch.cat(self.indices).numpy().squeeze()
 
     def _save_embeddings(self) -> None:
