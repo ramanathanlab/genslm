@@ -12,9 +12,9 @@ from gene_transformer.config import BaseSettings, WarmupLRSettings
 from gene_transformer.dataset import FastaDataset, FileBackedH5Dataset
 from gene_transformer.model import DNATransformer
 from gene_transformer.utils import (
-    OutputsCallback,
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
+    OutputsCallback,
 )
 
 

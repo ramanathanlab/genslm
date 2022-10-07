@@ -1,3 +1,5 @@
+import os
+import socket
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -9,8 +11,6 @@ from gene_transformer.utils import (
     non_redundant_generation,
     seqs_to_fasta,
 )
-import os
-import socket
 
 
 def main():

@@ -1,19 +1,23 @@
 import json
+import logging
 import os
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import logging
 
 import numpy as np
 import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
+import torch.multiprocessing as mp
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
-from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
 from deepspeed.profiling.flops_profiler.profiler import FlopsProfiler
+from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
+from lightning_transformers.utilities.deepspeed import (
+    enable_transformers_pretrained_deepspeed_sharding,
+)
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.profiler import PyTorchProfiler
@@ -24,19 +28,15 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
-from lightning_transformers.utilities.deepspeed import (
-    enable_transformers_pretrained_deepspeed_sharding,
-)
-import torch.multiprocessing as mp
 
 from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import CachingH5Dataset, FileBackedH5Dataset
 from gene_transformer.utils import (
-    OutputsCallback,
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
+    OutputsCallback,
     PerplexityCallback,
     SequenceGenerationCallback,
     ThroughputMonitor,

@@ -1,10 +1,11 @@
 ### util to convert zero checkpoint to a pt file
 
+from argparse import ArgumentParser
+from pathlib import Path
+
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
 )
-from argparse import ArgumentParser
-from pathlib import Path
 
 
 def deepspeed_to_pt(weight_path: Path) -> Path:

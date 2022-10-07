@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
+
 import torch  # without this, there's a weird error on polaris that has to do with a shared object
 from tokenizers import Tokenizer
 from transformers import PreTrainedTokenizerFast
