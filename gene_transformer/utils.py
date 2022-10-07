@@ -539,8 +539,10 @@ class OutputsCallback(Callback):
         self,
         compute_mean: bool = True,
         save_dir: Path = Path("./outputs"),
+        output_attentions=False,
     ) -> None:
         self.compute_mean = compute_mean
+        self.output_attentions = output_attentions
         self.save_dir = save_dir
         self.embeddings, self.attentions, self.indices = [], [], []
         save_dir.mkdir(exist_ok=True)
@@ -552,8 +554,10 @@ class OutputsCallback(Callback):
 
     def _save_embeddings(self) -> None:
         rank_label = uuid.uuid4()
-        np.save(self.save_dir / f"embeddings-{rank_label}.npy", self.embeddings)
-        np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
+        if self.output_attentions:
+            np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
+        else:
+            np.save(self.save_dir / f"embeddings-{rank_label}.npy", self.embeddings)
         np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
 
     def on_predict_start(
@@ -571,16 +575,18 @@ class OutputsCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        if self.compute_mean:
-            # Compute average over sequence length
-            embed = outputs.hidden_states[0].detach().mean(dim=1).cpu()
+        if output_attentions:
+            attend = torch.sum(outputs.attentions[0].detach().cpu(), dim=0)
+            self.attentions.append(attend)
         else:
-            embed = outputs.hidden_states[0].detach().cpu()
+            if self.compute_mean:
+                # Compute average over sequence length
+                embed = outputs.hidden_states[0].detach().mean(dim=1).cpu()
+            else:
+                embed = outputs.hidden_states[0].detach().cpu()
 
-        attend = torch.sum(outputs.attentions[0].detach().cpu(), dim=0)
+            self.embeddings.append(embed)
 
-        self.embeddings.append(embed)
-        self.attentions.append(attend)
         self.indices.append(batch["indices"].detach().cpu())
 
     def on_predict_end(

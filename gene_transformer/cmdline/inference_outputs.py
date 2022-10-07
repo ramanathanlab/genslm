@@ -124,7 +124,10 @@ def main(config: InferenceConfig) -> None:
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 
     tmp_embeddings_dir = config.embeddings_out_path.with_suffix("")
-    embedding_callback = OutputsCallback(save_dir=tmp_embeddings_dir)
+
+    embedding_callback = OutputsCallback(
+        save_dir=tmp_embeddings_dir, output_attentions=args.attention
+    )
     trainer = pl.Trainer(
         gpus=-1,
         precision=config.precision,
@@ -163,6 +166,7 @@ def main(config: InferenceConfig) -> None:
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
+    parser.add_arguument("-a", "--attention", action="store_true", default=False)
     args = parser.parse_args()
     config = InferenceConfig.from_yaml(args.config)
     main(config)
