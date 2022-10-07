@@ -534,30 +534,32 @@ class PerplexityCallback(Callback):
         self._log_perplexity(pl_module, self.val_name, train=False, on_epoch=True)
 
 
-class EmbeddingsCallback(Callback):
+class OutputsCallback(Callback):
     def __init__(
         self,
         compute_mean: bool = True,
-        save_dir: Path = Path("./embeddings"),
+        save_dir: Path = Path("./outputs"),
     ) -> None:
         self.compute_mean = compute_mean
         self.save_dir = save_dir
-        self.embeddings, self.indices = [], []
+        self.embeddings, self.attentions, self.indices = [], [], []
         save_dir.mkdir(exist_ok=True)
 
     def _gather_data(self) -> None:
         self.embeddings = torch.cat(self.embeddings).numpy()
+        self.attentions = torch.cat(self.attentions).numpy()
         self.indices = torch.cat(self.indices).numpy().squeeze()
 
     def _save_embeddings(self) -> None:
         rank_label = uuid.uuid4()
         np.save(self.save_dir / f"embeddings-{rank_label}.npy", self.embeddings)
+        np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
         np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
 
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        self.embeddings, self.indices = [], []
+        self.embeddings, self.attentions, self.indices = [], [], []
 
     def on_predict_batch_end(
         self,
@@ -575,7 +577,10 @@ class EmbeddingsCallback(Callback):
         else:
             embed = outputs.hidden_states[0].detach().cpu()
 
+        attend = outputs.attentions.detach().cpu()
+
         self.embeddings.append(embed)
+        self.attentions.append(attend)
         self.indices.append(batch["indices"].detach().cpu())
 
     def on_predict_end(

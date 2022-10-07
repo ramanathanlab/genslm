@@ -33,7 +33,7 @@ from gene_transformer.blast import BLASTCallback
 from gene_transformer.config import ModelSettings, PathLike, throughput_config
 from gene_transformer.dataset import CachingH5Dataset, FileBackedH5Dataset
 from gene_transformer.utils import (
-    EmbeddingsCallback,
+    OutputsCallback,
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
     ModelLoadStrategy,
@@ -438,7 +438,7 @@ def inference(
     """Output embedding array of shape (num_seqs, hidden_dim)."""
     model: DNATransformer = model_load_strategy.get_model(DNATransformer)
 
-    embedding_callback = EmbeddingsCallback()
+    embedding_callback = OutputsCallback()
     trainer = pl.Trainer(
         gpus=-1,
         # default_root_dir=str(cfg.checkpoint_dir),
