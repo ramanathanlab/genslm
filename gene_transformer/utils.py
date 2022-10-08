@@ -590,7 +590,7 @@ class OutputsCallback(Callback):
     ) -> None:
         # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
         if self.output_attentions:
-            attend = torch.sum(outputs.attentions[0].detach().cpu(), dim=0)
+            attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
             self.attentions.append(attend)
         elif self.output_logits:
             logits = outputs.logits.detach().cpu()
