@@ -593,7 +593,7 @@ class OutputsCallback(Callback):
             attend = torch.sum(outputs.attentions[0].detach().cpu(), dim=0)
             self.attentions.append(attend)
         elif self.output_logits:
-            logits = outputs.logits.detatch().cpu()
+            logits = outputs.logits.detach().cpu()
             self.logits.append(logits)
         else:
             if self.compute_mean:
