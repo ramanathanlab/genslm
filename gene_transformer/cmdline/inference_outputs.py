@@ -127,7 +127,7 @@ def main(config: InferenceConfig) -> None:
 
     if args.attention:
         print("Generating attention values...")
-    elif arg.logits:
+    elif args.logits:
         print("Generating logit values...")
     else:
         print("Generating embeddings values...")
