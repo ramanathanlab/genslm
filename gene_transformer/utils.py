@@ -557,7 +557,8 @@ class OutputsCallback(Callback):
 
     def _gather_data(self) -> None:
         if self.output_attentions:
-            self.attentions = torch.tensor(self.attentions).numpy()
+            self.attentions = torch.stack(self.attentions).numpy()
+            print(self.attentions.shape)
         elif self.output_logits:
             self.logits = torch.cat(self.logits).numpy()
         else:
