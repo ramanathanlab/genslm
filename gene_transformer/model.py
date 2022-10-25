@@ -516,7 +516,7 @@ if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
-    pl.seed_everything(0)
+    pl.seed_everything(config.random_seed)
 
     # potential polaris fix for connection reset error
     mp.set_start_method("spawn")

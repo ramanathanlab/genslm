@@ -129,6 +129,8 @@ class ModelSettings(BaseSettings):
     """Path to the BLAST executable, defaults to current conda environment."""
 
     # model settings
+    random_seed: int = 0
+    """Random seed for PL seed everything call"""
     model_config_json: Path
     """Huggingface json dict to load AutoConfig from."""
     batch_size: int = 8
