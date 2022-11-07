@@ -343,7 +343,7 @@ def train(cfg: ModelSettings) -> None:
         max_steps = 7
     else:
         max_steps = (
-            -1
+            cfg.max_steps
         )  # disable, see https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#max-steps
 
     trainer = pl.Trainer(

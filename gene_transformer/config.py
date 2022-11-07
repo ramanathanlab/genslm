@@ -137,6 +137,8 @@ class ModelSettings(BaseSettings):
     """Training micro-batch size."""
     epochs: int = 5
     """Number of training epochs."""
+    max_steps: int = -1
+    """Max number of training steps. -1 means that max number of epochs is used instead."""
     block_size: int = 512
     """Block size to specify sequence length passed to the transformer."""
     accumulate_grad_batches: int = 1
