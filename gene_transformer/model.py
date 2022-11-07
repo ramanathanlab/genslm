@@ -26,7 +26,12 @@ from tokenizers import Tokenizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    PreTrainedTokenizerFast,
+    get_cosine_schedule_with_warmup,
+)
 from transformers.utils import ModelOutput
 
 from gene_transformer.blast import BLASTCallback
@@ -209,27 +214,43 @@ class DNATransformer(pl.LightningModule):
             #     cuda_aware=False,
             #     comm_backend_name="mpi",
             # )
-        if self.cfg.warm_up_lr is not None:
-            scheduler = WarmupLR(
-                optimizer,
-                warmup_min_lr=self.cfg.warm_up_lr.min_lr,
-                warmup_max_lr=self.cfg.learning_rate,
-                warmup_num_steps=self.cfg.warm_up_lr.num_steps,
-            )
-            return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
+            if self.cfg.warm_up_lr is not None:
+                scheduler = WarmupLR(
+                    optimizer,
+                    warmup_min_lr=self.cfg.warm_up_lr.min_lr,
+                    warmup_max_lr=self.cfg.learning_rate,
+                    warmup_num_steps=self.cfg.warm_up_lr.num_steps,
+                )
+                return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
-        if self.cfg.lr_plateau is not None:
-            scheduler = ReduceLROnPlateau(
-                optimizer=optimizer, **self.cfg.lr_plateau.dict(), verbose=True
-            )
-            return [optimizer], [
-                {
-                    "scheduler": scheduler,
-                    "interval": "step",
-                    "monitor": "val/loss",
-                    "frequency": self.cfg.val_check_interval,
-                }
-            ]
+            if self.cfg.lr_plateau is not None:
+                scheduler = ReduceLROnPlateau(
+                    optimizer=optimizer, **self.cfg.lr_plateau.dict(), verbose=True
+                )
+                return [optimizer], [
+                    {
+                        "scheduler": scheduler,
+                        "interval": "step",
+                        "monitor": "val/loss",
+                        "frequency": self.cfg.val_check_interval,
+                    }
+                ]
+
+            if self.cfg.lr_cosine_with_warmup is not None:
+
+                if cfg.max_steps == -1:
+                    raise ValueError(
+                        "Max Steps must be set in the model config to use the cosine warmup scheduler"
+                    )
+
+                scheduler = get_cosine_schedule_with_warmup(
+                    optimizer,
+                    num_warmup_steps=cfg.lr_cosine_with_warmup.num_warmup_steps,
+                    num_training_steps=cfg.max_steps,
+                    num_cycles=cfg.lr_cosine_with_warmup.num_cycles,
+                )
+
+                return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
         return optimizer
 

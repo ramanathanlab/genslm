@@ -39,6 +39,18 @@ class WarmupLRSettings(BaseSettings):
     """Steps to warm up for."""
 
 
+class CosineWithWarmupLRSettings(BaseSettings):
+    """Learning rate scheduler settings to go into transformers.get_cosine_schedule_with_warmup.
+    Note that the number of total training steps is taken from the full model config.
+    From huggingface: Create a schedule with a learning rate that decreases following the values of the cosine function
+    between the initial lr set in the optimizer to 0, after a warmup period during which it increases linearly between 0
+     and the initial lr set in the optimizer.
+    """
+
+    num_warmup_steps: int = 150
+    num_cycles: float = 0.5
+
+
 class ReduceLROnPlateauSettings(BaseSettings):
     mode: str = "min"
     """LR will adjust based on minimizing/maximizing a metric"""
@@ -151,6 +163,8 @@ class ModelSettings(BaseSettings):
     """If specified, will use a learning rate warmup scheduler."""
     lr_plateau: Optional[ReduceLROnPlateauSettings] = None
     """If specified, will use a LR plateau scheduler."""
+    lr_cosine_with_warmup: Optional[CosineWithWarmupLRSettings] = None
+    """If specified, will use a cosine with warmup LR scheduler."""
     deepspeed_cfg_file: Optional[Path] = None
     """The deepspeed configuration file (currently unused)."""
     deepspeed_stage: int = 3
