@@ -405,7 +405,8 @@ def train(cfg: ModelSettings) -> None:
         val_check_interval=cfg.val_check_interval,
         log_every_n_steps=cfg.log_every_n_steps,
         limit_val_batches=cfg.limit_val_batches,
-        max_steps=max_steps
+        max_steps=max_steps,
+        gradient_clip_val=cfg.gradient_clip_value,
         # plugins=[SLURMEnvironment(auto_requeue=False)]
     )
 

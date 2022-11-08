@@ -151,6 +151,8 @@ class ModelSettings(BaseSettings):
     """Number of training epochs."""
     max_steps: int = -1
     """Max number of training steps. -1 means that max number of epochs is used instead."""
+    gradient_clip_value: 0.0
+    """clip gradients' global norm to <=value using gradient_clip_algorithm='norm' by default. 0 means no clipping."""
     block_size: int = 512
     """Block size to specify sequence length passed to the transformer."""
     accumulate_grad_batches: int = 1
