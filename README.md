@@ -159,3 +159,17 @@ conda activate gene_transformer
 python -m gene_transformer.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -v "-c config.yaml" 
 ```
 *Module specific arguments are passed verbatim by the `-v` flag, args must be inside quotes*
+
+## Citations
+
+If you use our models in your research, please cite this paper:
+
+```bibtex
+@article{zvyagin2022genslms,
+  title={GenSLMs: Genome-scale language models reveal SARS-CoV-2 evolutionary dynamics.},
+  author={Zvyagin, Max T and Brace, Alexander and Hippe, Kyle and Deng, Yuntian and Zhang, Bin and Bohorquez, Cindy Orozco and Clyde, Austin and Kale, Bharat and Perez-Rivera, Danilo and Ma, Heng and others},
+  journal={bioRxiv},
+  year={2022},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
