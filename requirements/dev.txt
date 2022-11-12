@@ -6,6 +6,8 @@ pytest
 isort
 pylint
 pydocstyle
+coverage
+pygount
 
 # mypy type stubs:
 types-PyYAML

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := all
 package_name = genslm
-extra_folders = #examples/ test/
+extra_folders = tests/ examples/
 isort = isort $(package_name) $(extra_folders)
 black = black --target-version py37 $(package_name) $(extra_folders)
 flake8 = flake8 $(package_name)/ $(extra_folders)
@@ -26,6 +26,17 @@ mypy:
 	$(run_mypy) --package $(package_name)
 	$(run_mypy) $(package_name)/
 	$(run_mypy) $(extra_folders)
+
+.PHONY: coverage
+coverage:
+	coverage run -m pytest tests
+	coverage report
+	coverage html
+	open htmlcov/index.html
+
+.PHONY: pygount
+make pygount:
+	pygount --format=summary $(package_name)
 
 .PHONY: all
 all: format lint #mypy
