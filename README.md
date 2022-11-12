@@ -27,29 +27,29 @@ To setup the docker container and push to docker hub:
 ```
 cd requirements
 docker login
-docker build . -t gene_transformer
-docker tag gene_transformer abrace05/gene_transformer
-docker push abrace05/gene_transformer
+docker build . -t genslm
+docker tag genslm abrace05/genslm
+docker push abrace05/genslm
 ```
 
 Check that the container runs:
 ```
-docker run -it --rm abrace05/gene_transformer bash
+docker run -it --rm abrace05/genslm bash
 ```
 
 ## Perlmutter Setup
 
 Perlmutter uses Shifter to manage software containers. You can bootstrap the Docker image above via:
 ```
-shifterimg -v pull abrace05/gene_transformer
+shifterimg -v pull abrace05/genslm
 ```
 To check the image status:
 ```
-shifterimg images | grep gene_transformer
+shifterimg images | grep genslm
 ```
 Using the container on a compute node:
 ```
-salloc --nodes 1 --qos interactive --time 00:10:00 --constraint gpu --gpus 4 --account=m3957_g --image=abrace05/gene_transformer:latest
+salloc --nodes 1 --qos interactive --time 00:10:00 --constraint gpu --gpus 4 --account=m3957_g --image=abrace05/genslm:latest
 
 shifter /bin/bash
 ```
@@ -103,15 +103,15 @@ The python, pip, conda executables can be found in:
 /opt/conda/bin/conda
 ```
 
-Install `gene_transformer` in editable mode:
+Install `genslm` in editable mode:
 ```
-git clone https://github.com/ramanathanlab/gene_transformer.git
-/opt/conda/bin/pip install -e gene_transformer/
+git clone https://github.com/ramanathanlab/genslm.git
+/opt/conda/bin/pip install -e genslm/
 ```
 
 Test the installation:
 ```
-/opt/conda/bin/python -c "import gene_transformer; print(gene_transformer.__version__)"
+/opt/conda/bin/python -c "import genslm; print(genslm.__version__)"
 ```
 
 ## Polaris Setup
@@ -131,10 +131,10 @@ Then run the following commands in the directory your would like to store the pr
 ```
 module load conda/2022-07-19
 conda activate
-conda create -n gene_transformer --clone base
-conda activate gene_transformer
-git clone https://github.com/ramanathanlab/gene_transformer.git
-cd gene_transformer/
+conda create -n genslm --clone base
+conda activate genslm
+git clone https://github.com/ramanathanlab/genslm.git
+cd genslm/
 pip install -U pip wheel setuptools
 pip install -r requirements/requirements.txt
 pip install -r requirements/dev.txt
@@ -143,7 +143,7 @@ pip install -e .
 
 Test the installation:
 ```
-python -c "import gene_transformer; print(gene_transformer.__version__)"
+python -c "import genslm; print(genslm.__version__)"
 ```
 
 ### Polaris Training
@@ -151,12 +151,12 @@ python -c "import gene_transformer; print(gene_transformer.__version__)"
 We have a CLI tool to make it easier to launch training jobs on various HPC platforms. You can specify which system 
 you would like to submit to by specifiying the `-T, --template` option. We currently have templates for `polaris` 
 and `perlmutter`. By default, submitted jobs will output results to the directory where the submit command was run, 
-you can use the `-w` option to specifiy a different `workdir`. Please run `python -m gene_transformer.hpc.submit --help` 
+you can use the `-w` option to specifiy a different `workdir`. Please run `python -m genslm.hpc.submit --help` 
 for more information. See config.py for documentation on the yaml options, and note that config.yaml paths **MUST** be absolute.
 ```
 module load conda/2022-07-19
-conda activate gene_transformer
-python -m gene_transformer.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -v "-c config.yaml" 
+conda activate genslm
+python -m genslm.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -v "-c config.yaml" 
 ```
 *Module specific arguments are passed verbatim by the `-v` flag, args must be inside quotes*
 

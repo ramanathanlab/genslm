@@ -1,0 +1,55 @@
+#!/bin/sh
+#PBS -l select={{ nodes }}:system=polaris
+#PBS -l place=scatter
+#PBS -l filesystems={{ filesystems }}
+#PBS -l walltime={{ time }}
+#PBS -q {{ queue }}
+#PBS -A {{ allocation }}
+
+# Controlling the output of your application
+# UG Sec 3.3 page UG-40 Managing Output and Error Files
+# By default, PBS spools your output on the compute node and then uses scp to move it the
+# destination directory after the job finishes.  Since we have globally mounted file systems
+# it is highly recommended that you use the -k option to write directly to the destination
+# the doe stands for direct, output, error
+#PBS -k doe
+#PBS -o {{ workdir / job_name }}.out
+#PBS -e {{ workdir / job_name }}.err
+
+# Internet access on nodes
+export HTTP_PROXY=http://proxy.alcf.anl.gov:3128
+export HTTPS_PROXY=http://proxy.alcf.anl.gov:3130
+export http_proxy=http://proxy.alcf.anl.gov:3128
+export https_proxy=http://proxy.alcf.anl.gov:3128
+git config --global http.proxy http://proxy.alcf.anl.gov:3128
+echo "Set HTTP_PROXY and to $HTTP_PROXY"
+
+# Set ADDR and PORT for communication
+master_node=$(cat $PBS_NODEFILE| head -1)
+export MASTER_ADDR=$(host $master_node | head -1 | awk '{print $4}')
+export MASTER_PORT=2345
+
+# Enable GPU-MPI (if supported by application)
+export MPICH_GPU_SUPPORT_ENABLED=1
+
+# Initialize environment
+module load conda/2022-09-08
+conda activate genslm
+# IMPORTANT NOTE: This requires having a conda environment called genslm
+
+# NCCL settings
+export NCCL_DEBUG=info
+export NCCL_NET_GDR_LEVEL=PHB
+
+export NNODES=`wc -l < $PBS_NODEFILE`
+export NRANKS_PER_NODE=4
+export NTOTRANKS=$(( NNODES * NRANKS_PER_NODE ))
+
+echo "NUM_OF_NODES= ${NNODES} TOTAL_NUM_RANKS= ${NTOTRANKS} RANKS_PER_NODE= ${NRANKS_PER_NODE}"
+echo < $PBS_NODEFILE
+
+# For applications that internally handle binding MPI/OpenMP processes to GPUs
+cd {{ workdir }}
+mpiexec -n ${NTOTRANKS} -ppn ${NRANKS_PER_NODE} --hostfile $PBS_NODEFILE \
+{{ genslm_path / "hpc" / "templates" / "run-polaris-generation.sh" }} \
+  python -m {{ module }} {{ module_args }}
