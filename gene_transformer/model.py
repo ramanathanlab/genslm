@@ -213,6 +213,7 @@ class DNATransformer(pl.LightningModule):
             #     comm_backend_name="mpi",
             # )
             if self.cfg.warm_up_lr is not None:
+                print(f"Using WarmupLR with parameters: {self.cfg.warm_up_lr}")
                 scheduler = WarmupLR(
                     optimizer,
                     warmup_min_lr=self.cfg.warm_up_lr.min_lr,
