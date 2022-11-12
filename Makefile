@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-package_name = gene_transformer
+package_name = genslm
 extra_folders = #examples/ test/
 isort = isort $(package_name) $(extra_folders)
 black = black --target-version py37 $(package_name) $(extra_folders)
