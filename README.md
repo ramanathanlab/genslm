@@ -1,4 +1,4 @@
-# Gene Transformer
+# GenSLM
 
 Transformer language models for the generation of synthetic sequences.
 
