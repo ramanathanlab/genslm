@@ -1,4 +1,4 @@
-### util to convert zero checkpoint to a pt file
+"""Util to convert zero checkpoint to a pt file."""
 
 from argparse import ArgumentParser
 from pathlib import Path

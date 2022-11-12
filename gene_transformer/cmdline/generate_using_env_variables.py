@@ -72,7 +72,7 @@ def main():
     model = load_strategy.get_model(DNATransformer)
     try:
         model.cuda(gpu_number)
-    except:
+    except Exception:
         print(
             "ERROR: ",
             gpu_number,
@@ -108,7 +108,7 @@ def main():
 
         # Write fasta with unique sequences to disk
         seqs_to_fasta(unique_seqs, args.output_fasta, custom_seq_name=args.name_prefix)
-    except:
+    except Exception:
         print(
             "Failure generating on {}, rank {}".format(socket.gethostname(), pmi_rank)
         )

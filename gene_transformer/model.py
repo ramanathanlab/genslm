@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import warnings
 from argparse import ArgumentParser
@@ -13,7 +12,6 @@ import torch
 import torch.multiprocessing as mp
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed.profiling.flops_profiler.profiler import FlopsProfiler
-from deepspeed.runtime.fp16.onebit.zoadam import ZeroOneAdam
 from deepspeed.runtime.lr_schedules import WarmupLR
 from lightning_transformers.utilities.deepspeed import (
     enable_transformers_pretrained_deepspeed_sharding,
@@ -238,16 +236,16 @@ class DNATransformer(pl.LightningModule):
 
             if self.cfg.lr_cosine_with_warmup is not None:
 
-                if cfg.max_steps == -1:
+                if self.cfg.max_steps == -1:
                     raise ValueError(
                         "Max Steps must be set in the model config to use the cosine warmup scheduler"
                     )
 
                 scheduler = get_cosine_schedule_with_warmup(
                     optimizer,
-                    num_warmup_steps=cfg.lr_cosine_with_warmup.num_warmup_steps,
-                    num_training_steps=cfg.max_steps,
-                    num_cycles=cfg.lr_cosine_with_warmup.num_cycles,
+                    num_warmup_steps=self.cfg.lr_cosine_with_warmup.num_warmup_steps,
+                    num_training_steps=self.cfg.max_steps,
+                    num_cycles=self.cfg.lr_cosine_with_warmup.num_cycles,
                 )
 
                 return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
@@ -255,7 +253,7 @@ class DNATransformer(pl.LightningModule):
         return optimizer
 
 
-def train(cfg: ModelSettings) -> None:
+def train(cfg: ModelSettings) -> None:  # noqa
     if cfg.load_pt_checkpoint is not None:
         load_strategy = LoadPTCheckpointStrategy(
             cfg.load_pt_checkpoint, cfg=cfg, generation_flag=True
