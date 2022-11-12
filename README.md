@@ -1,6 +1,10 @@
-# GenSLM
+# GenSLMs: Genome-scale language models reveal SARS-CoV-2 evolutionary dynamics
 
-GenSLMs: Genome-scale language models reveal SARS-CoV-2 evolutionary dynamics
+<img width="1220" alt="genslm_header" src="https://user-images.githubusercontent.com/59709404/201488225-25d7eefb-29c9-4780-a1c1-d9820abcbdc3.png">
+
+
+## Preprint
+Available here: https://www.biorxiv.org/content/10.1101/2022.10.10.511571v1
 
 ## Important Note
 If you intend to use the Reformer model, please uninstall the version of hugging
