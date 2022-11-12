@@ -1,4 +1,6 @@
-# Ignore jupyter line counts
+# Ignore line counts
 *.ipynb linguist-generated=true
-# Ignore fasta line counts
 *.fasta linguist-generated=true
+*.json linguist-generated=true
+*.csv linguist-generated=true
+*.txt linguist-generated=true
