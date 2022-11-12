@@ -1,6 +1,6 @@
 # GenSLM
 
-Transformer language models for the generation of synthetic sequences.
+GenSLMs: Genome-scale language models reveal SARS-CoV-2 evolutionary dynamics
 
 ## Important Note
 If you intend to use the Reformer model, please uninstall the version of hugging
