@@ -86,6 +86,17 @@ class DNATransformer(pl.LightningModule):
                     "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
                 )
             self.model = AutoModelForCausalLM.from_config(self.base_config)
+        # should not be loading from checkpoints for Selene runs
+        # try:
+        #     enable_transformers_pretrained_deepspeed_sharding(self)
+        # except AttributeError:
+        #     pl.utilities.rank_zero.rank_zero_warn(
+        #         "Transformers sharding initialization not enabled -  likely not using DeepSpeed..."
+        #     )
+        # # needed to load from checkpoint
+        # if generation_flag:
+        #     self.model = AutoModelForCausalLM.from_config(self.base_config)
+        # See issue: https://github.com/Lightning-AI/lightning-transformers/issues/290
 
     # @deepspeed.zero.Init()
 
