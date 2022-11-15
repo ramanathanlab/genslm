@@ -14,14 +14,14 @@ Once you finish implementing a feature or bug-fix, please send a Pull Request to
 To develop genslm on your machine, please follow these instructions:
 
 
-1. Clone a copy of mdlearn from source:
+1. Clone a copy of genslm from source:
 
 ```
 git clone https://github.com/ramanathanlab/genslm
 cd genslm
 ```
 
-2. If you already have a mdlearn from source, update it:
+2. If you already have a genslm from source, update it:
 
 ```
 git pull
