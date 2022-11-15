@@ -166,7 +166,7 @@ If you are looking to contribute, please see [`CONTRIBUTING.md`](https://github.
 
 ## License
 
-genslm has a MIT license, as seen in the [`LICENSE.md`](https://github.com/ramanathanlab/genslm/blob/main/LICENSE) file.
+genslm has a MIT license, as seen in the [`LICENSE.md`](https://github.com/ramanathanlab/genslm/blob/main/LICENSE.md) file.
 
 ## Citations
 
