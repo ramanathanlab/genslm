@@ -34,7 +34,6 @@ python -m venv env
 source env/bin/activate
 pip install -U pip setuptools wheel
 pip install -r requirements/dev.txt
-pip install -r requirements/requirements.txt
 pip install -e .
 ```
 
