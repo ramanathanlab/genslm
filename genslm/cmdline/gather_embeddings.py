@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 
 
 def gather_embeddings(
     input_dir: Path, output_path: Optional[Path] = None
-) -> np.ndarray:
+) -> npt.ArrayLike:
     """Gather embeddings produced via DDP into a single sorted numpy array."""
 
     # Glob embedding and index files written by each rank
