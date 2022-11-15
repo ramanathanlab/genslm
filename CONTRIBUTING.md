@@ -85,7 +85,7 @@ To view the docs run: `open genslm/docs/build/html/index.html`.
 To release a new version of genslm to PyPI:
 
 1. Merge the `develop` branch into the `main` branch with an updated version number in [`genslm.__init__`](https://github.com/ramanathanlab/genslm/blob/main/genslm/__init__.py).
-2. Make a new release on GitHub with the tag and name equal to the version number.
+2. Make a new release on GitHub with the tag and name equal to the version number with a "v" in front, e.g., `v<version-number>`.
 3. [Build and install](#developing-genslm) genslm from source.
 4. Run the following commands:
 ```
