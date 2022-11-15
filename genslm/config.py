@@ -103,7 +103,7 @@ class ModelSettings(BaseSettings):
     limit_val_batches: Optional[int] = None
     """Limit validation batches to this many batches:
     total_val_samples = (num_ranks * mini_batch) * limit_val_batches"""
-    check_val_every_n_epoch: int = 1.0
+    check_val_every_n_epoch: int = 1
     """Run validation every n number of epochs"""
     checkpoint_every_n_train_steps: Optional[int] = None
     """Number of training steps to perform model checkpointing"""
@@ -151,7 +151,7 @@ class ModelSettings(BaseSettings):
     """Number of training epochs."""
     max_steps: int = -1
     """Max number of training steps. -1 means that max number of epochs is used instead."""
-    gradient_clip_value: int = 0.0
+    gradient_clip_value: float = 0.0
     """clip gradients' global norm to <=value using gradient_clip_algorithm='norm' by default. 0 means no clipping."""
     block_size: int = 512
     """Block size to specify sequence length passed to the transformer."""
@@ -244,7 +244,7 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     new_config.checkpoint_dir = None
     new_config.epochs = 6
     new_config.check_val_every_n_epoch = 7
-    new_config.limit_val_batches = 0.0
+    new_config.limit_val_batches = 0
     # Select size of subset to use, more ranks require more data to compute stats.
     new_config.small_subset = 32 * new_config.batch_size * new_config.num_nodes
     return new_config
