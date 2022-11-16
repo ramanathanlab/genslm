@@ -110,7 +110,7 @@ module load conda/2022-07-19
 conda activate genslm
 python -m genslm.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -v "-c config.yaml" 
 ```
-*Module specific arguments are passed verbatim by the `-v` flag, args must be inside quotes*
+*Module specific arguments are passed verbatim by the `-v` flag, args must be inside quotes.*
 
 For additional commands, please see [`COMMANDS.md`](https://github.com/ramanathanlab/genslm/blob/main/docs/COMMANDS.md).
 
