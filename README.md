@@ -2,10 +2,6 @@
 
 <img width="1220" alt="genslm_header" src="https://user-images.githubusercontent.com/59709404/201488225-25d7eefb-29c9-4780-a1c1-d9820abcbdc3.png">
 
-
-## IMPORTANT
-We will be releasing model weights and data along with documentation and examples for common inference tasks soon. Stay tuned...
-
 ## Preprint
 Available here: https://www.biorxiv.org/content/10.1101/2022.10.10.511571v1
 
