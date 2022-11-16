@@ -14,7 +14,7 @@ from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, BatchEncoding
 
 from genslm.config import PathLike
 
@@ -619,3 +619,67 @@ class FileBackedH5Dataset(Dataset, H5PreprocessMixin):
             self.h5_file = h5py.File(self.file_path, "r")
 
         return self.read_from_h5(idx)
+
+
+class SequenceDataset(Dataset):  # type: ignore[type-arg]
+    """Dataset initialized from a list of sequence strings."""
+
+    def __init__(
+        self,
+        sequences: List[str],
+        seq_length: int,
+        tokenizer: PreTrainedTokenizerFast,
+        kmer_size: int = 3,
+        num_tokenizer_workers: int = 1,
+    ):
+        self.batch_encodings = self.tokenize_sequences(
+            sequences, tokenizer, seq_length, kmer_size, num_tokenizer_workers
+        )
+
+    @staticmethod
+    def tokenize_sequences(
+        sequences: List[str],
+        tokenizer: PreTrainedTokenizerFast,
+        seq_length: int,
+        kmer_size: int = 3,
+        num_tokenizer_workers: int = 1,
+    ) -> List[BatchEncoding]:
+
+        tokenizer_fn = functools.partial(
+            tokenizer, max_length=seq_length, padding="max_length", return_tensors="pt"
+        )
+        func = functools.partial(
+            SequenceDataset.tokenize,
+            tokenizer=tokenizer_fn,
+            kmer_size=kmer_size,
+        )
+
+        batch_encodings = []
+        chunksize = max(1, len(sequences) // num_tokenizer_workers)
+        with ProcessPoolExecutor(max_workers=num_tokenizer_workers) as pool:
+            for encodings in pool.map(func, sequences, chunksize=chunksize):
+                batch_encodings.append(encodings)
+        return batch_encodings
+
+    @staticmethod
+    def tokenize(
+        sequence: str, tokenizer: PreTrainedTokenizerFast, kmer_size: int
+    ) -> BatchEncoding:
+        return tokenizer(sequence, SequenceDataset.group_by_kmer(sequence, kmer_size))
+
+    @staticmethod
+    def group_by_kmer(seq: str, kmer: int) -> str:
+        return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer))
+
+    def __len__(self) -> int:
+        return len(self.batch_encodings)
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        batch_encoding = self.batch_encodings[idx]
+        # Squeeze so that batched tensors end up with (batch_size, seq_length)
+        # instead of (batch_size, 1, seq_length)
+        sample = {
+            "input_ids": batch_encoding["input_ids"].squeeze(),
+            "attention_mask": batch_encoding["attention_mask"],
+        }
+        return sample
