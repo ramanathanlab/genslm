@@ -175,10 +175,7 @@ embeddings.shape
 
 ### Generate synthetic sequences [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/generate.ipynb)
 ```python
-import torch
-import numpy as np
-from torch.utils.data import DataLoader
-from genslm import GenSLM, SequenceDataset
+from genslm import GenSLM
 
 model = GenSLM("genslm_25M_patric", model_cache_dir="/content/gdrive/MyDrive")
 model.eval()
@@ -188,7 +185,7 @@ prompt = model.tokenizer.encode("ATG", return_tensors="pt")
 
 tokens = model.model.generate(
     prompt,
-    max_length=10, # You can increase this to generate longer sequences
+    max_length=10, # Increase this to generate longer sequences
     min_length=10,
     do_sample=True,
     top_k=50,
