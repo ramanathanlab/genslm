@@ -81,12 +81,12 @@ prompt = model.tokenizer.encode("ATG", return_tensors="pt")
 
 tokens = model.model.generate(
     prompt,
-    max_length=10, # Increase this to generate longer sequences
+    max_length=10,  # Increase this to generate longer sequences
     min_length=10,
     do_sample=True,
     top_k=50,
     top_p=0.95,
-    num_return_sequences=2, # Change the number of sequences to generate
+    num_return_sequences=2,  # Change the number of sequences to generate
     remove_invalid_values=True,
     use_cache=True,
     pad_token_id=model.tokenizer.encode("[PAD]")[0],
