@@ -137,9 +137,7 @@ Our pre-trained models and datasets can be downloaded via [Globus](https://www.g
 
 The primary inference modes currently supported by `genslm` are computing embeddings and generating synthetic sequences. 
 
-### Compute embeddings
-
-[Try it out in Colab!](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/embedding-colab.ipynb)
+### Compute embeddings [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/embedding.ipynb)
 ```python
 import torch
 import numpy as np
