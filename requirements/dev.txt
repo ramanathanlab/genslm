@@ -8,6 +8,7 @@ pylint
 pydocstyle
 coverage
 pygount
+jupyter
 
 # mypy type stubs:
 types-PyYAML
