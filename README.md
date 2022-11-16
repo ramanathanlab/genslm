@@ -129,13 +129,13 @@ Test the installation:
 
 ## Usage
 
-Our pre-trained models and datasets can be downloaded via [Globus](https://www.globus.org/) as follows:
+Our pre-trained models and datasets can be downloaded from this [Globus Endpoint](https://app.globus.org/file-manager?origin_id=25918ad0-2a4e-4f37-bcfc-8183b19c3150&origin_path=%2F) or via Python as follows:
 
 ```python
 # TODO: Insert example
 ```
 
-The primary inference modes currently supported by `genslm` are computing embeddings and generating synthetic sequences. 
+Use GenSLMs to compute sequence embeddings for downsteam tasks, generate synthetic sequences, or easily extend them to your own application.
 
 ### Compute embeddings [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/embedding.ipynb)
 ```python
