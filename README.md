@@ -139,7 +139,7 @@ The primary inference modes currently supported by `genslm` are computing embedd
 
 ### Compute embeddings
 
-[Try it out in Colab!](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/embedding-colab.ipynb)
+[Try it out in Colab!](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/embedding.ipynb)
 ```python
 import torch
 import numpy as np
