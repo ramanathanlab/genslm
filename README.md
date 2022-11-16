@@ -173,9 +173,40 @@ embeddings.shape
 >>> (2, 512)
 ```
 
-### Generate synthetic sequences
+### Generate synthetic sequences [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/generate.ipynb)
 ```python
-# TODO: Insert example
+import torch
+import numpy as np
+from torch.utils.data import DataLoader
+from genslm import GenSLM, SequenceDataset
+
+model = GenSLM("genslm_25M_patric", model_cache_dir="/content/gdrive/MyDrive")
+model.eval()
+
+# Prompt the language model with a start codon
+prompt = model.tokenizer.encode("ATG", return_tensors="pt")
+
+tokens = model.model.generate(
+    prompt,
+    max_length=10, # You can increase this to generate longer sequences
+    min_length=10,
+    do_sample=True,
+    top_k=50,
+    top_p=0.95,
+    num_return_sequences=2, # Change the number of sequences to generate
+    remove_invalid_values=True,
+    use_cache=True,
+    pad_token_id=model.tokenizer.encode("[PAD]")[0],
+    temperature=1.0,
+)
+
+sequences = model.tokenizer.batch_decode(tokens, skip_special_tokens=True)
+
+for sequence in sequences:
+    print(sequence)
+
+>>> ATG GTT ATT TCA TCT GAT TTA CCA ACT
+>>> ATG TTC ATT CTT CCG GCA CTT ATC GAA
 ```
 
 ### High Performance Computing
