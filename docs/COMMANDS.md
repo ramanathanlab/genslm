@@ -1,6 +1,7 @@
-Helpful commands for `genslm`
+# Commands 
+Helpful commands for running `genslm` at scale on HPC platforms.
 
-### Submitting to Polaris (TODO: perlmutter)
+## Submitting to Polaris
 
 Here is an example for submitting to Polaris. This assumes you are in the working directory where `config.yaml` is.
 ```bash 
@@ -14,7 +15,7 @@ python -m genslm.hpc.submit \
   -v "-c config.yaml" 
 ```
 
-### Generating Embeddings 
+## Generating Embeddings 
 
 1. Convert model weights into PT (optionally remove the attention_weight.bias, it is recomended to not use these files however)
 
@@ -56,7 +57,7 @@ python -m genslm.cmdline.gather_embeddings \
   -o 25m_genome_train_embeddings.npy
 ```
 
-### Data processing 
+## Data processing 
 
 Converting a directory of fasta files into a directory of h5 files (Step one of data preprocessing for pretraining, output of this step needs to be combined into single files to be fed to models) 
 ```bash 
