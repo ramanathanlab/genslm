@@ -161,7 +161,7 @@ embeddings = []
 with torch.no_grad():
     for batch in dataloader:
         outputs = model(batch["input_ids"], batch["attention_mask"], output_hidden_states=True)
-        # outputs.hidden_states shape: (batch_size, sequence_length, hidden_size)
+        # outputs.hidden_states shape: (layers, batch_size, sequence_length, hidden_size)
         emb = outputs.hidden_states[0].detach().cpu().numpy()
         # Compute average over sequence length
         emb = np.mean(emb, axis=1)
