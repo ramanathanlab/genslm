@@ -1,0 +1,52 @@
+wandb_active: true
+wandb_project_name: codon_transformer
+wandb_entity_name: null
+wandb_model_tag: patric_20B_256nodes_10_4_scratch_lr_plateau # is actually 25B, incorrect name but keeping for reference
+checkpoint_dir: patric_20B_256nodes_10_4_scratch_lr_plateau
+load_ds_checkpoint: null
+#load_pt_checkpoint: patric_20B_128nodes_10_3_scratch_lr_plateau/model-epoch00-val_loss0.73.pt
+node_local_path: null
+num_nodes: 256
+compute_throughput: false
+profiling_path: null
+enable_perplexity: true
+log_every_n_steps: 10
+val_check_interval: 50
+limit_val_batches: 32
+check_val_every_n_epoch: 1
+checkpoint_every_n_train_steps: 50
+checkpoint_every_n_epochs: null
+tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_100vocab.json
+train_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_train.h5
+val_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_val.h5
+test_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_test.h5
+kmer_size: 3
+small_subset: 0
+enable_blast: false
+blast_validation_file: blast_file.fasta
+num_blast_seqs_per_gpu: 5
+blast_exe_path: blastn
+model_config_json: neox_25B.json
+batch_size: 1
+epochs: 5
+max_steps: 10000
+block_size: 2048
+accumulate_grad_batches: 1
+learning_rate: 5.0e-05
+precision: 16
+#gradient_clip_value: 0.5
+#lr_cosine_with_warmup:
+#    num_warmup_steps: 1000
+#    num_cycles: 0.5
+#lr_plateau:
+#    patience: 3
+#    threshold: 1.0e-2
+deepspeed_cfg_file: null
+offload_parameters: true
+offload_optimizer: true
+num_test_seqs_per_gpu: 0
+custom_seq_name: SyntheticSeq
+num_data_workers: 4
+prefetch_factor: 4
+pin_memory: true
+persistent_workers: true
