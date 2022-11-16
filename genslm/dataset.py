@@ -14,7 +14,7 @@ from Bio import SeqIO  # type: ignore[import]
 from natsort import natsorted
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from transformers import PreTrainedTokenizerFast, BatchEncoding
+from transformers import BatchEncoding, PreTrainedTokenizerFast
 
 from genslm.config import PathLike
 

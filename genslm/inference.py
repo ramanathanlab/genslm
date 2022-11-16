@@ -1,11 +1,13 @@
 import os
 from pathlib import Path
+from typing import Any, Dict
+
 import torch
 import torch.nn as nn
-from typing import Dict, Any
 from tokenizers import Tokenizer
-from transformers.utils import ModelOutput
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
+from transformers.utils import ModelOutput
+
 import genslm
 
 
