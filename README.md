@@ -17,9 +17,7 @@ Available here: https://www.biorxiv.org/content/10.1101/2022.10.10.511571v1
 To install `genslm` on most systems:
 ```bash
 pip install git+https://github.com/ramanathanlab/genslm
-pip install deepspeed
 ```
-Note: the `deepspeed` dependency will be removed soon.
 
 GenSLMs were trained on the [Polaris](https://www.alcf.anl.gov/polaris) and [Perlmutter](https://perlmutter.carrd.co/) supercomputers. For installation on these systems, please see [`INSTALL.md`](https://github.com/ramanathanlab/genslm/blob/main/docs/INSTALL.md).
 
