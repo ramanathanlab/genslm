@@ -175,7 +175,7 @@ embeddings.shape
 >>> (2, 512)
 ```
 
-### Generate novel sequences
+### Generate synthetic sequences
 ```python
 # TODO: Insert example
 ```
