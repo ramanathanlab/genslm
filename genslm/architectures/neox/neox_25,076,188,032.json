@@ -22,6 +22,6 @@
     "transformers_version": "4.21.1",
     "use_cache": true,
     "vocab_size": 69, 
-    "use_deepspeed_checkpointing": True, 
+    "use_deepspeed_checkpointing": true, 
     "_deepspeed_checkpoint_comment": "Note that deepspeed checkpointing is only supported with maxzvyagin's transformers fork, optimizations are underway to remove this dependency"
 }
