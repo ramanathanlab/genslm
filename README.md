@@ -3,7 +3,7 @@
 <img width="1220" alt="genslm_header" src="https://user-images.githubusercontent.com/59709404/201488225-25d7eefb-29c9-4780-a1c1-d9820abcbdc3.png">
 
 ## Preprint
-Available here: https://www.biorxiv.org/content/10.1101/2022.10.10.511571v1
+Available here: https://www.biorxiv.org/content/10.1101/2022.10.10.511571v2
 
 ## Table of Contents
 1. [Installation](#installation)
@@ -23,11 +23,7 @@ GenSLMs were trained on the [Polaris](https://www.alcf.anl.gov/polaris) and [Per
 
 ## Usage
 
-Our pre-trained models and datasets can be downloaded from this [Globus Endpoint](https://app.globus.org/file-manager?origin_id=25918ad0-2a4e-4f37-bcfc-8183b19c3150&origin_path=%2F) or via Python as follows:
-
-```python
-# TODO: Insert example
-```
+Our pre-trained models and datasets can be downloaded from this [Globus Endpoint](https://app.globus.org/file-manager?origin_id=25918ad0-2a4e-4f37-bcfc-8183b19c3150&origin_path=%2F).
 
 Use GenSLMs to compute sequence embeddings for downsteam tasks, generate synthetic sequences, or easily extend them to your own application.
 
@@ -99,6 +95,11 @@ for sequence in sequences:
 >>> ATG GTT ATT TCA TCT GAT TTA CCA ACT
 >>> ATG TTC ATT CTT CCG GCA CTT ATC GAA
 ```
+
+### Diffusion Model
+A novel hierarchical language model with two levels: the top level uses a diffusion model to capture global context and longer-range interactions across the entire genome sequence; the bottom level uses a transformer for codon-level modeling, guided by the top-level diffusion model. This model enables us to prospectively model SARS-CoV-2 evolution by leveraging its generative capabilities.
+
+Please refer to this codebase for diffusion model usage: https://github.com/da03/hierarchical_diffusion_LM
 
 ### High Performance Computing
 
