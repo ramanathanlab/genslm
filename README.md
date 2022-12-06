@@ -97,7 +97,7 @@ for sequence in sequences:
 ```
 
 ### Diffusion Model
-A novel hierarchical transformer-based model that uses both Generative Pre-trained Transformers (GPT) (on individual gene sequences) and stable diffusion to capture the correct context and longer-range interactions in genome-scale datasets. This model enables us to prospectively model SARS-CoV-2 evolution by leveraging its generative capabilities.
+A novel hierarchical language model with two levels: the top level uses a diffusion model to capture global context and longer-range interactions across the entire genome sequence; the bottom level uses a transformer for codon-level modeling, guided by the top-level diffusion model. This model enables us to prospectively model SARS-CoV-2 evolution by leveraging its generative capabilities.
 
 Please refer to this codebase for diffusion model usage: https://github.com/da03/hierarchical_diffusion_LM
 
