@@ -646,7 +646,7 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
     ) -> List[BatchEncoding]:
 
         tokenizer_fn = functools.partial(
-            tokenizer, max_length=seq_length, padding="max_length", return_tensors="pt"
+            tokenizer, max_length=seq_length, padding="max_length", truncation=True, return_tensors="pt"
         )
         func = functools.partial(
             SequenceDataset.tokenize,
@@ -656,9 +656,13 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
 
         batch_encodings = []
         chunksize = max(1, len(sequences) // num_tokenizer_workers)
-        with ProcessPoolExecutor(max_workers=num_tokenizer_workers) as pool:
-            for encodings in pool.map(func, sequences, chunksize=chunksize):
-                batch_encodings.append(encodings)
+
+        for seq in tqdm(sequences, desc="Tokenizing..."): 
+            batch_encodings.append(func(seq))
+        # print(f"Doing MP with {chunksize=}")
+        # with ProcessPoolExecutor(max_workers=num_tokenizer_workers) as pool:
+        #     for encodings in tqdm(pool.map(func, sequences, chunksize=chunksize), total=len(sequences)):
+        #         batch_encodings.append(encodings)
         return batch_encodings
 
     @staticmethod
