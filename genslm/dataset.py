@@ -673,7 +673,7 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
 
     @staticmethod
     def group_by_kmer(seq: str, kmer: int) -> str:
-        return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer))
+        return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
 
     def __len__(self) -> int:
         return len(self.batch_encodings)
