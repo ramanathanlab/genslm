@@ -630,10 +630,10 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
         seq_length: int,
         tokenizer: PreTrainedTokenizerFast,
         kmer_size: int = 3,
-        num_tokenizer_workers: int = 1,
+        verbose: bool = True,
     ):
         self.batch_encodings = self.tokenize_sequences(
-            sequences, tokenizer, seq_length, kmer_size, num_tokenizer_workers
+            sequences, tokenizer, seq_length, kmer_size, verbose
         )
 
     @staticmethod
@@ -642,30 +642,22 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
         tokenizer: PreTrainedTokenizerFast,
         seq_length: int,
         kmer_size: int = 3,
-        num_tokenizer_workers: int = 1,
+        verbose: bool = True,
     ) -> List[BatchEncoding]:
 
         tokenizer_fn = functools.partial(
-            tokenizer, max_length=seq_length, padding="max_length", return_tensors="pt"
-        )
-        func = functools.partial(
-            SequenceDataset.tokenize,
-            tokenizer=tokenizer_fn,
-            kmer_size=kmer_size,
+            tokenizer,
+            max_length=seq_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
         )
 
-        batch_encodings = []
-        chunksize = max(1, len(sequences) // num_tokenizer_workers)
-        with ProcessPoolExecutor(max_workers=num_tokenizer_workers) as pool:
-            for encodings in pool.map(func, sequences, chunksize=chunksize):
-                batch_encodings.append(encodings)
+        batch_encodings = [
+            tokenizer_fn(SequenceDataset.group_by_kmer(seq, kmer_size))
+            for seq in tqdm(sequences, desc="Tokenizing...", disable=not verbose)
+        ]
         return batch_encodings
-
-    @staticmethod
-    def tokenize(
-        sequence: str, tokenizer: PreTrainedTokenizerFast, kmer_size: int
-    ) -> BatchEncoding:
-        return tokenizer(sequence, SequenceDataset.group_by_kmer(sequence, kmer_size))
 
     @staticmethod
     def group_by_kmer(seq: str, kmer: int) -> str:
