@@ -630,9 +630,10 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
         seq_length: int,
         tokenizer: PreTrainedTokenizerFast,
         kmer_size: int = 3,
+        verbose: bool = True,
     ):
         self.batch_encodings = self.tokenize_sequences(
-            sequences, tokenizer, seq_length, kmer_size
+            sequences, tokenizer, seq_length, kmer_size, verbose
         )
 
     @staticmethod
