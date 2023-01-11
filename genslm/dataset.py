@@ -646,20 +646,20 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
     ) -> List[BatchEncoding]:
 
         tokenizer_fn = functools.partial(
-            tokenizer, max_length=seq_length, padding="max_length", truncation=True, return_tensors="pt"
+            tokenizer,
+            max_length=seq_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
         )
         func = functools.partial(
-            SequenceDataset.tokenize,
-            tokenizer=tokenizer_fn,
-            kmer_size=kmer_size,
+            SequenceDataset.tokenize, tokenizer=tokenizer_fn, kmer_size=kmer_size
         )
 
-        batch_encodings = []
-        chunksize = max(1, len(sequences) // num_tokenizer_workers)
+        batch_encodings = [func(seq) for seq in tqdm(sequences, desc="Tokenizing...")]
 
-        for seq in tqdm(sequences, desc="Tokenizing..."): 
-            batch_encodings.append(func(seq))
         # print(f"Doing MP with {chunksize=}")
+        # chunksize = max(1, len(sequences) // num_tokenizer_workers)
         # with ProcessPoolExecutor(max_workers=num_tokenizer_workers) as pool:
         #     for encodings in tqdm(pool.map(func, sequences, chunksize=chunksize), total=len(sequences)):
         #         batch_encodings.append(encodings)
@@ -669,7 +669,7 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
     def tokenize(
         sequence: str, tokenizer: PreTrainedTokenizerFast, kmer_size: int
     ) -> BatchEncoding:
-        return tokenizer(sequence, SequenceDataset.group_by_kmer(sequence, kmer_size))
+        return tokenizer(SequenceDataset.group_by_kmer(sequence, kmer_size))
 
     @staticmethod
     def group_by_kmer(seq: str, kmer: int) -> str:
