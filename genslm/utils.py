@@ -545,12 +545,14 @@ class OutputsCallback(Callback):
         self,
         compute_mean: bool = True,
         save_dir: Path = Path("./outputs"),
-        output_attentions=False,
-        output_logits=False,
+        output_embeddings: bool = True,
+        output_attentions: bool = False,
+        output_logits: bool = False,
     ) -> None:
         self.compute_mean = compute_mean
         self.output_attentions = output_attentions
         self.output_logits = output_logits
+        self.output_embeddings = output_embeddings
         self.save_dir = save_dir
         self.embeddings, self.attentions, self.logits, self.indices = [], [], [], []
         save_dir.mkdir(exist_ok=True)
@@ -558,10 +560,9 @@ class OutputsCallback(Callback):
     def _gather_data(self) -> None:
         if self.output_attentions:
             self.attentions = torch.stack(self.attentions).numpy()
-            print(self.attentions.shape)
-        elif self.output_logits:
+        if self.output_logits:
             self.logits = torch.cat(self.logits).numpy()
-        else:
+        if self.output_embeddings:
             self.embeddings = torch.cat(self.embeddings).numpy()
         self.indices = torch.cat(self.indices).numpy().squeeze()
 
@@ -569,9 +570,9 @@ class OutputsCallback(Callback):
         rank_label = uuid.uuid4()
         if self.output_attentions:
             np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
-        elif self.output_logits:
+        if self.output_logits:
             np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
-        else:
+        if self.output_embeddings:
             np.save(self.save_dir / f"embeddings-{rank_label}.npy", self.embeddings)
         np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
 
@@ -593,10 +594,10 @@ class OutputsCallback(Callback):
         if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
             self.attentions.append(attend)
-        elif self.output_logits:
+        if self.output_logits:
             logits = outputs.logits.detach().cpu()
             self.logits.append(logits)
-        else:
+        if self.output_embeddings:
             if self.compute_mean:
                 # Compute average over sequence length
                 embed = outputs.hidden_states[0].detach().mean(dim=1).cpu()
