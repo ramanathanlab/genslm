@@ -241,6 +241,7 @@ def main(config: InferenceConfig) -> None:
         callbacks=[outputs_callback],
         strategy="ddp",
         logger=False,
+        max_epochs=-1,
     )
 
     # This dataset loads each sequence from each fasta file into memory
