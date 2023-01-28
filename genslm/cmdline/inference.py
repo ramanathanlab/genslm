@@ -74,10 +74,7 @@ class InferenceSequenceDataset(Dataset):
         # Read all fasta files into memory as strings
         self.sequences = self.read_sequences(fasta_path)
         # Quick transformation to group sequences by kmers
-        self.sequences = [
-            self.group_by_kmer(seq, kmer_size)
-            for seq in tqdm(self.sequences, desc="Grouping by kmer")
-        ]
+        self.sequences = [self.group_by_kmer(seq, kmer_size) for seq in self.sequences]
 
         # Define tokenizer function, but wait to tokenize
         # until a specific batch is requested
