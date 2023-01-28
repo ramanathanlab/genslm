@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import torch
 import torch.nn as nn
@@ -9,6 +9,8 @@ from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFa
 from transformers.utils import ModelOutput
 
 import genslm
+
+PathLike = Union[str, Path]
 
 
 class GenSLM(nn.Module):
@@ -44,14 +46,14 @@ class GenSLM(nn.Module):
         },
     }
 
-    def __init__(self, model_id: str, model_cache_dir: str = ".") -> None:
+    def __init__(self, model_id: str, model_cache_dir: PathLike = ".") -> None:
         """GenSLM inference module.
 
         Parameters
         ----------
         model_id : str
             A model ID corresponding to a pre-trained model. (e.g., genslm_25M_patric)
-        model_cache_dir : str, optional
+        model_cache_dir : PathLike, optional
             Directory where model weights have been downloaded to (defaults to current
             working directory). If model weights are not found, then they will be
             downloaded, by default "."
@@ -62,7 +64,7 @@ class GenSLM(nn.Module):
             If model_id is invalid.
         """
         super().__init__()
-        self.model_cache_dir = model_cache_dir
+        self.model_cache_dir = Path(model_cache_dir)
         self.model_info = self.MODELS.get(model_id)
         if self.model_info is None:
             valid_model_ids = list(self.MODELS.keys())
@@ -87,7 +89,7 @@ class GenSLM(nn.Module):
         base_config = AutoConfig.from_pretrained(self.model_info["config"])
         model = AutoModelForCausalLM.from_config(base_config)
 
-        weight_path = Path(self.model_cache_dir) / self.model_info["weights"]
+        weight_path = self.model_cache_dir / self.model_info["weights"]
         if not weight_path.exists():
             # TODO: Implement model download
             raise NotImplementedError
@@ -105,10 +107,7 @@ class GenSLM(nn.Module):
         return tokenizer
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        **kwargs: Dict[str, Any],
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, **kwargs: Any
     ) -> ModelOutput:
         return self.model(
             input_ids, labels=input_ids, attention_mask=attention_mask, **kwargs
