@@ -182,7 +182,7 @@ class OutputsCallback(Callback):
             np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
 
         if self.output_embeddings:
-            for layer, embed in self.embeddings:
+            for layer, embed in self.embeddings.items():
                 self.embeddings = torch.cat(embed).numpy()
                 np.save(
                     self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
