@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 import numpy as np
 import pytorch_lightning as pl
 import torch
+import torch.multiprocessing as mp
 from natsort import natsorted
 from pytorch_lightning.callbacks import Callback
 from torch.utils.data import DataLoader, Dataset  # Subset
@@ -212,6 +213,8 @@ def main(config: InferenceConfig) -> None:
     # Setup torch environment
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    # Potential polaris fix for connection reset error
+    mp.set_start_method("spawn")
     pl.seed_everything(0)
 
     # Load GenSLM model and inject into pytorch lightning
