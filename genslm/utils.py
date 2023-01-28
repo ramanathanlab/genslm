@@ -1,9 +1,10 @@
+import re
 import time
 import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Dict, List, Optional, Set, Type, Union
 
 import numpy as np
 import pytorch_lightning as pl
@@ -11,6 +12,7 @@ import torch
 from Bio import SeqIO  # type: ignore[import]
 from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
+from pydantic import BaseModel
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities.deepspeed import (
     convert_zero_checkpoint_to_fp32_state_dict,
@@ -20,7 +22,53 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast  # , StoppingCriteriaList
 from transformers import StoppingCriteria
 
+PathLike = Union[str, Path]
+
 STOP_CODONS = {"TAA", "TAG", "TGA"}
+
+
+class Sequence(BaseModel):
+    sequence: str
+    """Biological sequence (Nucleotide sequence)."""
+    tag: str
+    """Sequence description tag."""
+
+
+def read_fasta(fasta_file: PathLike) -> List[Sequence]:
+    """Reads fasta file sequences and description tags into dataclass."""
+    text = Path(fasta_file).read_text()
+    pattern = re.compile("^>", re.MULTILINE)
+    non_parsed_seqs = re.split(pattern, text)[1:]
+    lines = [
+        line.replace("\n", "") for seq in non_parsed_seqs for line in seq.split("\n", 1)
+    ]
+
+    return [
+        Sequence(sequence=seq, tag=tag)
+        for seq, tag in tqdm(zip(lines[1::2], lines[::2]))
+    ]
+
+
+def read_fasta_only_seq(fasta_file: PathLike) -> List[str]:
+    """Reads fasta file sequences without description tag."""
+    text = Path(fasta_file).read_text()
+    pattern = re.compile("^>", re.MULTILINE)
+    non_parsed_seqs = re.split(pattern, text)[1:]
+    lines = [
+        line.replace("\n", "") for seq in non_parsed_seqs for line in seq.split("\n", 1)
+    ]
+
+    return lines[1::2]
+
+
+def write_fasta(
+    sequences: Union[Sequence, List[Sequence]], fasta_file: PathLike, mode: str = "w"
+) -> None:
+    """Write or append sequences to a fasta file."""
+    seqs = [sequences] if isinstance(sequences, Sequence) else sequences
+    with open(fasta_file, mode) as f:
+        for seq in seqs:
+            f.write(f">{seq.tag}\n{seq.sequence}\n")
 
 
 class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
@@ -543,13 +591,13 @@ class PerplexityCallback(Callback):
 class OutputsCallback(Callback):
     def __init__(
         self,
-        compute_mean: bool = True,
         save_dir: Path = Path("./outputs"),
+        mean_embedding_reduction: bool = True,
         output_embeddings: bool = True,
         output_attentions: bool = False,
         output_logits: bool = False,
     ) -> None:
-        self.compute_mean = compute_mean
+        self.mean_embedding_reduction = mean_embedding_reduction
         self.output_attentions = output_attentions
         self.output_logits = output_logits
         self.output_embeddings = output_embeddings
@@ -598,7 +646,7 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu()
             self.logits.append(logits)
         if self.output_embeddings:
-            if self.compute_mean:
+            if self.mean_embedding_reduction:
                 # Compute average over sequence length
                 embed = outputs.hidden_states[0].detach().mean(dim=1).cpu()
             else:

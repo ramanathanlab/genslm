@@ -1,9 +1,11 @@
 import itertools
+
 import numpy as np
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
-from genslm import GenSLM, SequenceDataset
 from transformers import PreTrainedTokenizerFast
+
+from genslm import GenSLM, SequenceDataset
 
 
 def generate_random_sequence(min_length: int = 10, max_length: int = 2020) -> str:

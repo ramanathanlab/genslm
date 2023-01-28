@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader  # Subset
 
 import genslm
 from genslm.config import BaseSettings, WarmupLRSettings
-from genslm.dataset import FastaDataset, FileBackedH5Dataset
+from genslm.dataset import FileBackedH5Dataset, InferenceSequenceDataset
 from genslm.model import DNATransformer
 from genslm.utils import (
     LoadDeepSpeedStrategy,
@@ -21,8 +21,19 @@ from genslm.utils import (
 class InferenceConfig(BaseSettings):
     data_file: Path
     """Data file to run inference on (HDF5)."""
-    embeddings_out_path: Path
-    """Directory to write embeddings to."""
+    output_path: Path
+    """Directory to write embeddings, attentions, logits to."""
+
+    # Which outputs to generate
+    output_embeddings: bool = True
+    """Whether or not to generate and save embeddings."""
+    mean_embedding_reduction: bool = False
+    """Whether or not to average the embeddings over sequence length."""
+    output_attentions: bool = False
+    """Whether or not to generate and save attentions."""
+    output_logits: bool = False
+    """Whether or not to generate and save logits."""
+
     model_config_json: Path
     """Huggingface json dict to load AutoConfig from."""
     load_pt_checkpoint: Optional[Path] = None
@@ -84,32 +95,10 @@ class InferenceConfig(BaseSettings):
         return v
 
 
-# class DNATransformer(pl.LightningModule):
-#     def __init__(self, cfg: InferenceConfig) -> None:
-#         # Loads from a hugging face JSON file
-#         base_config = AutoConfig.from_pretrained(cfg.model_config_json)
-#         self.model = AutoModelForCausalLM.from_config(base_config)
-
-#     def forward(
-#         self, batch: Dict[str, torch.Tensor], **kwargs: Dict[str, Any]
-#     ) -> ModelOutput:
-#         return self.model(
-#             batch["input_ids"],
-#             labels=batch["input_ids"],
-#             attention_mask=batch["attention_mask"],
-#             **kwargs,
-#         )
-
-#     def predict_step(
-#         self, batch: Dict[str, torch.Tensor], batch_idx: int
-#     ) -> ModelOutput:
-#         return self(batch, output_hidden_states=True)
-
-
 def main(config: InferenceConfig) -> None:
     # Setup torch environment
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-    # torch.set_num_threads(config.num_data_workers)  # type: ignore[attr-defined]
     pl.seed_everything(0)
 
     if config.load_pt_checkpoint:
@@ -123,19 +112,19 @@ def main(config: InferenceConfig) -> None:
 
     model: DNATransformer = model_strategy.get_model(DNATransformer)
 
-    tmp_embeddings_dir = config.embeddings_out_path.with_suffix("")
-
-    if args.attention:
-        print("Generating attention values...")
-    elif args.logits:
-        print("Generating logit values...")
-    else:
+    if config.output_embeddings:
         print("Generating embeddings values...")
+    if config.output_attentions:
+        print("Generating attention values...")
+    if config.output_logits:
+        print("Generating logit values...")
 
     embedding_callback = OutputsCallback(
-        save_dir=tmp_embeddings_dir,
-        output_attentions=args.attention,
-        output_logits=args.logits,
+        save_dir=config.output_path,
+        mean_embedding_reduction=config.mean_embedding_reduction,
+        output_embeddings=config.output_embeddings,
+        output_attentions=config.output_attentions,
+        output_logits=config.output_logits,
     )
     trainer = pl.Trainer(
         gpus=-1,
@@ -149,7 +138,9 @@ def main(config: InferenceConfig) -> None:
     if config.data_file.suffix == ".h5":
         dataset = FileBackedH5Dataset(config.data_file)
     elif config.data_file.is_dir():
-        dataset = FastaDataset(config.data_file, config.block_size, model.tokenizer)
+        dataset = InferenceSequenceDataset(
+            config.data_file, config.block_size, model.tokenizer
+        )
     else:
         raise ValueError(f"Couldn't process data_file: {config.data_file}")
 
@@ -166,18 +157,10 @@ def main(config: InferenceConfig) -> None:
     trainer.predict(model, dataloaders=dataloader, return_predictions=False)
     print("Done")
 
-    # This approch has a bug since global_rank is not a single process
-    # if trainer.is_global_zero:
-    #    gather_embeddings(tmp_embeddings_dir, config.embeddings_out_path)
-    #    shutil.rmtree(tmp_embeddings_dir)
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
-    parser.add_argument("-a", "--attention", action="store_true")
-    parser.add_argument("-l", "--logits", action="store_true")
     args = parser.parse_args()
-    assert not (args.attention and args.logits)
     config = InferenceConfig.from_yaml(args.config)
     main(config)
