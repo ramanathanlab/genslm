@@ -17,7 +17,6 @@ from tqdm import tqdm
 from transformers import BatchEncoding, PreTrainedTokenizerFast
 
 from genslm.config import PathLike
-from genslm.utils import read_fasta_only_seq
 
 
 def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
@@ -674,60 +673,5 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
         sample = {
             "input_ids": batch_encoding["input_ids"].squeeze(),
             "attention_mask": batch_encoding["attention_mask"],
-        }
-        return sample
-
-
-class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
-    """Dataset initialized from fasta files."""
-
-    def __init__(
-        self,
-        fasta_path: PathLike,
-        seq_length: int,
-        tokenizer: PreTrainedTokenizerFast,
-        kmer_size: int = 3,
-    ):
-
-        self.sequences = self.read_sequences(fasta_path)
-        self.sequences = [
-            self.group_by_kmer(seq, kmer_size)
-            for seq in tqdm(self.sequences, desc="Grouping by kmer")
-        ]
-
-        self.tokenizer_fn = functools.partial(
-            tokenizer,
-            max_length=seq_length,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
-        )
-
-    @staticmethod
-    def read_sequences(fasta_path: PathLike) -> List[str]:
-        sequences = []
-        if Path(fasta_path).is_dir():
-            fasta_files = natsorted((Path(fasta_path).glob("*.fasta")))
-            for fasta_file in tqdm(fasta_files, desc="Reading fasta files..."):
-                sequences.extend(read_fasta_only_seq(fasta_file))
-        else:
-            sequences = read_fasta_only_seq(fasta_path)
-        return sequences
-
-    @staticmethod
-    def group_by_kmer(seq: str, kmer: int) -> str:
-        return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
-
-    def __len__(self) -> int:
-        return len(self.sequences)
-
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        batch_encoding = self.tokenizer_fn(self.sequences[idx])
-        # Squeeze so that batched tensors end up with (batch_size, seq_length)
-        # instead of (batch_size, 1, seq_length)
-        sample = {
-            "input_ids": batch_encoding["input_ids"].squeeze(),
-            "attention_mask": batch_encoding["attention_mask"],
-            "indices": torch.from_numpy(np.array([idx])),
         }
         return sample

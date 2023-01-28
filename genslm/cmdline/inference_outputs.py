@@ -1,24 +1,31 @@
+import functools
 import os
+import uuid
 from argparse import ArgumentParser
+from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
+import numpy as np
 import pytorch_lightning as pl
-from pydantic import root_validator, validator
-from torch.utils.data import DataLoader  # Subset
+import torch
+from natsort import natsorted
+from pytorch_lightning.callbacks import Callback
+from torch.utils.data import DataLoader, Dataset  # Subset
+from tqdm import tqdm
+from transformers import PreTrainedTokenizerFast
 
-import genslm
-from genslm.config import BaseSettings, WarmupLRSettings
-from genslm.dataset import FileBackedH5Dataset, InferenceSequenceDataset
-from genslm.model import DNATransformer
-from genslm.utils import (
-    LoadDeepSpeedStrategy,
-    LoadPTCheckpointStrategy,
-    OutputsCallback,
-)
+from genslm.config import BaseSettings, path_validator
+from genslm.inference import GenSLM
+from genslm.utils import read_fasta_only_seq
 
 
 class InferenceConfig(BaseSettings):
+    # Input files
+    model_id: str = "genslm_25M_patric"
+    """The genslm model to load."""
+    model_cache_dir: Path
+    """The directory of the model weights."""
     data_file: Path
     """Data file to run inference on (HDF5)."""
     output_path: Path
@@ -34,16 +41,11 @@ class InferenceConfig(BaseSettings):
     output_logits: bool = False
     """Whether or not to generate and save logits."""
 
-    model_config_json: Path
-    """Huggingface json dict to load AutoConfig from."""
-    load_pt_checkpoint: Optional[Path] = None
-    """Checkpoint pt file to initialze model weights."""
-    load_ds_checkpoint: Optional[Path] = None
-    """DeepSpeed checkpoint file to initialze model weights."""
-    precision: int = 16
-    """Model precision."""
+    # Run time settings
     num_nodes: int = 1
     """Number of nodes to use for inference."""
+    precision: int = 16
+    """Model precision."""
     batch_size: int = 32
     """Batch size to use for inference."""
     num_data_workers: int = 4
@@ -52,47 +54,161 @@ class InferenceConfig(BaseSettings):
     """Number of batches loaded in advance by each worker."""
     pin_memory: bool = True
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
-    block_size: int = 2048
-    """Only used when processing a directory of fasta files."""
-    deepspeed_flops_profile: bool = False
-    """Always false when computing embeddings"""
 
-    # Parameters needed to initialize DNATransformer (not used for inference)
-    tokenizer_file: Path = (
-        Path(genslm.__file__).parent
-        / "tokenizer_files"
-        / "codon_wordlevel_100vocab.json"
-    )
-    learning_rate: float = 5e-5
-    warm_up_lr: Optional[WarmupLRSettings] = None
+    # validators
+    _data_file_exists = path_validator("data_file")
+    _model_cache_dir_exists = path_validator("model_cache_dir")
 
-    @root_validator
-    def assert_checkpoint_file_specified(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        load_pt_checkpoint: Optional[Path] = values.get("load_pt_checkpoint")
-        load_ds_checkpoint: Optional[Path] = values.get("load_ds_checkpoint")
-        if load_pt_checkpoint is None and load_ds_checkpoint is None:
-            raise ValueError(
-                "At least one of load_pt_checkpoint or load_ds_checkpoint must be specified."
-            )
-        return values
 
-    @validator("data_file")
-    def data_file_exists(cls, v: Path) -> Path:
-        if not v.exists():
-            raise FileNotFoundError(f"data_file path does not exist {v}.")
-        return v
+class InferenceSequenceDataset(Dataset):
+    """Dataset initialized from fasta files."""
 
-    @validator("load_pt_checkpoint")
-    def load_pt_checkpoint_exists(cls, v: Optional[Path]) -> Optional[Path]:
-        if v is not None and not v.exists():
-            raise FileNotFoundError(f"load_pt_checkpoint path does not exist {v}.")
-        return v
+    def __init__(
+        self,
+        fasta_path: Path,
+        seq_length: int,
+        tokenizer: PreTrainedTokenizerFast,
+        kmer_size: int = 3,
+    ):
 
-    @validator("load_ds_checkpoint")
-    def load_ds_checkpoint_exists(cls, v: Optional[Path]) -> Optional[Path]:
-        if v is not None and not v.exists():
-            raise FileNotFoundError(f"load_ds_checkpoint path does not exist {v}.")
-        return v
+        # Read all fasta files into memory as strings
+        self.sequences = self.read_sequences(fasta_path)
+        # Quick transformation to group sequences by kmers
+        self.sequences = [
+            self.group_by_kmer(seq, kmer_size)
+            for seq in tqdm(self.sequences, desc="Grouping by kmer")
+        ]
+
+        # Define tokenizer function, but wait to tokenize
+        # until a specific batch is requested
+        self.tokenizer_fn = functools.partial(
+            tokenizer,
+            max_length=seq_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        )
+
+    @staticmethod
+    def read_sequences(fasta_path: Path) -> List[str]:
+        sequences = []
+        if fasta_path.is_dir():
+            fasta_files = natsorted(fasta_path.glob("*.fasta"))
+            for fasta_file in tqdm(fasta_files, desc="Reading fasta files..."):
+                sequences.extend(read_fasta_only_seq(fasta_file))
+        else:
+            sequences = read_fasta_only_seq(fasta_path)
+        return sequences
+
+    @staticmethod
+    def group_by_kmer(seq: str, kmer: int) -> str:
+        return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
+
+    def __len__(self) -> int:
+        return len(self.sequences)
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        seq = self.sequences[idx]
+        batch_encoding = self.tokenizer_fn(seq)
+        # Squeeze so that batched tensors end up with (batch_size, seq_length)
+        # instead of (batch_size, 1, seq_length)
+        sample = {
+            "input_ids": batch_encoding["input_ids"].squeeze(),
+            "attention_mask": batch_encoding["attention_mask"],
+            "indices": torch.from_numpy(np.array([idx])),
+            "seq_lens": torch.from_numpy(np.array([len(seq)])),
+        }
+        return sample
+
+
+class OutputsCallback(Callback):
+    def __init__(
+        self,
+        save_dir: Path = Path("./outputs"),
+        mean_embedding_reduction: bool = False,
+        output_embeddings: bool = True,
+        output_attentions: bool = False,
+        output_logits: bool = False,
+    ) -> None:
+        self.mean_embedding_reduction = mean_embedding_reduction
+        self.output_attentions = output_attentions
+        self.output_logits = output_logits
+        self.output_embeddings = output_embeddings
+        self.save_dir = save_dir
+        # Embeddings: Key layer-id, value embedding array
+        self.embeddings, self.attentions, self.indices = defaultdict(list), [], []
+        save_dir.mkdir(exist_ok=True)
+
+    def on_predict_start(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        self.embeddings, self.attentions, self.indices = defaultdict(list), [], []
+
+    def on_predict_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+        dataloader_idx: int,
+    ) -> None:
+        # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
+        if self.output_attentions:
+            attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
+            self.attentions.append(attend)
+        if self.output_logits:
+            logits = outputs.logits.detach().cpu()
+            self.logits.append(logits)
+        if self.output_embeddings:
+            for layer, embeddings in enumerate(outputs.hidden_states):
+                if self.mean_embedding_reduction:
+                    # Compute average over sequence length
+                    embed = embeddings[layer].detach().mean(dim=1).cpu()
+                else:
+                    embed = embeddings[layer].detach().cpu()
+                self.embeddings[layer].append(embed)
+
+        self.indices.append(batch["indices"].detach().cpu())
+
+    def on_predict_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        # Save each ranks data to a unique file
+        rank_label = uuid.uuid4()
+
+        if self.output_logits:
+            self.logits = torch.cat(self.logits).numpy()
+            np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
+
+        if self.output_embeddings:
+            for layer, embed in self.embeddings:
+                self.embeddings = torch.cat(embed).numpy()
+                np.save(
+                    self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
+                )
+
+        if self.output_attentions:
+            self.attentions = torch.stack(self.attentions).numpy()
+            np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
+
+        # Save indices to combine the per-rank files into a single dataset
+        self.indices = torch.cat(self.indices).numpy().squeeze()
+        np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
+
+
+class LightningGenSLM(pl.LightningModule):
+    """Lightning wrapper to facilitate distributed prediction."""
+
+    def __init__(self, model: GenSLM) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, *args, **kwargs) -> Any:
+        return self.model(*args, **kwargs)
+
+    def predict_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Any:
+        return self(batch["input_ids"], batch["attention_mask"])
 
 
 def main(config: InferenceConfig) -> None:
@@ -101,49 +217,39 @@ def main(config: InferenceConfig) -> None:
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     pl.seed_everything(0)
 
-    if config.load_pt_checkpoint:
-        model_strategy = LoadPTCheckpointStrategy(
-            config.load_pt_checkpoint, cfg=config, generation_flag=True
-        )
-    else:
-        model_strategy = LoadDeepSpeedStrategy(
-            config.load_ds_checkpoint, cfg=config, generation_flag=True
-        )
+    # Load GenSLM model and inject into pytorch lightning
+    model = GenSLM(config.model_id, config.model_cache_dir)
+    # Set the default kwarg values once
+    model.forward = functools.partial(
+        model.forward,
+        output_hidden_states=config.output_embeddings,
+        output_attentions=config.output_attentions,
+    )
+    ptl_model = LightningGenSLM(model)
 
-    model: DNATransformer = model_strategy.get_model(DNATransformer)
-
-    if config.output_embeddings:
-        print("Generating embeddings values...")
-    if config.output_attentions:
-        print("Generating attention values...")
-    if config.output_logits:
-        print("Generating logit values...")
-
-    embedding_callback = OutputsCallback(
+    # Create callback to save model outputs to disk
+    outputs_callback = OutputsCallback(
         save_dir=config.output_path,
         mean_embedding_reduction=config.mean_embedding_reduction,
         output_embeddings=config.output_embeddings,
         output_attentions=config.output_attentions,
         output_logits=config.output_logits,
     )
+
+    # Use pytorch lightning trainer to take advantage of distribution strategies
     trainer = pl.Trainer(
         gpus=-1,
         precision=config.precision,
         num_nodes=config.num_nodes,
-        callbacks=[embedding_callback],
+        callbacks=[outputs_callback],
         strategy="ddp",
     )
 
-    # Select datset type based on data_file type
-    if config.data_file.suffix == ".h5":
-        dataset = FileBackedH5Dataset(config.data_file)
-    elif config.data_file.is_dir():
-        dataset = InferenceSequenceDataset(
-            config.data_file, config.block_size, model.tokenizer
-        )
-    else:
-        raise ValueError(f"Couldn't process data_file: {config.data_file}")
-
+    # This dataset loads each sequence from each fasta file into memory
+    # as strings on each rank and then tokenizes on-the-fly.
+    dataset = InferenceSequenceDataset(
+        config.data_file, model.seq_length, model.tokenizer
+    )
     # dataset = Subset(dataset, np.arange(512))  # for testing
     dataloader = DataLoader(
         dataset,
@@ -153,9 +259,19 @@ def main(config: InferenceConfig) -> None:
         pin_memory=config.pin_memory,
     )
 
-    print(f"Running inference with dataset length {len(dataloader)}")
-    trainer.predict(model, dataloaders=dataloader, return_predictions=False)
-    print("Done")
+    if trainer.is_global_zero:
+        print(f"Running inference with dataset length {len(dataloader)}")
+        if config.output_embeddings:
+            print("Generating embeddings values...")
+        if config.output_attentions:
+            print("Generating attention values...")
+        if config.output_logits:
+            print("Generating logit values...")
+
+    trainer.predict(ptl_model, dataloaders=dataloader, return_predictions=False)
+
+    if trainer.is_global_zero:
+        print("Done")
 
 
 if __name__ == "__main__":
@@ -164,3 +280,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = InferenceConfig.from_yaml(args.config)
     main(config)
+
+    # TODO: Implement embedding padding removal

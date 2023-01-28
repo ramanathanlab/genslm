@@ -1,6 +1,5 @@
 import re
 import time
-import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 from statistics import mean
@@ -586,78 +585,3 @@ class PerplexityCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         self._log_perplexity(pl_module, self.val_name, train=False, on_epoch=True)
-
-
-class OutputsCallback(Callback):
-    def __init__(
-        self,
-        save_dir: Path = Path("./outputs"),
-        mean_embedding_reduction: bool = True,
-        output_embeddings: bool = True,
-        output_attentions: bool = False,
-        output_logits: bool = False,
-    ) -> None:
-        self.mean_embedding_reduction = mean_embedding_reduction
-        self.output_attentions = output_attentions
-        self.output_logits = output_logits
-        self.output_embeddings = output_embeddings
-        self.save_dir = save_dir
-        self.embeddings, self.attentions, self.logits, self.indices = [], [], [], []
-        save_dir.mkdir(exist_ok=True)
-
-    def _gather_data(self) -> None:
-        if self.output_attentions:
-            self.attentions = torch.stack(self.attentions).numpy()
-        if self.output_logits:
-            self.logits = torch.cat(self.logits).numpy()
-        if self.output_embeddings:
-            self.embeddings = torch.cat(self.embeddings).numpy()
-        self.indices = torch.cat(self.indices).numpy().squeeze()
-
-    def _save_embeddings(self) -> None:
-        rank_label = uuid.uuid4()
-        if self.output_attentions:
-            np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
-        if self.output_logits:
-            np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
-        if self.output_embeddings:
-            np.save(self.save_dir / f"embeddings-{rank_label}.npy", self.embeddings)
-        np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
-
-    def on_predict_start(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
-    ) -> None:
-        self.embeddings, self.attentions, self.indices = [], [], []
-
-    def on_predict_batch_end(
-        self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
-        outputs: Any,
-        batch: Any,
-        batch_idx: int,
-        dataloader_idx: int,
-    ) -> None:
-        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        if self.output_attentions:
-            attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
-            self.attentions.append(attend)
-        if self.output_logits:
-            logits = outputs.logits.detach().cpu()
-            self.logits.append(logits)
-        if self.output_embeddings:
-            if self.mean_embedding_reduction:
-                # Compute average over sequence length
-                embed = outputs.hidden_states[0].detach().mean(dim=1).cpu()
-            else:
-                embed = outputs.hidden_states[0].detach().cpu()
-
-            self.embeddings.append(embed)
-
-        self.indices.append(batch["indices"].detach().cpu())
-
-    def on_predict_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
-    ) -> None:
-        self._gather_data()
-        self._save_embeddings()
