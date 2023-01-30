@@ -159,12 +159,14 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu()
             self.logits.append(logits)
         if self.output_embeddings:
+            seq_lens = batch["seq_lens"]
             for layer, embeddings in enumerate(outputs.hidden_states):
                 if self.mean_embedding_reduction:
                     # Compute average over sequence length
-                    embed = embeddings[layer].detach().mean(dim=1).cpu()
+                    embed = embeddings.detach().mean(dim=1).cpu()
                 else:
-                    embed = embeddings[layer].detach().cpu()
+                    embed = embeddings.detach().cpu().numpy()
+                    embed = [embed[:, 1:seq_len] for seq_len in seq_lens]
                 self.embeddings[layer].append(embed)
 
         self.indices.append(batch["indices"].detach().cpu())
@@ -181,7 +183,7 @@ class OutputsCallback(Callback):
 
         if self.output_embeddings:
             for layer, embed_ in self.embeddings.items():
-                embed = torch.cat(embed_).numpy()
+                embed = np.concatenate(embed_)
                 np.save(
                     self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
                 )
