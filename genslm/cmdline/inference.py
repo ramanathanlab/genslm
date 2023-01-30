@@ -164,10 +164,13 @@ class OutputsCallback(Callback):
             for layer, embeddings in enumerate(outputs.hidden_states):
                 if self.mean_embedding_reduction:
                     # Compute average over sequence length
+                    # TODO: Account for padding
                     embed = embeddings.detach().mean(dim=1).cpu()
                 else:
                     embed = embeddings.detach().cpu().numpy()
-                    embed = [embed[:, 1:seq_len] for seq_len in seq_lens]
+                    embed = [
+                        embed[i, 1:seq_len, :] for i, seq_len in enumerate(seq_lens)
+                    ]
                 self.embeddings[layer].append(embed)
 
         self.indices.append(batch["indices"].detach().cpu())
