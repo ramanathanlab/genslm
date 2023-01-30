@@ -185,6 +185,7 @@ class OutputsCallback(Callback):
                 for example in batch:
                     grp.create_dataset(f"{counter}", data=example)
                     counter += 1
+                f.flush()
 
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
