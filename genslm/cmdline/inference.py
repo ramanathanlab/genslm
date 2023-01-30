@@ -176,7 +176,7 @@ class OutputsCallback(Callback):
         with h5.File(save_path, "w") as f:
             grp = f.create_group("embeddings")
             counter = 0
-            for batch in data.values():
+            for batch in data:
                 for example in batch:
                     grp.create_dataset(f"{counter}", data=example)
                     counter += 1
