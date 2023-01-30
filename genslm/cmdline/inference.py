@@ -175,8 +175,11 @@ class OutputsCallback(Callback):
     def save_embeddings_h5(self, save_path: Path, data: np.ndarray) -> None:
         with h5.File(save_path, "w") as f:
             grp = f.create_group("embeddings")
-            for i, example in enumerate(data):
-                grp.create_dataset(f"{i}", data=example)
+            counter = 0
+            for batch in data.values():
+                for example in batch:
+                    grp.create_dataset(f"{counter}", data=example)
+                    counter += 1
 
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
@@ -191,9 +194,9 @@ class OutputsCallback(Callback):
 
         if self.output_embeddings:
             for layer, embed_ in self.embeddings.items():
-                embed = np.concatenate(embed_)
+                # embed = np.concatenate(embed_)
                 self.save_embeddings_h5(
-                    self.save_dir / f"embeddings-layer-{layer}-{rank_label}.h5", embed
+                    self.save_dir / f"embeddings-layer-{layer}-{rank_label}.h5", embed_
                 )
                 # np.save(
                 #     self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
