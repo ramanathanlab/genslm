@@ -193,6 +193,7 @@ class OutputsCallback(Callback):
             np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
 
         if self.output_embeddings:
+            print("Num layers in embeddings:", len(self.embeddings))
             for layer, embed_ in self.embeddings.items():
                 # embed = np.concatenate(embed_)
                 self.save_embeddings_h5(
