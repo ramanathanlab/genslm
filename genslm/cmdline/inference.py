@@ -168,8 +168,10 @@ class OutputsCallback(Callback):
                     embed = embeddings.detach().mean(dim=1).cpu()
                 else:
                     embed = embeddings.detach().cpu().numpy()
+                    # TODO: check +1 is correct for padding
                     embed = [
-                        embed[i, 1:seq_len, :] for i, seq_len in enumerate(seq_lens)
+                        embed[i, 1 : seq_len + 1, :]
+                        for i, seq_len in enumerate(seq_lens)
                     ]
                 self.embeddings[layer].append(embed)
 
@@ -196,7 +198,12 @@ class OutputsCallback(Callback):
             np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
 
         if self.output_embeddings:
-            print("Num layers in embeddings:", len(self.embeddings))
+            print(
+                "Num layers in embeddings: ",
+                len(self.embeddings),
+                os.environ["RANK"],
+                os.environ["NODE_RANK"],
+            )
             for layer, embed_ in self.embeddings.items():
                 # embed = np.concatenate(embed_)
                 self.save_embeddings_h5(
