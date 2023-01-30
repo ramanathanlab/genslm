@@ -6,6 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
 
+import h5py as h5
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -171,6 +172,12 @@ class OutputsCallback(Callback):
 
         self.indices.append(batch["indices"].detach().cpu())
 
+    def save_embeddings_h5(self, save_path: Path, data: np.ndarray) -> None:
+        with h5.File(save_path, "w") as f:
+            grp = f.create_group("embeddings")
+            for i, example in enumerate(data):
+                grp.create_dataset(f"{i}", data=example)
+
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
@@ -178,15 +185,19 @@ class OutputsCallback(Callback):
         rank_label = uuid.uuid4()
 
         if self.output_logits:
+            # TODO: figure out if cat is going to mess things up here
             self.logits = torch.cat(self.logits).numpy()
             np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
 
         if self.output_embeddings:
             for layer, embed_ in self.embeddings.items():
                 embed = np.concatenate(embed_)
-                np.save(
-                    self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
+                self.save_embeddings_h5(
+                    self.save_dir / f"embeddings-layer-{layer}-{rank_label}.h5", embed
                 )
+                # np.save(
+                #     self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
+                # )
 
         if self.output_attentions:
             self.attentions = torch.stack(self.attentions).numpy()
