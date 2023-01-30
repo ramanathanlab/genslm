@@ -203,6 +203,7 @@ class OutputsCallback(Callback):
                 len(self.embeddings),
                 os.environ["RANK"],
                 os.environ["NODE_RANK"],
+                os.environ["GLOBAL_RANK"],
             )
             for layer, embed_ in self.embeddings.items():
                 # embed = np.concatenate(embed_)
