@@ -30,9 +30,7 @@ def gather_embeddings(
             with h5py.File(h5_file, "r") as input_file:
                 indices = input_file["fasta-indices"][...]
                 logits = input_file["logits"][...]
-                for i, out_index, seq_key in enumerate(
-                    zip(indices, input_file["embeddings"].keys())
-                ):
+                for out_index, seq_key in zip(indices, input_file["embeddings"].keys()):
                     output_file["embeddings"][str(out_index)] = h5py.ExternalLink(
                         str(h5_file), f"embeddings/{seq_key}"
                     )
