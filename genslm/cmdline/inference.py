@@ -188,6 +188,7 @@ class OutputsCallback(Callback):
                     h5_file["embeddings"].create_dataset(
                         f"{i}", data=e[1 : seq_len + 1]
                     )
+                h5_file.flush()
 
                 # self.embeddings[layer].append(embed)
 
