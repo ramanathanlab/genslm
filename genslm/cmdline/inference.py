@@ -146,7 +146,6 @@ class OutputsCallback(Callback):
         # Embeddings: Key layer-id, value embedding array
         self.embeddings = defaultdict(list)
         self.attentions, self.logits, self.indices = [], [], []
-        save_dir.mkdir(exist_ok=True)
 
         self.h5s_open: Dict[int, h5py.File] = {}
         self.h5_kwargs = {
@@ -159,7 +158,9 @@ class OutputsCallback(Callback):
         self.tmp_dir = self.save_dir
         if self.node_local_path is not None:
             self.tmp_dir = self.node_local_path / self.save_dir.name
-            self.tmp_dir.mkdir(exist_ok=True)
+        # Note: If we mkdir the save_dir and node_local_path is set,
+        # then shutil.move will error since the dst already exists.
+        self.tmp_dir.mkdir(exist_ok=True)
 
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
