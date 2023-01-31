@@ -150,8 +150,8 @@ class OutputsCallback(Callback):
 
         self.h5s_open: Dict[int, h5py.File] = {}
         self.h5_kwargs = {
-            "compression": "gzip",
-            "compression_opts": 4,
+            # "compression": "gzip",
+            # "compression_opts": 4, Compression is too slow for current impl
             "fletcher32": True,
         }
         self.rank_label = uuid.uuid4()
