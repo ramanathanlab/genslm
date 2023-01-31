@@ -22,16 +22,20 @@ def gather_embeddings(
     # Glob embedding and index files written by each rank
     with h5py.File(output_path, "w") as output_file:
         output_file.create_group("embeddings")
+        output_file.create_group("logits")
         for h5_file in input_dir.glob(glob_pattern):
             if "gathered" in h5_file.name:
                 continue
             print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
                 indices = input_file["fasta-indices"][...]
+                logits = input_file["logits"][...]
                 for out_index, seq_key in zip(indices, input_file["embeddings"].keys()):
                     output_file["embeddings"][str(out_index)] = h5py.ExternalLink(
                         str(h5_file), f"embeddings/{seq_key}"
                     )
+
+                    output_file["logits"][str(out_index)] = logits[int(seq_key)]
 
     print("Wrote gathered output to", output_path, "\n")
 
