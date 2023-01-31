@@ -33,6 +33,8 @@ def gather_embeddings(
                         str(h5_file), f"embeddings/{seq_key}"
                     )
 
+    print("Wrote gathered output to", output_path)
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
