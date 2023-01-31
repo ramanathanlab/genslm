@@ -140,6 +140,7 @@ class OutputsCallback(Callback):
 
         self.h5s_open: Dict[int, h5py.File] = {}
         self.rank_label = uuid.uuid4()
+        self.counter = 0
 
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
@@ -184,10 +185,11 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 # TODO: check +1 is correct for padding
 
-                for i, (e, seq_len) in enumerate(zip(embed, batch["seq_lens"])):
+                for e, seq_len in zip(embed, batch["seq_lens"]):
                     h5_file["embeddings"].create_dataset(
-                        f"{i}", data=e[1 : seq_len + 1]
+                        f"{self.counter}", data=e[1 : seq_len + 1]
                     )
+                    self.counter += 1
                 h5_file.flush()
 
                 # self.embeddings[layer].append(embed)
