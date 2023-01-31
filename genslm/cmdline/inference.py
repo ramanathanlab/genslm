@@ -304,7 +304,7 @@ def main(config: InferenceConfig) -> None:
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     # Potential polaris fix for connection reset error
     mp.set_start_method("spawn")
-    pl.seed_everything(0)
+    pl.seed_everything(42)
 
     # Load GenSLM model and inject into pytorch lightning
     model = GenSLM(config.model_id, config.model_cache_dir)
