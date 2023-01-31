@@ -218,16 +218,6 @@ class OutputsCallback(Callback):
 
         self.indices.append(batch["indices"].detach().cpu())
 
-    def save_embeddings_h5(self, save_path: Path, data: np.ndarray) -> None:
-        with h5py.File(save_path, "w") as f:
-            grp = f.create_group("embeddings")
-            counter = 0
-            for batch in data:
-                for example in batch:
-                    grp.create_dataset(f"{counter}", data=example)
-                    counter += 1
-                f.flush()
-
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
