@@ -23,8 +23,9 @@ def gather_embeddings(
     with h5py.File(output_path, "w") as output_file:
         output_file.create_group("embeddings")
         for h5_file in input_dir.glob(glob_pattern):
+            print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
-                indices = input_file["indices"][...]
+                indices = input_file["fasta-indices"][...]
                 for out_index, seq_key in zip(indices, input_file["embeddings"].keys()):
                     output_file["embeddings"][str(out_index)] = h5py.ExternalLink(
                         str(h5_file), f"embeddings/{seq_key}"
