@@ -144,6 +144,11 @@ class OutputsCallback(Callback):
         save_dir.mkdir(exist_ok=True)
 
         self.h5s_open: Dict[int, h5py.File] = {}
+        self.h5_kwargs = {
+            "compression": "gzip",
+            "compression_opts": 6,
+            "fletcher32": True,
+        }
         self.rank_label = uuid.uuid4()
         self.counter = 0
 
@@ -194,7 +199,7 @@ class OutputsCallback(Callback):
 
                 for emb, seq_len in zip(embed, batch["seq_lens"]):
                     h5_file["embeddings"].create_dataset(
-                        f"{self.counter}", data=emb[1 : seq_len + 1]
+                        f"{self.counter}", data=emb[1 : seq_len + 1], **self.h5_kwargs
                     )
                     self.counter += 1
                 h5_file.flush()
@@ -222,14 +227,14 @@ class OutputsCallback(Callback):
             self.logits = torch.cat(self.logits).numpy()
             # Write logits to h5 files
             for h5_file in self.h5s_open.values():
-                h5_file.create_dataset("logits", data=self.logits)
+                h5_file.create_dataset("logits", data=self.logits, **self.h5_kwargs)
 
         self.indices = torch.cat(self.indices).numpy().squeeze()
         # np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
 
         # Write indices to h5 files to map embeddings back to fasta file
         for h5_file in self.h5s_open.values():
-            h5_file.create_dataset("fasta-indices", data=self.indices)
+            h5_file.create_dataset("fasta-indices", data=self.indices, **self.h5_kwargs)
 
         # Close all h5 files
         for h5_file in self.h5s_open.values():
