@@ -210,17 +210,24 @@ class OutputsCallback(Callback):
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        # Close all h5 files
-        for h5_file in self.h5s_open.values():
-            h5_file.close()
 
         if self.output_logits:
             # TODO: figure out if cat is going to mess things up here
             self.logits = torch.cat(self.logits).numpy()
-            np.save(self.save_dir / f"logits-{self.rank_label}.npy", self.logits)
+            # Write logits to h5 files
+            for h5_file in self.h5s_open.values():
+                h5_file.create_dataset("logits", data=self.logits)
 
         self.indices = torch.cat(self.indices).numpy().squeeze()
-        np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
+        # np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
+
+        # Write indices to h5 files to map embeddings back to fasta file
+        for h5_file in self.h5s_open.values():
+            h5_file.create_dataset("fasta-indices", data=self.indices)
+
+        # Close all h5 files
+        for h5_file in self.h5s_open.values():
+            h5_file.close()
 
     def on_predict_end_not_running(  # TODO: Remove this
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
