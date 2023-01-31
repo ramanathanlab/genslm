@@ -206,6 +206,13 @@ class OutputsCallback(Callback):
                     counter += 1
                 f.flush()
 
+    def on_predict_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        # Close all h5 files
+        for h5_file in self.h5s_open.values():
+            h5_file.close()
+
     def on_predict_end_not_running(  # TODO: Remove this
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
