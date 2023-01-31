@@ -1,10 +1,11 @@
 import functools
 import os
 import uuid
+import shutil
 from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import h5py
 import numpy as np
@@ -32,6 +33,8 @@ class InferenceConfig(BaseSettings):
     """Data file to run inference on (HDF5)."""
     output_path: Path
     """Directory to write embeddings, attentions, logits to."""
+    node_local_path: Optional[Path] = None
+    """Optional node local storage option to accelerate I/O."""
 
     # Which outputs to generate
     layer_bounds: Tuple[int, int] = (0, -1)
@@ -126,12 +129,14 @@ class OutputsCallback(Callback):
     def __init__(
         self,
         save_dir: Path = Path("./outputs"),
+        node_local_path: Optional[Path] = None,
         layer_bounds: Tuple[int, int] = (0, -1),
         mean_embedding_reduction: bool = False,
         output_embeddings: bool = True,
         output_attentions: bool = False,
         output_logits: bool = False,
     ) -> None:
+        self.node_local_path = node_local_path
         self.layer_lb, self.layer_ub = layer_bounds
         self.mean_embedding_reduction = mean_embedding_reduction
         self.output_attentions = output_attentions
@@ -151,6 +156,10 @@ class OutputsCallback(Callback):
         }
         self.rank_label = uuid.uuid4()
         self.counter = 0
+        self.tmp_dir = self.save_dir
+        if self.node_local_path is not None:
+            self.tmp_dir = self.node_local_path / self.save_dir.name
+            self.tmp_dir.mkdir(exist_ok=True)
 
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
@@ -176,7 +185,9 @@ class OutputsCallback(Callback):
         if self.output_embeddings:
 
             for layer, embeddings in enumerate(outputs.hidden_states):
-                if layer < self.layer_lb or layer > self.layer_ub:
+                if layer < self.layer_lb or (
+                    self.layer_ub != -1 and layer > self.layer_ub
+                ):
                     continue  # Only take layers that are in user-defined bounds
 
                 # if self.mean_embedding_reduction:
@@ -188,8 +199,9 @@ class OutputsCallback(Callback):
                 h5_file = self.h5s_open.get(layer)
                 if h5_file is None:
                     name = (
-                        self.save_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
+                        self.tmp_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
                     )
+                    print(f"Writing to {name}")
                     h5_file = h5py.File(name, "w")
                     h5_file.create_group("embeddings")
                     self.h5s_open[layer] = h5_file
@@ -239,6 +251,11 @@ class OutputsCallback(Callback):
         # Close all h5 files
         for h5_file in self.h5s_open.values():
             h5_file.close()
+
+        # Move back to persistent storage
+        if self.node_local_path is not None:
+            print("Moving data from node-local storage to file system")
+            shutil.move(self.tmp_dir, self.save_dir)
 
     def on_predict_end_not_running(  # TODO: Remove this
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
@@ -312,6 +329,7 @@ def main(config: InferenceConfig) -> None:
     # Create callback to save model outputs to disk
     outputs_callback = OutputsCallback(
         save_dir=config.output_path,
+        node_local_path=config.node_local_path,
         layer_bounds=config.layer_bounds,
         mean_embedding_reduction=config.mean_embedding_reduction,
         output_embeddings=config.output_embeddings,
