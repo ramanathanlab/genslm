@@ -23,6 +23,8 @@ def gather_embeddings(
     with h5py.File(output_path, "w") as output_file:
         output_file.create_group("embeddings")
         for h5_file in input_dir.glob(glob_pattern):
+            if "gathered" in h5_file.name:
+                continue
             print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
                 indices = input_file["fasta-indices"][...]
@@ -60,10 +62,10 @@ if __name__ == "__main__":
     for layer in layers:
         if args.layers:
             glob_pattern = f"*layer-{layer}*.h5"
-            out_path = args.output_path / f"embeddings_gathered_layer-{layer}.h5"
+            out_path = args.output_path / f"embeddings-gathered-layer-{layer}.h5"
 
         else:
             glob_pattern = args.glob_pattern
-            out_path = args.output_path / "embeddings_gathered.h5"
+            out_path = args.output_path / "embeddings-gathered.h5"
 
         gather_embeddings(args.input_dir, out_path, glob_pattern)
