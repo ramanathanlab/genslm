@@ -157,9 +157,7 @@ class OutputsCallback(Callback):
         self.counter = 0
         self.tmp_dir = self.save_dir
         if self.node_local_path is not None:
-            self.tmp_dir = self.node_local_path / self.save_dir.name
-        # Note: If we mkdir the save_dir and node_local_path is set,
-        # then shutil.move will error since the dst already exists.
+            self.tmp_dir = self.node_local_path / f"embeddings-{self.rank_label}"
         self.tmp_dir.mkdir(exist_ok=True)
 
     def on_predict_start(
@@ -202,7 +200,6 @@ class OutputsCallback(Callback):
                     name = (
                         self.tmp_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
                     )
-                    print(f"Writing to {name}")
                     h5_file = h5py.File(name, "w")
                     h5_file.create_group("embeddings")
                     self.h5s_open[layer] = h5_file
@@ -256,7 +253,7 @@ class OutputsCallback(Callback):
         # Move back to persistent storage
         if self.node_local_path is not None:
             print("Moving data from node-local storage to file system")
-            shutil.move(str(self.tmp_dir), str(self.save_dir))
+            shutil.move(str(self.tmp_dir), str(self.save_dir / self.tmp_dir.name))
 
     def on_predict_end_not_running(  # TODO: Remove this
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
