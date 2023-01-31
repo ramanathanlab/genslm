@@ -135,7 +135,8 @@ class OutputsCallback(Callback):
         self.output_embeddings = output_embeddings
         self.save_dir = save_dir
         # Embeddings: Key layer-id, value embedding array
-        self.embeddings, self.attentions, self.indices = defaultdict(list), [], []
+        self.embeddings = defaultdict(list)
+        self.attentions, self.logits, self.indices = [], [], []
         save_dir.mkdir(exist_ok=True)
 
         self.h5s_open: Dict[int, h5py.File] = {}
