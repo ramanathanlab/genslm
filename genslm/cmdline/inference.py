@@ -6,7 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
 
-import h5py as h5
+import h5py
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -138,6 +138,9 @@ class OutputsCallback(Callback):
         self.embeddings, self.attentions, self.indices = defaultdict(list), [], []
         save_dir.mkdir(exist_ok=True)
 
+        self.h5s_open: Dict[int, h5py.File] = {}
+        self.rank_label = uuid.uuid4()
+
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
@@ -160,25 +163,38 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu()
             self.logits.append(logits)
         if self.output_embeddings:
-            seq_lens = batch["seq_lens"]
+
             for layer, embeddings in enumerate(outputs.hidden_states):
-                if self.mean_embedding_reduction:
-                    # Compute average over sequence length
-                    # TODO: Account for padding
-                    embed = embeddings.detach().mean(dim=1).cpu()
-                else:
-                    embed = embeddings.detach().cpu().numpy()
-                    # TODO: check +1 is correct for padding
-                    embed = [
-                        embed[i, 1 : seq_len + 1, :]
-                        for i, seq_len in enumerate(seq_lens)
-                    ]
-                self.embeddings[layer].append(embed)
+
+                # if self.mean_embedding_reduction:
+                #     # Compute average over sequence length
+                #     # TODO: Account for padding
+                #     embed = embeddings.detach().mean(dim=1).cpu()
+                # else:
+
+                h5_file = self.h5s_open.get(layer)
+                if h5_file is None:
+                    name = (
+                        self.save_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
+                    )
+                    h5_file = h5py.File(name, "w")
+                    h5_file.create_group("embeddings")
+                    self.h5s_open[layer] = h5_file
+
+                embed = embeddings.detach().cpu().numpy()
+                # TODO: check +1 is correct for padding
+
+                for i, (e, seq_len) in enumerate(zip(embed, batch["seq_lens"])):
+                    h5_file["embeddings"].create_dataset(
+                        f"{i}", data=e[1 : seq_len + 1]
+                    )
+
+                # self.embeddings[layer].append(embed)
 
         self.indices.append(batch["indices"].detach().cpu())
 
     def save_embeddings_h5(self, save_path: Path, data: np.ndarray) -> None:
-        with h5.File(save_path, "w") as f:
+        with h5py.File(save_path, "w") as f:
             grp = f.create_group("embeddings")
             counter = 0
             for batch in data:
@@ -187,7 +203,7 @@ class OutputsCallback(Callback):
                     counter += 1
                 f.flush()
 
-    def on_predict_end(
+    def on_predict_end_not_running(  # TODO: Remove this
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         # Save each ranks data to a unique file
