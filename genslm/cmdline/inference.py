@@ -154,7 +154,7 @@ class OutputsCallback(Callback):
             "fletcher32": True,
         }
         self.rank_label = uuid.uuid4()
-        self.counter = 0
+        self.counter = defaultdict(int)
         self.tmp_dir = self.save_dir
         if self.node_local_path is not None:
             self.tmp_dir = self.node_local_path / f"embeddings-{self.rank_label}"
@@ -209,9 +209,11 @@ class OutputsCallback(Callback):
 
                 for emb, seq_len in zip(embed, batch["seq_lens"]):
                     h5_file["embeddings"].create_dataset(
-                        f"{self.counter}", data=emb[1 : seq_len + 1], **self.h5_kwargs
+                        f"{self.counter[layer]}",
+                        data=emb[1 : seq_len + 1],
+                        **self.h5_kwargs,
                     )
-                    self.counter += 1
+                    self.counter[layer] += 1
                 h5_file.flush()
 
                 # self.embeddings[layer].append(embed)
