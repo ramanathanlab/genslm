@@ -4,7 +4,7 @@ import uuid
 from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import h5py
 import numpy as np
@@ -34,6 +34,8 @@ class InferenceConfig(BaseSettings):
     """Directory to write embeddings, attentions, logits to."""
 
     # Which outputs to generate
+    layer_bounds: Tuple[int, int] = (0, -1)
+    """Which layers to generate data for, all by default."""
     output_embeddings: bool = True
     """Whether or not to generate and save embeddings."""
     mean_embedding_reduction: bool = False
@@ -124,11 +126,13 @@ class OutputsCallback(Callback):
     def __init__(
         self,
         save_dir: Path = Path("./outputs"),
+        layer_bounds: Tuple[int, int] = (0, -1),
         mean_embedding_reduction: bool = False,
         output_embeddings: bool = True,
         output_attentions: bool = False,
         output_logits: bool = False,
     ) -> None:
+        self.layer_lb, self.layer_ub = layer_bounds
         self.mean_embedding_reduction = mean_embedding_reduction
         self.output_attentions = output_attentions
         self.output_logits = output_logits
@@ -167,6 +171,8 @@ class OutputsCallback(Callback):
         if self.output_embeddings:
 
             for layer, embeddings in enumerate(outputs.hidden_states):
+                if layer < self.layer_lb or layer > self.layer_ub:
+                    continue  # Only take layers that are in user-defined bounds
 
                 # if self.mean_embedding_reduction:
                 #     # Compute average over sequence length
@@ -301,6 +307,7 @@ def main(config: InferenceConfig) -> None:
     # Create callback to save model outputs to disk
     outputs_callback = OutputsCallback(
         save_dir=config.output_path,
+        layer_bounds=config.layer_bounds,
         mean_embedding_reduction=config.mean_embedding_reduction,
         output_embeddings=config.output_embeddings,
         output_attentions=config.output_attentions,
