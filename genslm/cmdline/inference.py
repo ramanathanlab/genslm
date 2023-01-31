@@ -1,11 +1,11 @@
 import functools
 import os
-import uuid
 import shutil
+import uuid
 from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import h5py
 import numpy as np
