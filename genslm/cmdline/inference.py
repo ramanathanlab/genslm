@@ -255,7 +255,7 @@ class OutputsCallback(Callback):
         # Move back to persistent storage
         if self.node_local_path is not None:
             print("Moving data from node-local storage to file system")
-            shutil.move(self.tmp_dir, self.save_dir)
+            shutil.move(str(self.tmp_dir), str(self.save_dir))
 
     def on_predict_end_not_running(  # TODO: Remove this
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
