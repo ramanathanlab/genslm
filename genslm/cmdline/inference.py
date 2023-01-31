@@ -146,7 +146,7 @@ class OutputsCallback(Callback):
         self.h5s_open: Dict[int, h5py.File] = {}
         self.h5_kwargs = {
             "compression": "gzip",
-            "compression_opts": 6,
+            "compression_opts": 4,
             "fletcher32": True,
         }
         self.rank_label = uuid.uuid4()
