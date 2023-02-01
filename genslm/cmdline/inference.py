@@ -160,7 +160,7 @@ class OutputsCallback(Callback):
         self.save_dir = save_dir
         # Embeddings: Key layer-id, value embedding array
         self.embeddings = defaultdict(list)
-        self.attentions, self.indices = [], []
+        self.attentions, self.indices, self.na_hashes = [], [], []
 
         self.h5s_open: Dict[int, h5py.File] = {}
         self.h5_kwargs = {
