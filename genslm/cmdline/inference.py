@@ -207,7 +207,7 @@ class OutputsCallback(Callback):
                     self.h5s_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                logits = outputs.logits.detach().cpu()
+                # logits = outputs.logits.detach().cpu().numpy()
 
                 for emb, seq_len, fasta_ind in zip(
                     embed, batch["seq_lens"], batch["indices"]
@@ -219,7 +219,7 @@ class OutputsCallback(Callback):
                     )
                     # h5_file["logits"].create_dataset(
                     #     f"{fasta_ind}",
-                    #     data=logits[1 : seq_len + 1],
+                    #     data=logit[1 : seq_len + 1],
                     #     **self.h5_kwargs,
                     # )
 
