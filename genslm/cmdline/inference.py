@@ -207,8 +207,8 @@ class OutputsCallback(Callback):
 
                 embed = embeddings.detach().cpu().numpy()
 
-                for emb, logit, seq_len, fasta_ind in zip(
-                    embed, logits, batch["seq_lens"], batch["indices"]
+                for emb, seq_len, fasta_ind in zip(
+                    embed, batch["seq_lens"], batch["indices"]
                 ):
                     h5_file["embeddings"].create_dataset(
                         f"{fasta_ind}",
