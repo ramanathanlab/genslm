@@ -216,7 +216,7 @@ class OutputsCallback(Callback):
 
                 h5_file.flush()
 
-        self.na_hashes.extend(batch["na_hash"].detach().cpu().numpy())
+        self.na_hashes.extend(batch["na_hash"])
         self.indices.append(batch["indices"].detach().cpu())
 
     def on_predict_end(
