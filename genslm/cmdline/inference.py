@@ -153,10 +153,6 @@ class OutputsCallback(Callback):
         self.attentions, self.indices, self.na_hashes = [], [], []
 
         self.h5embeddings_open: Dict[int, h5py.File] = {}
-        self.h5logit_file = h5py.File(
-            self.save_dir / f"logits-{self.rank_label}.h5", "w"
-        )
-        self.h5logit_file.create_group("logits")
 
         self.h5_kwargs = {
             # "compression": "gzip",
@@ -171,6 +167,11 @@ class OutputsCallback(Callback):
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
+        self.h5logit_file = h5py.File(
+            self.save_dir / f"logits-{self.rank_label}.h5", "w"
+        )
+        self.h5logit_file.create_group("logits")
+
         self.embeddings, self.attentions, self.indices = defaultdict(list), [], []
 
     def on_predict_batch_end(
