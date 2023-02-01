@@ -206,7 +206,7 @@ class OutputsCallback(Callback):
                     self.h5embeddings_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-
+                print(type(batch["seq_lens"]), type(batch["seq_lens"][0]))
                 for emb, seq_len, fasta_ind in zip(
                     embed, batch["seq_lens"], batch["indices"]
                 ):
