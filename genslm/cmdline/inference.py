@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Tuple
 import hashlib
 
 import h5py
+import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.multiprocessing as mp
@@ -115,8 +116,8 @@ class InferenceSequenceDataset(Dataset):
         sample = {
             "input_ids": batch_encoding["input_ids"].squeeze(),
             "attention_mask": batch_encoding["attention_mask"],
-            "indices": idx,
-            "seq_lens": len(seq),
+            "indices": torch.from_numpy(np.array([idx])),
+            "seq_lens": torch.from_numpy(np.array([len(seq)])),
             "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
             # "na_hash": "hash",
         }
@@ -224,7 +225,6 @@ class OutputsCallback(Callback):
     ) -> None:
 
         self.indices = torch.cat(self.indices).numpy().squeeze()
-        # np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
 
         if self.output_logits:
             self.h5logit_file.create_dataset(
