@@ -168,15 +168,16 @@ class OutputsCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
+        seq_lens = batch["seq_lens"].detach().cpu().numpy()
+        fasta_inds = batch["indices"].detach().cpu().numpy()
+
         if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
             self.attentions.append(attend)
 
         if self.output_logits:
             logits = outputs.logits.detach().cpu().numpy()
-            for logit, seq_len, fasta_ind in zip(
-                logits, batch["seq_lens"], batch["indices"]
-            ):
+            for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
                     f"{fasta_ind}",
                     data=logit[1 : seq_len + 1],
@@ -206,10 +207,7 @@ class OutputsCallback(Callback):
                     self.h5embeddings_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                print(type(batch["seq_lens"]), type(batch["seq_lens"][0]))
-                for emb, seq_len, fasta_ind in zip(
-                    embed, batch["seq_lens"], batch["indices"]
-                ):
+                for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
                         f"{fasta_ind}",
                         data=emb[1 : seq_len + 1],
@@ -218,7 +216,7 @@ class OutputsCallback(Callback):
 
                 h5_file.flush()
 
-        self.na_hashes.extend(batch["na_hash"])
+        self.na_hashes.extend(batch["na_hash"].detach().cpu().numpy())
         self.indices.append(batch["indices"].detach().cpu())
 
     def on_predict_end(
