@@ -146,10 +146,11 @@ class OutputsCallback(Callback):
         self.attentions, self.indices, self.na_hashes = [], [], []
 
         self.h5embeddings_open: Dict[int, h5py.File] = {}
-        self.h5logit_file = h5py.File(
-            self.save_dir / f"logits-{self.rank_label}.h5", "w"
-        )
-        self.h5logit_file.create_group("logits")
+        if self.output_logits:
+            self.h5logit_file = h5py.File(
+                self.save_dir / f"logits-{self.rank_label}.h5", "w"
+            )
+            self.h5logit_file.create_group("logits")
 
         self.h5_kwargs = {
             # "compression": "gzip",
@@ -171,7 +172,7 @@ class OutputsCallback(Callback):
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
             self.attentions.append(attend)
 
-        if self.output_embeddings:
+        if self.output_logits:
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(
                 logits, batch["seq_lens"], batch["indices"]
@@ -182,6 +183,7 @@ class OutputsCallback(Callback):
                     **self.h5_kwargs,
                 )
 
+        if self.output_embeddings:
             for layer, embeddings in enumerate(outputs.hidden_states):
                 if layer < self.layer_lb or (
                     self.layer_ub != -1 and layer > self.layer_ub
@@ -226,16 +228,28 @@ class OutputsCallback(Callback):
         self.indices = torch.cat(self.indices).numpy().squeeze()
         # np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
 
-        # Write indices to h5 files to map embeddings back to fasta file
-        for h5_file in self.h5embeddings_open.values():
-            h5_file.create_dataset("fasta-indices", data=self.indices, **self.h5_kwargs)
-            h5_file.create_dataset("na-hashes", data=self.na_hashes, **self.h5_kwargs)
+        if self.output_logits:
+            self.h5logit_file.create_dataset(
+                "fasta-indices", data=self.indices, **self.h5_kwargs
+            )
+            self.h5logit_file.create_dataset(
+                "na-hashes", data=self.na_hashes, **self.h5_kwargs
+            )
+            self.h5logit_file.close()
 
-        # Close all h5 files
-        for h5_file in self.h5embeddings_open.values():
-            h5_file.close()
+        if self.output_embeddings:
+            # Write indices to h5 files to map embeddings back to fasta file
+            for h5_file in self.h5embeddings_open.values():
+                h5_file.create_dataset(
+                    "fasta-indices", data=self.indices, **self.h5_kwargs
+                )
+                h5_file.create_dataset(
+                    "na-hashes", data=self.na_hashes, **self.h5_kwargs
+                )
 
-        self.h5logit_file.close()
+            # Close all h5 files
+            for h5_file in self.h5embeddings_open.values():
+                h5_file.close()
 
 
 class LightningGenSLM(pl.LightningModule):
