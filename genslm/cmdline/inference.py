@@ -136,7 +136,7 @@ class InferenceSequenceDataset(Dataset):
             "indices": torch.from_numpy(np.array([idx])),
             "seq_lens": torch.from_numpy(np.array([len(seq)])),
             # "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
-            "na_hash": "hash",
+            # "na_hash": "hash",
         }
         return sample
 
@@ -235,7 +235,7 @@ class OutputsCallback(Callback):
                         **self.h5_kwargs,
                     )
 
-                    self.na_hashes.extend(batch["na_hash"])
+                    # self.na_hashes.extend(batch["na_hash"])
 
                 h5_file.flush()
 
@@ -251,7 +251,7 @@ class OutputsCallback(Callback):
         # Write indices to h5 files to map embeddings back to fasta file
         for h5_file in self.h5s_open.values():
             h5_file.create_dataset("fasta-indices", data=self.indices, **self.h5_kwargs)
-            h5_file.create_dataset("na-hashes", data=self.na_hashes, **self.h5_kwargs)
+            # h5_file.create_dataset("na-hashes", data=self.na_hashes, **self.h5_kwargs)
 
         # Close all h5 files
         for h5_file in self.h5s_open.values():
