@@ -234,7 +234,7 @@ class OutputsCallback(Callback):
                         **self.h5_kwargs,
                     )
 
-                    self.na_hashes.extend(batch["na_hash"].tolist())
+                    self.na_hashes.extend(batch["na_hash"])
 
                 h5_file.flush()
 
