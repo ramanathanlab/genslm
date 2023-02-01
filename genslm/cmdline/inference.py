@@ -217,11 +217,11 @@ class OutputsCallback(Callback):
                         data=emb[1 : seq_len + 1],
                         **self.h5_kwargs,
                     )
-                    h5_file["logits"].create_dataset(
-                        f"{fasta_ind}",
-                        data=logits[1 : seq_len + 1],
-                        **self.h5_kwargs,
-                    )
+                    # h5_file["logits"].create_dataset(
+                    #     f"{fasta_ind}",
+                    #     data=logits[1 : seq_len + 1],
+                    #     **self.h5_kwargs,
+                    # )
 
                     # self.na_hashes.extend(batch["na_hash"])
 
