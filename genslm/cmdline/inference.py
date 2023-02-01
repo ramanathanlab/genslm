@@ -5,12 +5,14 @@ import uuid
 from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
+import hashlib
 
 import h5py
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from torch.utils.data.dataloader import default_collate
 import torch.multiprocessing as mp
 from natsort import natsorted
 from pytorch_lightning.callbacks import Callback
@@ -108,6 +110,18 @@ class InferenceSequenceDataset(Dataset):
     def group_by_kmer(seq: str, kmer: int) -> str:
         return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
 
+    @staticmethod
+    def seq_collate(
+        batch: List[Dict[str, Union[torch.Tensor, str]]]
+    ) -> List[Dict[str, Union[torch.Tensor, str]]]:
+
+        hashes = [elem.pop("na_hash") for elem in batch]
+        collated_batch = default_collate(batch)
+        for elem, elem_hash in zip(collated_batch, hashes):
+            elem["na_hash"] = elem_hash
+
+        return collated_batch
+
     def __len__(self) -> int:
         return len(self.sequences)
 
@@ -121,6 +135,7 @@ class InferenceSequenceDataset(Dataset):
             "attention_mask": batch_encoding["attention_mask"],
             "indices": torch.from_numpy(np.array([idx])),
             "seq_lens": torch.from_numpy(np.array([len(seq)])),
+            "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
         }
         return sample
 
@@ -145,7 +160,7 @@ class OutputsCallback(Callback):
         self.save_dir = save_dir
         # Embeddings: Key layer-id, value embedding array
         self.embeddings = defaultdict(list)
-        self.attentions, self.logits, self.indices = [], [], []
+        self.attentions, self.indices = [], []
 
         self.h5s_open: Dict[int, h5py.File] = {}
         self.h5_kwargs = {
@@ -154,7 +169,6 @@ class OutputsCallback(Callback):
             "fletcher32": True,
         }
         self.rank_label = uuid.uuid4()
-        self.counter = defaultdict(int)
         self.tmp_dir = self.save_dir
         if self.node_local_path is not None:
             self.tmp_dir = self.node_local_path / f"embeddings-{self.rank_label}"
@@ -178,9 +192,7 @@ class OutputsCallback(Callback):
         if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
             self.attentions.append(attend)
-        if self.output_logits:
-            logits = outputs.logits.detach().cpu()
-            self.logits.append(logits)
+
         if self.output_embeddings:
 
             for layer, embeddings in enumerate(outputs.hidden_states):
@@ -202,34 +214,35 @@ class OutputsCallback(Callback):
                     )
                     h5_file = h5py.File(name, "w")
                     h5_file.create_group("embeddings")
+                    h5_file.create_group("logits")
                     self.h5s_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                # TODO: check +1 is correct for padding
+                logits = outputs.logits.detach().cpu()
 
-                for emb, seq_len in zip(embed, batch["seq_lens"]):
+                for emb, seq_len, fasta_ind in zip(
+                    embed, batch["seq_lens"], batch["indices"]
+                ):
                     h5_file["embeddings"].create_dataset(
-                        f"{self.counter[layer]}",
+                        f"{fasta_ind}",
                         data=emb[1 : seq_len + 1],
                         **self.h5_kwargs,
                     )
-                    self.counter[layer] += 1
-                h5_file.flush()
+                    h5_file["logits"].create_dataset(
+                        f"{fasta_ind}",
+                        data=logits[1 : seq_len + 1],
+                        **self.h5_kwargs,
+                    )
 
-                # self.embeddings[layer].append(embed)
+                    self.na_hashes.extend(batch["na_hash"].tolist())
+
+                h5_file.flush()
 
         self.indices.append(batch["indices"].detach().cpu())
 
     def on_predict_end(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-
-        if self.output_logits:
-            # TODO: figure out if cat is going to mess things up here
-            self.logits = torch.cat(self.logits).numpy()
-            # Write logits to h5 files
-            for h5_file in self.h5s_open.values():
-                h5_file.create_dataset("logits", data=self.logits, **self.h5_kwargs)
 
         self.indices = torch.cat(self.indices).numpy().squeeze()
         # np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
@@ -246,42 +259,6 @@ class OutputsCallback(Callback):
         if self.node_local_path is not None:
             print("Moving data from node-local storage to file system")
             shutil.move(str(self.tmp_dir), str(self.save_dir / self.tmp_dir.name))
-
-    def on_predict_end_not_running(  # TODO: Remove this
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
-    ) -> None:
-        # Save each ranks data to a unique file
-        rank_label = uuid.uuid4()
-
-        if self.output_logits:
-            # TODO: figure out if cat is going to mess things up here
-            self.logits = torch.cat(self.logits).numpy()
-            np.save(self.save_dir / f"logits-{rank_label}.npy", self.logits)
-
-        if self.output_embeddings:
-            print(
-                "Num layers in embeddings: ",
-                len(self.embeddings),
-                os.environ["RANK"],
-                os.environ["NODE_RANK"],
-                os.environ["GLOBAL_RANK"],
-            )
-            for layer, embed_ in self.embeddings.items():
-                # embed = np.concatenate(embed_)
-                self.save_embeddings_h5(
-                    self.save_dir / f"embeddings-layer-{layer}-{rank_label}.h5", embed_
-                )
-                # np.save(
-                #     self.save_dir / f"embeddings-layer-{layer}-{rank_label}.npy", embed
-                # )
-
-        if self.output_attentions:
-            self.attentions = torch.stack(self.attentions).numpy()
-            np.save(self.save_dir / f"attentions-{rank_label}.npy", self.attentions)
-
-        # Save indices to combine the per-rank files into a single dataset
-        self.indices = torch.cat(self.indices).numpy().squeeze()
-        np.save(self.save_dir / f"indices-{rank_label}.npy", self.indices)
 
 
 class LightningGenSLM(pl.LightningModule):

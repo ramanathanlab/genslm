@@ -19,13 +19,12 @@ def gather_embeddings(
     if output_path is None:
         output_path = input_dir / "embeddings_gathered.h5"
 
+    input_files = list(input_dir.glob(glob_pattern))
     # Glob embedding and index files written by each rank
     with h5py.File(output_path, "w") as output_file:
         output_file.create_group("embeddings")
         output_file.create_group("logits")
-        for h5_file in input_dir.glob(glob_pattern):
-            if "gathered" in h5_file.name:
-                continue
+        for h5_file in input_files:
             print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
                 indices = input_file["fasta-indices"][...]
