@@ -250,6 +250,7 @@ class OutputsCallback(Callback):
         # Write indices to h5 files to map embeddings back to fasta file
         for h5_file in self.h5s_open.values():
             h5_file.create_dataset("fasta-indices", data=self.indices, **self.h5_kwargs)
+            h5_file.create_dataset("na-hashes", data=self.na_hashes, **self.h5_kwargs)
 
         # Close all h5 files
         for h5_file in self.h5s_open.values():
