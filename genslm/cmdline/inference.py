@@ -12,7 +12,6 @@ import h5py
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from torch.utils.data.dataloader import default_collate
 import torch.multiprocessing as mp
 from natsort import natsorted
 from pytorch_lightning.callbacks import Callback
@@ -207,21 +206,21 @@ class OutputsCallback(Callback):
                     self.h5s_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                # logits = outputs.logits.detach().cpu().numpy()
+                logits = outputs.logits.detach().cpu().numpy()
 
-                for emb, seq_len, fasta_ind in zip(
-                    embed, batch["seq_lens"], batch["indices"]
+                for emb, logit, seq_len, fasta_ind in zip(
+                    embed, logits, batch["seq_lens"], batch["indices"]
                 ):
                     h5_file["embeddings"].create_dataset(
                         f"{fasta_ind}",
                         data=emb[1 : seq_len + 1],
                         **self.h5_kwargs,
                     )
-                    # h5_file["logits"].create_dataset(
-                    #     f"{fasta_ind}",
-                    #     data=logit[1 : seq_len + 1],
-                    #     **self.h5_kwargs,
-                    # )
+                    h5_file["logits"].create_dataset(
+                        f"{fasta_ind}",
+                        data=logit[1 : seq_len + 1],
+                        **self.h5_kwargs,
+                    )
 
                     self.na_hashes.extend(batch["na_hash"])
 
