@@ -1,15 +1,12 @@
 import functools
 import os
-import shutil
 import uuid
 from argparse import ArgumentParser
-from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple
 import hashlib
 
 import h5py
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.multiprocessing as mp
@@ -34,8 +31,6 @@ class InferenceConfig(BaseSettings):
     """Data file to run inference on (HDF5)."""
     output_path: Path
     """Directory to write embeddings, attentions, logits to."""
-    node_local_path: Optional[Path] = None
-    """Optional node local storage option to accelerate I/O."""
 
     # Which outputs to generate
     layer_bounds: Tuple[int, int] = (0, -1)
@@ -132,7 +127,6 @@ class OutputsCallback(Callback):
     def __init__(
         self,
         save_dir: Path = Path("./outputs"),
-        node_local_path: Optional[Path] = None,
         layer_bounds: Tuple[int, int] = (0, -1),
         mean_embedding_reduction: bool = False,
         output_embeddings: bool = True,
@@ -141,38 +135,27 @@ class OutputsCallback(Callback):
     ) -> None:
         self.rank_label = uuid.uuid4()
 
-        self.node_local_path = node_local_path
         self.layer_lb, self.layer_ub = layer_bounds
         self.mean_embedding_reduction = mean_embedding_reduction
         self.output_attentions = output_attentions
         self.output_logits = output_logits
         self.output_embeddings = output_embeddings
         self.save_dir = save_dir
+        self.save_dir.mkdir(parents=True, exist_ok=True)
         # Embeddings: Key layer-id, value embedding array
-        self.embeddings = defaultdict(list)
         self.attentions, self.indices, self.na_hashes = [], [], []
 
         self.h5embeddings_open: Dict[int, h5py.File] = {}
+        self.h5logit_file = h5py.File(
+            self.save_dir / f"logits-{self.rank_label}.h5", "w"
+        )
+        self.h5logit_file.create_group("logits")
 
         self.h5_kwargs = {
             # "compression": "gzip",
             # "compression_opts": 4, Compression is too slow for current impl
             "fletcher32": True,
         }
-        self.tmp_dir = self.save_dir
-        if self.node_local_path is not None:
-            self.tmp_dir = self.node_local_path / f"embeddings-{self.rank_label}"
-        self.tmp_dir.mkdir(exist_ok=True)
-
-    def on_predict_start(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
-    ) -> None:
-        self.h5logit_file = h5py.File(
-            self.save_dir / f"logits-{self.rank_label}.h5", "w"
-        )
-        self.h5logit_file.create_group("logits")
-
-        self.embeddings, self.attentions, self.indices = defaultdict(list), [], []
 
     def on_predict_batch_end(
         self,
@@ -211,14 +194,14 @@ class OutputsCallback(Callback):
                 #     embed = embeddings.detach().mean(dim=1).cpu()
                 # else:
 
-                h5_file = self.h5s_open.get(layer)
+                h5_file = self.h5embeddings_open.get(layer)
                 if h5_file is None:
                     name = (
                         self.tmp_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
                     )
                     h5_file = h5py.File(name, "w")
                     h5_file.create_group("embeddings")
-                    self.h5s_open[layer] = h5_file
+                    self.h5embeddings_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
 
@@ -244,18 +227,15 @@ class OutputsCallback(Callback):
         # np.save(self.save_dir / f"indices-{self.rank_label}.npy", self.indices)
 
         # Write indices to h5 files to map embeddings back to fasta file
-        for h5_file in self.h5s_open.values():
+        for h5_file in self.h5embeddings_open.values():
             h5_file.create_dataset("fasta-indices", data=self.indices, **self.h5_kwargs)
             h5_file.create_dataset("na-hashes", data=self.na_hashes, **self.h5_kwargs)
 
         # Close all h5 files
-        for h5_file in self.h5s_open.values():
+        for h5_file in self.h5embeddings_open.values():
             h5_file.close()
 
-        # Move back to persistent storage
-        if self.node_local_path is not None:
-            print("Moving data from node-local storage to file system")
-            shutil.move(str(self.tmp_dir), str(self.save_dir / self.tmp_dir.name))
+        self.h5logit_file.close()
 
 
 class LightningGenSLM(pl.LightningModule):
@@ -293,7 +273,6 @@ def main(config: InferenceConfig) -> None:
     # Create callback to save model outputs to disk
     outputs_callback = OutputsCallback(
         save_dir=config.output_path,
-        node_local_path=config.node_local_path,
         layer_bounds=config.layer_bounds,
         mean_embedding_reduction=config.mean_embedding_reduction,
         output_embeddings=config.output_embeddings,
