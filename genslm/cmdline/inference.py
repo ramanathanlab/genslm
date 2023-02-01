@@ -197,7 +197,7 @@ class OutputsCallback(Callback):
                 h5_file = self.h5embeddings_open.get(layer)
                 if h5_file is None:
                     name = (
-                        self.tmp_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
+                        self.save_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
                     )
                     h5_file = h5py.File(name, "w")
                     h5_file.create_group("embeddings")
