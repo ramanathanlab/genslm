@@ -139,6 +139,8 @@ class OutputsCallback(Callback):
         output_attentions: bool = False,
         output_logits: bool = False,
     ) -> None:
+        self.rank_label = uuid.uuid4()
+
         self.node_local_path = node_local_path
         self.layer_lb, self.layer_ub = layer_bounds
         self.mean_embedding_reduction = mean_embedding_reduction
@@ -150,13 +152,17 @@ class OutputsCallback(Callback):
         self.embeddings = defaultdict(list)
         self.attentions, self.indices, self.na_hashes = [], [], []
 
-        self.h5s_open: Dict[int, h5py.File] = {}
+        self.h5embeddings_open: Dict[int, h5py.File] = {}
+        self.h5logit_file = h5py.File(
+            self.save_dir / f"logits-{self.rank_label}.h5", "w"
+        )
+        self.h5logit_file.create_group("logits")
+
         self.h5_kwargs = {
             # "compression": "gzip",
             # "compression_opts": 4, Compression is too slow for current impl
             "fletcher32": True,
         }
-        self.rank_label = uuid.uuid4()
         self.tmp_dir = self.save_dir
         if self.node_local_path is not None:
             self.tmp_dir = self.node_local_path / f"embeddings-{self.rank_label}"
@@ -182,6 +188,15 @@ class OutputsCallback(Callback):
             self.attentions.append(attend)
 
         if self.output_embeddings:
+            logits = outputs.logits.detach().cpu().numpy()
+            for logit, seq_len, fasta_ind in zip(
+                logits, batch["seq_lens"], batch["indices"]
+            ):
+                self.h5logit_file["logits"].create_dataset(
+                    f"{fasta_ind}",
+                    data=logit[1 : seq_len + 1],
+                    **self.h5_kwargs,
+                )
 
             for layer, embeddings in enumerate(outputs.hidden_states):
                 if layer < self.layer_lb or (
@@ -202,11 +217,9 @@ class OutputsCallback(Callback):
                     )
                     h5_file = h5py.File(name, "w")
                     h5_file.create_group("embeddings")
-                    h5_file.create_group("logits")
                     self.h5s_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                logits = outputs.logits.detach().cpu().numpy()
 
                 for emb, logit, seq_len, fasta_ind in zip(
                     embed, logits, batch["seq_lens"], batch["indices"]
@@ -214,11 +227,6 @@ class OutputsCallback(Callback):
                     h5_file["embeddings"].create_dataset(
                         f"{fasta_ind}",
                         data=emb[1 : seq_len + 1],
-                        **self.h5_kwargs,
-                    )
-                    h5_file["logits"].create_dataset(
-                        f"{fasta_ind}",
-                        data=logit[1 : seq_len + 1],
                         **self.h5_kwargs,
                     )
 
