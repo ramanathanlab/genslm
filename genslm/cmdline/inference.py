@@ -121,9 +121,9 @@ class InferenceSequenceDataset(Dataset):
         sample = {
             "input_ids": batch_encoding["input_ids"].squeeze(),
             "attention_mask": batch_encoding["attention_mask"],
-            "indices": torch.from_numpy(np.array([idx])),
-            "seq_lens": torch.from_numpy(np.array([len(seq)])),
-            "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
+            "indices": [idx],
+            "seq_lens": [len(seq)],
+            "na_hash": [hashlib.md5(seq.encode("utf-8")).hexdigest()],
             # "na_hash": "hash",
         }
         return sample
