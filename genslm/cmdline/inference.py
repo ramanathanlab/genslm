@@ -110,18 +110,6 @@ class InferenceSequenceDataset(Dataset):
     def group_by_kmer(seq: str, kmer: int) -> str:
         return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
 
-    @staticmethod
-    def seq_collate(
-        batch: List[Dict[str, Union[torch.Tensor, str]]]
-    ) -> List[Dict[str, Union[torch.Tensor, str]]]:
-
-        hashes = [elem.pop("na_hash") for elem in batch]
-        collated_batch = default_collate(batch)
-        for elem, elem_hash in zip(collated_batch, hashes):
-            elem["na_hash"] = elem_hash
-
-        return collated_batch
-
     def __len__(self) -> int:
         return len(self.sequences)
 
