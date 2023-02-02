@@ -140,6 +140,10 @@ if __name__ == "__main__":
     if node_rank == 0:
         json.dump(dict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
+    # Trick ptl into thinking we are single node
+    os.environ["WORLD_SIZE"] = "4"
+    os.environ["NODE_RANK"] = "0"
+
     for file in process_files[node_rank]:
         file_config = config.copy()
         file_config.data_file = config.data_file / file
