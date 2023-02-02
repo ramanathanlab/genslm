@@ -41,7 +41,9 @@ def gather_embeddings(
                 indices = input_file["fasta-indices"]
 
                 for fasta_idx, na_hash in zip(indices, hashes):
-                    output_file["na-hashes"][str(fasta_idx)] = na_hash
+                    output_file["na-hashes"].create_dataset(
+                        f"{fasta_idx}", data=na_hash
+                    )
 
     print("Wrote gathered output to", output_path, "\n")
 
