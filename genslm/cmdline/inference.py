@@ -197,7 +197,7 @@ class OutputsCallback(Callback):
     ) -> None:
         # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
         seq_lens = batch["seq_lens"].detach().cpu().numpy().squeeze()
-        fasta_inds = batch["indices"].detach().cpu().numpy()
+        fasta_inds = batch["indices"].detach().cpu().numpy().squeeze()
 
         if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
