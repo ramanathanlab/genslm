@@ -150,6 +150,11 @@ class OutputsCallback(Callback):
             self.layer_lb, self.layer_ub = None, None
             self.layers = layer_bounds
 
+            if any([layer < 0 for layer in self.layers]):
+                self.layer_normalized = False
+            else:
+                self.layer_normalized = True
+
         # Embeddings: Key layer-id, value embedding array
         self.attentions, self.indices, self.na_hashes = [], [], []
 
@@ -191,6 +196,20 @@ class OutputsCallback(Callback):
                 )
 
         if self.output_embeddings:
+            if self.layer_lb is not None and self.layer_lb < 0:
+                self.layer_lb = outputs.hidden_states.shape[0] + self.layer_lb
+            if self.layer_ub is not None and self.layer_ub < 0:
+                self.layer_ub = outputs.hidden_states.shape[0] + self.layer_ub
+
+            if self.layers is not None and not self.layer_normalized:
+                for ind in range(len(self.layers)):
+                    if self.layers[ind] < 0:
+                        self.layers[ind] = (
+                            outputs.hidden_states.shape[0] + self.layers[ind]
+                        )
+
+                self.layer_normalized = True
+
             for layer, embeddings in enumerate(outputs.hidden_states):
                 # User specified list of layers to take
                 if self.layers is not None and layer not in self.layers:
