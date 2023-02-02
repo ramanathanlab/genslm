@@ -29,7 +29,7 @@ def gather_embeddings(
             print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
                 resolved_path = h5_file.resolve()
-                for seq_fasta_index in zip(input_file["embeddings"].keys()):
+                for seq_fasta_index in input_file["embeddings"].keys():
                     output_file["embeddings"][seq_fasta_index] = h5py.ExternalLink(
                         str(resolved_path), f"embeddings/{seq_fasta_index}"
                     )
