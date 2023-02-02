@@ -170,6 +170,7 @@ class OutputsCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         # Plus one for embedding layer
+        # TODO Alex please check this :)
         num_hidden_layers = pl_module.model.model.config.num_hidden_layers + 1
 
         if self.layer_lb is not None and self.layer_lb < 0:
@@ -184,8 +185,6 @@ class OutputsCallback(Callback):
             layer_num = self.layers[ind]
             if layer_num < 0:
                 self.layers[ind] = num_hidden_layers + layer_num
-
-        print(self.layers)
 
     def on_predict_batch_end(
         self,
@@ -212,7 +211,6 @@ class OutputsCallback(Callback):
                 )
 
         if self.output_embeddings:
-            print(len(outputs.hidden_states))
             for layer, embeddings in enumerate(outputs.hidden_states):
                 # User specified list of layers to take
                 if layer not in self.layers:
