@@ -24,18 +24,25 @@ def gather_embeddings(
     with h5py.File(output_path, "w") as output_file:
         output_file.create_group("embeddings")
         output_file.create_group("logits")
-        for h5_file in input_files:
+        output_file.create_group("na_hashes")
+        for i, h5_file in enumerate(input_files):
             print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
-                indices = input_file["fasta-indices"][...]
                 resolved_path = h5_file.resolve()
-                for out_index, seq_key in zip(indices, input_file["embeddings"].keys()):
-                    output_file["embeddings"][str(out_index)] = h5py.ExternalLink(
-                        str(resolved_path), f"embeddings/{seq_key}"
+                for seq_fasta_index in zip(input_file["embeddings"].keys()):
+                    output_file["embeddings"][seq_fasta_index] = h5py.ExternalLink(
+                        str(resolved_path), f"embeddings/{seq_fasta_index}"
                     )
 
-                    output_file["logits"][str(out_index)] = h5py.ExternalLink(
-                        str(resolved_path), f"logits/{seq_key}"
+                    output_file["logits"][str(seq_fasta_index)] = h5py.ExternalLink(
+                        str(resolved_path), f"logits/{seq_fasta_index}"
+                    )
+                hashes = input_file["na_hashes"]
+                indices = input_file["fasta-indices"]
+
+                for fasta_idx, na_hash in zip(indices, hashes):
+                    output_file["na_hashes"][str(fasta_idx)] = h5py.ExternalLink(
+                        str(resolved_path), f"na_hashes/{na_hash}"
                     )
 
     print("Wrote gathered output to", output_path, "\n")
