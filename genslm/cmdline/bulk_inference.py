@@ -142,7 +142,7 @@ if __name__ == "__main__":
     for file in process_files[node_rank]:
         file_config = config.copy()
         file_config.data_file = config.data_file / file
-        file_config.output_path = (config.output_path / file).with_suffix()
+        file_config.output_path = config.output_path / Path(file).stem()
         file_config.output_path.mkdir(parents=True, exist_ok=True)
     # main(config)
 
