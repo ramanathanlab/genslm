@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 import hashlib
+from collections import defaultdict
 
 import h5py
 import numpy as np
@@ -159,6 +160,9 @@ class OutputsCallback(Callback):
             "fletcher32": True,
         }
 
+        self.embedding_counter = defaultdict(int)
+        self.logit_counter = 0
+
     def on_predict_batch_end(
         self,
         trainer: "pl.Trainer",
@@ -178,11 +182,9 @@ class OutputsCallback(Callback):
 
         if self.output_logits:
             logits = outputs.logits.detach().cpu().numpy()
-            for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
+            for logit, seq_len in zip(logits, seq_lens):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}",
-                    data=logit[1 : seq_len + 1],
-                    **self.h5_kwargs,
+                    f"{fasta_ind}", data=logit[1 : seq_len + 1], **self.h5_kwargs,
                 )
 
         if self.output_embeddings:
@@ -208,11 +210,9 @@ class OutputsCallback(Callback):
                     self.h5embeddings_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
+                for emb, seq_len, in zip(embed, seq_lens):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}",
-                        data=emb[1 : seq_len + 1],
-                        **self.h5_kwargs,
+                        f"{fasta_ind}", data=emb[1 : seq_len + 1], **self.h5_kwargs,
                     )
 
                 h5_file.flush()
