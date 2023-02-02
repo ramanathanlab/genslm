@@ -150,11 +150,6 @@ class OutputsCallback(Callback):
             self.layer_lb, self.layer_ub = None, None
             self.layers = layer_bounds
 
-            if any([layer < 0 for layer in self.layers]):
-                self.layer_normalized = False
-            else:
-                self.layer_normalized = True
-
         # Embeddings: Key layer-id, value embedding array
         self.attentions, self.indices, self.na_hashes = [], [], []
 
@@ -170,6 +165,23 @@ class OutputsCallback(Callback):
             # "compression_opts": 4, Compression is too slow for current impl
             "fletcher32": True,
         }
+
+    def on_predict_start(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        num_hidden_layers = pl_module.model.config["num_hidden_layers"]
+        if self.layer_lb is not None and self.layer_lb < 0:
+            self.layer_lb = num_hidden_layers + self.layer_lb
+        if self.layer_ub is not None and self.layer_ub < 0:
+            self.layer_ub = num_hidden_layers + self.layer_ub
+
+        if self.layers is None:
+            self.layers = list(range(self.layer_lb, self.layer_ub))
+
+        for ind in range(len(self.layers)):
+            layer_num = self.layers[ind]
+            if layer_num < 0:
+                self.layers[ind] = num_hidden_layers + layer_num
 
     def on_predict_batch_end(
         self,
@@ -196,30 +208,10 @@ class OutputsCallback(Callback):
                 )
 
         if self.output_embeddings:
-            if self.layer_lb is not None and self.layer_lb < 0:
-                self.layer_lb = outputs.hidden_states.shape[0] + self.layer_lb
-            if self.layer_ub is not None and self.layer_ub < 0:
-                self.layer_ub = outputs.hidden_states.shape[0] + self.layer_ub
-
-            if self.layers is not None and not self.layer_normalized:
-                for ind in range(len(self.layers)):
-                    if self.layers[ind] < 0:
-                        self.layers[ind] = (
-                            outputs.hidden_states.shape[0] + self.layers[ind]
-                        )
-
-                self.layer_normalized = True
-
             for layer, embeddings in enumerate(outputs.hidden_states):
                 # User specified list of layers to take
-                if self.layers is not None and layer not in self.layers:
+                if layer not in self.layers:
                     continue
-
-                if self.layer_lb is not None and (
-                    layer < self.layer_lb
-                    or (self.layer_ub != -1 and layer > self.layer_ub)
-                ):
-                    continue  # Only take layers that are in user-defined bounds
 
                 # if self.mean_embedding_reduction:
                 #     # Compute average over sequence length
