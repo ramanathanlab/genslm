@@ -41,9 +41,7 @@ def gather_embeddings(
                 indices = input_file["fasta-indices"]
 
                 for fasta_idx, na_hash in zip(indices, hashes):
-                    output_file["na-hashes"][str(fasta_idx)] = h5py.ExternalLink(
-                        str(resolved_path), f"na-hashes/{na_hash}"
-                    )
+                    output_file["na-hashes"][str(fasta_idx)] = na_hash
 
     print("Wrote gathered output to", output_path, "\n")
 
