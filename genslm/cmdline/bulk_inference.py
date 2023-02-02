@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import functools
 import os
+from collections import defaultdict
 from argparse import ArgumentParser
 from typing import Optional
 
@@ -118,23 +119,14 @@ if __name__ == "__main__":
     if config.file_lengths:
         file_lengths = config.file_lengths.read_text().splitlines()
         file_lengths = {item.split()[0]: int(item.split()[1]) for item in file_lengths}
+        file_lengths = {
+            k: v for k, v in sorted(file_lengths.items(), key=lambda item: item[1])
+        }
 
-        total_seqs = sum(file_lengths.values())
-
-        seqs_per_node = total_seqs // config.num_nodes
-
-        process_files = []
-        local_files = []
-        rank_length = 0
-        for file, length in file_lengths.items():
-            if rank_length > seqs_per_node:
-                process_files.append(local_files)
-                local_files = []
-                rank_length = 0
-            local_files.append(file)
-            rank_length += length
-        process_files.append(local_files)
-        print("Seqs per node", seqs_per_node)
+        process_files = defaultdict(list)
+        for i, file in enumerate(file_lengths):
+            if (config.data_file / file).exists():
+                process_files[i % config.num_nodes].append(file)
 
     else:
         # Split files equally across all ranks
@@ -144,8 +136,7 @@ if __name__ == "__main__":
             files[i * files_per_node : (i + 1) * files_per_node]
             for i in range(config.num_nodes_per_file)
         ]
-
-    json.dump(process_files, open(f"process_files_{node_rank}.json", "w"))
+    json.dump(defaultdict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
     # main(config)
 
