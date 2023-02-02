@@ -133,6 +133,8 @@ if __name__ == "__main__":
                 rank_length = 0
             local_files.append(file)
             rank_length += length
+        process_files.append(local_files)
+        print("Seqs per node", seqs_per_node)
 
     else:
         # Split files equally across all ranks
