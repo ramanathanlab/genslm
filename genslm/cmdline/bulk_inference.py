@@ -136,7 +136,7 @@ if __name__ == "__main__":
             files[i * files_per_node : (i + 1) * files_per_node]
             for i in range(config.num_nodes_per_file)
         ]
-    json.dump(defaultdict(process_files), open(f"process_files_{node_rank}.json", "w"))
+    json.dump(dict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
     # main(config)
 
