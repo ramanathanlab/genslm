@@ -212,7 +212,7 @@ class OutputsCallback(Callback):
                 )
 
         if self.output_embeddings:
-            print(outputs.hidden_states.shape)
+            print(len(outputs.hidden_states))
             for layer, embeddings in enumerate(outputs.hidden_states):
                 # User specified list of layers to take
                 if layer not in self.layers:
