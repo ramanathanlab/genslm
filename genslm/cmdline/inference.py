@@ -174,7 +174,6 @@ class OutputsCallback(Callback):
     ) -> None:
         # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
         seq_lens = batch["seq_lens"].detach().cpu().numpy().squeeze()
-        fasta_inds = batch["indices"].detach().cpu().numpy()
 
         if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
@@ -184,8 +183,11 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len in zip(logits, seq_lens):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}", data=logit[1 : seq_len + 1], **self.h5_kwargs,
+                    f"{self.logit_counter}",
+                    data=logit[1 : seq_len + 1],
+                    **self.h5_kwargs,
                 )
+                self.logit_counter += 1
 
         if self.output_embeddings:
             for layer, embeddings in enumerate(outputs.hidden_states):
@@ -212,8 +214,11 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, in zip(embed, seq_lens):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}", data=emb[1 : seq_len + 1], **self.h5_kwargs,
+                        f"{self.embedding_counter[layer]}",
+                        data=emb[1 : seq_len + 1],
+                        **self.h5_kwargs,
                     )
+                    self.embedding_counter[layer] += 1
 
                 h5_file.flush()
 
