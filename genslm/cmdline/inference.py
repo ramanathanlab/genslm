@@ -76,9 +76,11 @@ class InferenceSequenceDataset(Dataset):
     ):
 
         # Read all fasta files into memory as strings
-        self.sequences = self.read_sequences(fasta_path)
+        self.raw_sequences = self.read_sequences(fasta_path)
         # Quick transformation to group sequences by kmers
-        self.sequences = [self.group_by_kmer(seq, kmer_size) for seq in self.sequences]
+        self.sequences = [
+            self.group_by_kmer(seq, kmer_size) for seq in self.raw_sequences
+        ]
 
         # Define tokenizer function, but wait to tokenize
         # until a specific batch is requested
@@ -109,6 +111,7 @@ class InferenceSequenceDataset(Dataset):
         return len(self.sequences)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        raw_seq = self.raw_sequences[idx]
         seq = self.sequences[idx]
         batch_encoding = self.tokenizer_fn(seq)
         # Squeeze so that batched tensors end up with (batch_size, seq_length)
@@ -118,8 +121,8 @@ class InferenceSequenceDataset(Dataset):
             "attention_mask": batch_encoding["attention_mask"],
             "indices": torch.from_numpy(np.array([idx])),
             "seq_lens": torch.from_numpy(np.array([len(seq)])),
-            "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
-            # "na_hash": "hash",
+            # Need raw string for hashing
+            "na_hash": hashlib.md5(raw_seq.encode("utf-8")).hexdigest(),
         }
         return sample
 
