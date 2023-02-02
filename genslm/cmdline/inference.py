@@ -183,6 +183,8 @@ class OutputsCallback(Callback):
             if layer_num < 0:
                 self.layers[ind] = num_hidden_layers + layer_num
 
+        print(self.layers)
+
     def on_predict_batch_end(
         self,
         trainer: "pl.Trainer",
