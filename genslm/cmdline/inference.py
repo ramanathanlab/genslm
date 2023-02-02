@@ -307,7 +307,6 @@ def main(config: InferenceConfig) -> None:
     )
     ptl_model = LightningGenSLM(model)
 
-    print("Model loaded")
     # Create callback to save model outputs to disk
     outputs_callback = OutputsCallback(
         save_dir=config.output_path,
@@ -329,7 +328,6 @@ def main(config: InferenceConfig) -> None:
         max_epochs=-1,  # Avoid warning
     )
 
-    print("Trainer made")
     # This dataset loads each sequence from each fasta file into memory
     # as strings on each rank and then tokenizes on-the-fly.
     dataset = InferenceSequenceDataset(
