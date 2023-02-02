@@ -170,6 +170,7 @@ class OutputsCallback(Callback):
     ) -> None:
         # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
         seq_lens = batch["seq_lens"].detach().cpu().numpy()
+        print(type(seq_lens), type(seq_lens[0]))
         fasta_inds = batch["indices"].detach().cpu().numpy()
 
         if self.output_attentions:
