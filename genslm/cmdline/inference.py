@@ -3,7 +3,7 @@ import os
 import uuid
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 import hashlib
 
 import h5py
@@ -34,7 +34,7 @@ class InferenceConfig(BaseSettings):
     """Directory to write embeddings, attentions, logits to."""
 
     # Which outputs to generate
-    layer_bounds: Tuple[int, int] = (0, -1)
+    layer_bounds: Union[Tuple[int, int], List[int]] = (0, -1)
     """Which layers to generate data for, all by default."""
     output_embeddings: bool = True
     """Whether or not to generate and save embeddings."""
@@ -136,13 +136,20 @@ class OutputsCallback(Callback):
     ) -> None:
         self.rank_label = uuid.uuid4()
 
-        self.layer_lb, self.layer_ub = layer_bounds
         self.mean_embedding_reduction = mean_embedding_reduction
         self.output_attentions = output_attentions
         self.output_logits = output_logits
         self.output_embeddings = output_embeddings
         self.save_dir = save_dir
         self.save_dir.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(layer_bounds, tuple):
+            self.layer_lb, self.layer_ub = layer_bounds
+            self.layers = None
+        elif isinstance(layer_bounds, list):
+            self.layer_lb, self.layer_ub = None, None
+            self.layers = layer_bounds
+
         # Embeddings: Key layer-id, value embedding array
         self.attentions, self.indices, self.na_hashes = [], [], []
 
@@ -185,8 +192,13 @@ class OutputsCallback(Callback):
 
         if self.output_embeddings:
             for layer, embeddings in enumerate(outputs.hidden_states):
-                if layer < self.layer_lb or (
-                    self.layer_ub != -1 and layer > self.layer_ub
+                # User specified list of layers to take
+                if self.layers is not None and layer not in self.layers:
+                    continue
+
+                if self.layer_lb is not None and (
+                    layer < self.layer_lb
+                    or (self.layer_ub != -1 and layer > self.layer_ub)
                 ):
                     continue  # Only take layers that are in user-defined bounds
 
