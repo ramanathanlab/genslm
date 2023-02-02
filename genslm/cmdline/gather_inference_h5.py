@@ -32,7 +32,7 @@ def gather_embeddings(
                 hashes = input_file["na-hashes"]
                 indices = input_file["fasta-indices"]
                 for seq_fasta_index in input_file["embeddings"].keys():
-                    seq_hash = hashes[indices.find(str(seq_fasta_index))]
+                    seq_hash = hashes[0]
                     emb_link = output_file["embeddings"][
                         seq_fasta_index
                     ] = h5py.ExternalLink(
