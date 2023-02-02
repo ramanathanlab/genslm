@@ -136,8 +136,14 @@ if __name__ == "__main__":
             files[i * files_per_node : (i + 1) * files_per_node]
             for i in range(config.num_nodes_per_file)
         ]
+
     json.dump(dict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
+    for file in process_files[node_rank]:
+        file_config = config.copy()
+        file_config.data_file = config.data_file / file
+        file_config.output_path = (config.output_path / file).with_suffix()
+        file_config.output_path.mkdir(parents=True, exist_ok=True)
     # main(config)
 
     # TODO: Implement embedding padding removal
