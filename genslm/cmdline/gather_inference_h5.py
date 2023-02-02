@@ -29,21 +29,28 @@ def gather_embeddings(
             print("Loading", h5_file)
             with h5py.File(h5_file, "r") as input_file:
                 resolved_path = h5_file.resolve()
-                for seq_fasta_index in input_file["embeddings"].keys():
-                    output_file["embeddings"][seq_fasta_index] = h5py.ExternalLink(
-                        str(resolved_path), f"embeddings/{seq_fasta_index}"
-                    )
-
-                    output_file["logits"][str(seq_fasta_index)] = h5py.ExternalLink(
-                        str(resolved_path), f"logits/{seq_fasta_index}"
-                    )
                 hashes = input_file["na-hashes"]
                 indices = input_file["fasta-indices"]
-
-                for fasta_idx, na_hash in zip(indices, hashes):
-                    output_file["na-hashes"].create_dataset(
-                        f"{fasta_idx}", data=na_hash
+                for seq_fasta_index in input_file["embeddings"].keys():
+                    seq_hash = hashes[indices.find(str(seq_fasta_index))]
+                    emb_link = output_file["embeddings"][
+                        seq_fasta_index
+                    ] = h5py.ExternalLink(
+                        str(resolved_path), f"embeddings/{seq_fasta_index}"
                     )
+                    emb_link.attrs["na-hash"] = seq_hash
+
+                    logit_link = output_file["logits"][
+                        str(seq_fasta_index)
+                    ] = h5py.ExternalLink(
+                        str(resolved_path), f"logits/{seq_fasta_index}"
+                    )
+                    logit_link.attrs["na-hash"] = seq_hash
+
+                # for fasta_idx, na_hash in zip(indices, hashes):
+                #     output_file["na-hashes"].create_dataset(
+                #         f"{fasta_idx}", data=na_hash
+                #     )
 
     print("Wrote gathered output to", output_path, "\n")
 
