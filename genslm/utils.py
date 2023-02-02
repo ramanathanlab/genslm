@@ -43,8 +43,7 @@ def read_fasta(fasta_file: PathLike) -> List[Sequence]:
     ]
 
     return [
-        Sequence(sequence=seq, tag=tag)
-        for seq, tag in tqdm(zip(lines[1::2], lines[::2]))
+        Sequence(sequence=seq, tag=tag) for seq, tag in zip(lines[1::2], lines[::2])
     ]
 
 
