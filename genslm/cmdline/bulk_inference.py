@@ -141,8 +141,16 @@ if __name__ == "__main__":
         json.dump(dict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
     # Trick ptl into thinking we are single node
-    os.environ["WORLD_SIZE"] = "4"
-    os.environ["NODE_RANK"] = "0"
+    # os.environ["WORLD_SIZE"] = "4"
+    # os.environ["NODE_RANK"] = "0"
+
+    envs = [
+        os.environ.get("MASTER_ADDR"),
+        os.environ.get("MASTER_PORT"),
+        os.environ.get("WORLD_SIZE"),
+        os.environ.get("NODE_RANK"),
+    ]
+    json.dump(envs, open(f"envs_{node_rank}.json", "w"))
 
     for file in process_files[node_rank]:
         file_config = config.copy()
@@ -150,4 +158,3 @@ if __name__ == "__main__":
         file_config.output_path = config.output_path / Path(file).stem
         file_config.output_path.mkdir(parents=True, exist_ok=True)
         main(file_config)
-
