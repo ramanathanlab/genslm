@@ -140,6 +140,7 @@ if __name__ == "__main__":
     if node_rank == 0:
         json.dump(dict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
+    og_node_rank = node_rank
     # Trick ptl into thinking we are single node
     os.environ["MASTER_ADDR"] = platform.node()
     os.environ["MASTER_PORT"] = "12355"
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         os.environ.get("WORLD_SIZE"),
         os.environ.get("NODE_RANK"),
     ]
-    json.dump(envs, open(f"envs_{node_rank}.json", "w"))
+    json.dump(envs, open(f"envs_{og_node_rank}.json", "w"))
 
     for file in process_files[node_rank]:
         file_config = config.copy()
