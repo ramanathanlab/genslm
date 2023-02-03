@@ -1,5 +1,5 @@
 import json
-
+import platform
 
 from pathlib import Path
 import functools
@@ -141,8 +141,10 @@ if __name__ == "__main__":
         json.dump(dict(process_files), open(f"process_files_{node_rank}.json", "w"))
 
     # Trick ptl into thinking we are single node
-    # os.environ["WORLD_SIZE"] = "4"
-    # os.environ["NODE_RANK"] = "0"
+    os.environ["MASTER_ADDR"] = platform.node()
+    os.environ["MASTER_PORT"] = "12355"
+    os.environ["WORLD_SIZE"] = "4"
+    os.environ["NODE_RANK"] = "0"
 
     envs = [
         os.environ.get("MASTER_ADDR"),
