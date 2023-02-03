@@ -23,6 +23,8 @@ from genslm.cmdline.inference import (
     LightningGenSLM,
 )
 
+# NOTE: This script does not work
+
 node_rank = int(os.environ.get("NODE_RANK", 0))
 
 
