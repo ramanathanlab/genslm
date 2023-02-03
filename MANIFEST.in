@@ -1,3 +1,4 @@
 include genslm/tokenizer_files/*.json
 include genslm/architectures/*/*.json
-include genslm/hpc/templates/{*.sh, *.j2}
+include genslm/hpc/templates/*.sh
+include genslm/hpc/templates/*.j2
