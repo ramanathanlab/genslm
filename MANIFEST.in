@@ -1,2 +1,2 @@
-include genslm/tokenizer_files/*
-include genslm/hpc/templates/*
+include *.json, *.sh, *.j2
+include genslm/architectures/*/*.json
