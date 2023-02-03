@@ -1,0 +1,1 @@
+recursive-include genslm *.json *.sh *.j2
