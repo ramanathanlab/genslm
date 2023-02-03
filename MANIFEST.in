@@ -1,4 +1,1 @@
-include genslm/tokenizer_files/*.json
-include genslm/architectures/*/*.json
-include genslm/hpc/templates/*.sh
-include genslm/hpc/templates/*.j2
+recursive-include genslm *.json *.sh *.j2
