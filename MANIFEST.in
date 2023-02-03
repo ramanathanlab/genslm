@@ -1,0 +1,2 @@
+include genslm/tokenizer_files/*
+include genslm/hpc/templates/*
