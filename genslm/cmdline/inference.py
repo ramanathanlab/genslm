@@ -210,7 +210,9 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}", data=logit[1 : seq_len + 1], **self.h5_kwargs,
+                    f"{fasta_ind}",
+                    data=logit[1 : seq_len + 1],
+                    **self.h5_kwargs,
                 )
 
         if self.output_embeddings:
@@ -237,7 +239,9 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}", data=emb[1 : seq_len + 1], **self.h5_kwargs,
+                        f"{fasta_ind}",
+                        data=emb[1 : seq_len + 1],
+                        **self.h5_kwargs,
                     )
 
                 h5_file.flush()
