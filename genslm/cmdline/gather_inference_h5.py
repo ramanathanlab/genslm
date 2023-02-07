@@ -111,4 +111,4 @@ if __name__ == "__main__":
 
     if args.logits:
         out_path = args.output_path / "logits_gathered.h5"
-        gather_logits(args.input_dir, out_path, glob_pattern)
+        gather_logits(args.input_dir, out_path, args.logits_glob_pattern)
