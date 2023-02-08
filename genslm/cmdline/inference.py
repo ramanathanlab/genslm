@@ -157,11 +157,7 @@ class OutputsCallback(Callback):
         self.attentions, self.indices, self.na_hashes = [], [], []
 
         self.h5embeddings_open: Dict[int, h5py.File] = {}
-        if self.output_logits:
-            self.h5logit_file = h5py.File(
-                self.save_dir / f"logits-{self.rank_label}.h5", "w"
-            )
-            self.h5logit_file.create_group("logits")
+        self.h5logit_file = None
 
         self.h5_kwargs = {
             # "compression": "gzip",
@@ -189,6 +185,12 @@ class OutputsCallback(Callback):
             if layer_num < 0:
                 self.layers[ind] = num_hidden_layers + layer_num
 
+        if self.output_logits:
+            self.h5logit_file = h5py.File(
+                self.save_dir / f"logits-{self.rank_label}.h5", "w"
+            )
+            self.h5logit_file.create_group("logits")
+
     def on_predict_batch_end(
         self,
         trainer: "pl.Trainer",
@@ -210,9 +212,7 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}",
-                    data=logit[1 : seq_len + 1],
-                    **self.h5_kwargs,
+                    f"{fasta_ind}", data=logit[1 : seq_len + 1], **self.h5_kwargs,
                 )
 
         if self.output_embeddings:
@@ -239,9 +239,7 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}",
-                        data=emb[1 : seq_len + 1],
-                        **self.h5_kwargs,
+                        f"{fasta_ind}", data=emb[1 : seq_len + 1], **self.h5_kwargs,
                     )
 
                 h5_file.flush()
