@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 import hashlib
+import logging
 
 import h5py
 import numpy as np
@@ -20,6 +21,8 @@ from transformers import PreTrainedTokenizerFast
 from genslm.config import BaseSettings, path_validator
 from genslm.inference import GenSLM
 from genslm.utils import read_fasta_only_seq
+
+logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
 
 class InferenceConfig(BaseSettings):
