@@ -210,6 +210,7 @@ class OutputsCallback(Callback):
 
         if self.output_logits:
             logits = outputs.logits.detach().cpu().numpy()
+            print(f"{logits.shape=}, {seq_lens.shape=}, {fasta_inds.shape=}")
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
                     f"{fasta_ind}", data=logit[1 : seq_len + 1], **self.h5_kwargs,
