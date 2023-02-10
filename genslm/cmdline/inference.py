@@ -169,7 +169,6 @@ class OutputsCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         # Plus one for embedding layer
-        # TODO Alex please check this :)
         num_hidden_layers = pl_module.model.model.config.num_hidden_layers + 1
 
         if self.layer_lb is not None and self.layer_lb < 0:
