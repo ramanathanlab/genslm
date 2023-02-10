@@ -120,7 +120,7 @@ class InferenceSequenceDataset(Dataset):
             "input_ids": batch_encoding["input_ids"].squeeze(),
             "attention_mask": batch_encoding["attention_mask"],
             "indices": torch.from_numpy(np.array([idx])),
-            "seq_lens": torch.from_numpy(np.array([len(seq)])),
+            "seq_lens": batch_encoding["attention_mask"].sum(1),
             # Need raw string for hashing
             "na_hash": hashlib.md5(raw_seq.encode("utf-8")).hexdigest(),
         }
