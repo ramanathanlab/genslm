@@ -120,7 +120,7 @@ class InferenceSequenceDataset(Dataset):
             "input_ids": batch_encoding["input_ids"].squeeze(),
             "attention_mask": batch_encoding["attention_mask"],
             "indices": torch.from_numpy(np.array([idx])),
-            "seq_lens": torch.from_numpy(np.array([len(seq)])),
+            "seq_lens": batch_encoding["attention_mask"].sum(1),
             # Need raw string for hashing
             "na_hash": hashlib.md5(raw_seq.encode("utf-8")).hexdigest(),
         }
@@ -157,11 +157,7 @@ class OutputsCallback(Callback):
         self.attentions, self.indices, self.na_hashes = [], [], []
 
         self.h5embeddings_open: Dict[int, h5py.File] = {}
-        if self.output_logits:
-            self.h5logit_file = h5py.File(
-                self.save_dir / f"logits-{self.rank_label}.h5", "w"
-            )
-            self.h5logit_file.create_group("logits")
+        self.h5logit_file = None
 
         self.h5_kwargs = {
             # "compression": "gzip",
@@ -173,7 +169,6 @@ class OutputsCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         # Plus one for embedding layer
-        # TODO Alex please check this :)
         num_hidden_layers = pl_module.model.model.config.num_hidden_layers + 1
 
         if self.layer_lb is not None and self.layer_lb < 0:
@@ -189,6 +184,12 @@ class OutputsCallback(Callback):
             if layer_num < 0:
                 self.layers[ind] = num_hidden_layers + layer_num
 
+        if self.output_logits:
+            self.h5logit_file = h5py.File(
+                self.save_dir / f"logits-{self.rank_label}.h5", "w"
+            )
+            self.h5logit_file.create_group("logits")
+
     def on_predict_batch_end(
         self,
         trainer: "pl.Trainer",
@@ -199,8 +200,8 @@ class OutputsCallback(Callback):
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
-        seq_lens = batch["seq_lens"].detach().cpu().numpy().squeeze()
-        fasta_inds = batch["indices"].detach().cpu().numpy().squeeze()
+        seq_lens = batch["seq_lens"].detach().cpu().numpy().reshape(-1)
+        fasta_inds = batch["indices"].detach().cpu().numpy().reshape(-1)
 
         if self.output_attentions:
             attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
@@ -210,9 +211,7 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}",
-                    data=logit[1 : seq_len + 1],
-                    **self.h5_kwargs,
+                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs,
                 )
 
         if self.output_embeddings:
@@ -239,9 +238,7 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}",
-                        data=emb[1 : seq_len + 1],
-                        **self.h5_kwargs,
+                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs,
                     )
 
                 h5_file.flush()

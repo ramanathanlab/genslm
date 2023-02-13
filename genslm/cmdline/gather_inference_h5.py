@@ -9,7 +9,7 @@ import h5py
 def gather_logits(
     input_dir: Path,
     output_path: Optional[Path] = None,
-    glob_pattern: str = "logits_*.h5",
+    glob_pattern: str = "logits-*.h5",
     verbose: bool = False,
 ):
 
@@ -92,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--logits_glob_pattern", type=str, default="logits-*.h5")
     parser.add_argument("--embeddings", action="store_true", help="Gather embeddings")
     parser.add_argument("--logits", action="store_true", help="Gather logits.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output.")
     args = parser.parse_args()
 
     if args.embeddings:
@@ -107,8 +108,8 @@ if __name__ == "__main__":
             glob_pattern = f"*layer-{layer}*.h5"
             out_path = args.output_path / f"embeddings-gathered-layer-{layer}.h5"
 
-            gather_embeddings(args.input_dir, out_path, glob_pattern)
+            gather_embeddings(args.input_dir, out_path, glob_pattern, args.verbose)
 
     if args.logits:
-        out_path = args.output_path / "logits_gathered.h5"
-        gather_logits(args.input_dir, out_path, glob_pattern)
+        out_path = args.output_path / "logits-gathered.h5"
+        gather_logits(args.input_dir, out_path, args.logits_glob_pattern, args.verbose)
