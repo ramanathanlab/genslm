@@ -1,3 +1,12 @@
+"""
+Gathers embeddings written by `run_inference.py`. Gathers
+rank files into single h5py file with ExternalLinks to
+the original files. This is necesary for matching new H5 files to original
+fasta files, but makes the dataset brittle to being transferred to new locations. But if
+we try and copy dataset to new file it becomes very very slow.
+
+Current implementation coupled to the output format of `run_inference.py`.
+"""
 import re
 from argparse import ArgumentParser
 from pathlib import Path
@@ -98,7 +107,7 @@ if __name__ == "__main__":
     if args.embeddings:
         files = list(args.input_dir.glob(args.embeddings_glob_pattern))
         layers = set()
-        layer_pattern = re.compile("layer-(\d+)")
+        layer_pattern = re.compile(r"layer-(\d+)")
         for file in files:
             if "layer" in file.name:
                 layer = layer_pattern.search(file.name).group(1)

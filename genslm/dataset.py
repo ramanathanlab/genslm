@@ -17,6 +17,7 @@ from transformers import BatchEncoding, PreTrainedTokenizerFast
 
 from genslm.config import PathLike
 
+
 # TODO: Remove dependecy for BioPython
 # NOTE: Legacy H5 conversion code
 def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
