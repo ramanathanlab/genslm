@@ -2,11 +2,8 @@ import json
 import os
 import warnings
 from argparse import ArgumentParser
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-import numpy as np
-import numpy.typing as npt
 import pytorch_lightning as pl
 import torch
 import torch.multiprocessing as mp
@@ -23,7 +20,6 @@ from pytorch_lightning.strategies import DeepSpeedStrategy
 from tokenizers import Tokenizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -34,12 +30,10 @@ from transformers.utils import ModelOutput
 
 from genslm.blast import BLASTCallback
 from genslm.config import ModelSettings, PathLike, throughput_config
-from genslm.dataset import CachingH5Dataset, FileBackedH5Dataset
+from genslm.dataset import CachingH5Dataset
 from genslm.utils import (
     LoadDeepSpeedStrategy,
     LoadPTCheckpointStrategy,
-    ModelLoadStrategy,
-    OutputsCallback,
     PerplexityCallback,
     SequenceGenerationCallback,
     ThroughputMonitor,
@@ -441,106 +435,9 @@ def train(cfg: ModelSettings) -> None:  # noqa
         print("Completed training.")
 
 
-def generate_embeddings(
-    model: DNATransformer, dataloader: DataLoader, compute_mean: bool = False
-) -> np.ndarray:
-    """Output embedding array of shape (num_seqs, block_size, hidden_dim)."""
-    embeddings = []
-    for batch in tqdm(dataloader):
-        for key in ["input_ids", "attention_mask"]:
-            batch[key] = batch[key].cuda()
-        outputs = model(batch, output_hidden_states=True)
-        # outputs.hidden_states: (batch_size, sequence_length, hidden_size)
-        emb = outputs.hidden_states[0].detach().cpu().numpy()
-        if compute_mean:
-            # Compute average over sequence length
-            emb = np.mean(emb, axis=1)
-        embeddings.append(emb)
-
-    embeddings = np.concatenate(embeddings)  # type: ignore
-    return embeddings
-
-
-# TODO: Make separate files for training and inference
-def inference(
-    cfg: ModelSettings,
-    model_load_strategy: ModelLoadStrategy,
-    fasta_file: str,
-    output_path: Optional[PathLike] = None,
-) -> npt.ArrayLike:
-    """Output embedding array of shape (num_seqs, hidden_dim)."""
-    model: DNATransformer = model_load_strategy.get_model(DNATransformer)
-
-    embedding_callback = OutputsCallback()
-    trainer = pl.Trainer(
-        gpus=-1,
-        # default_root_dir=str(cfg.checkpoint_dir),
-        # strategy=DeepSpeedStrategy(stage=3),
-        strategy="ddp",
-        # accumulate_grad_batches=cfg.accumulate_grad_batches,
-        # num_sanity_val_steps=2,
-        precision=cfg.precision,
-        num_nodes=cfg.num_nodes,
-        callbacks=[embedding_callback],
-    )
-
-    dataset = FileBackedH5Dataset(fasta_file)
-    dataloader = model.get_dataloader(dataset, shuffle=False, drop_last=False)
-    print(f"Running inference with dataset length {len(dataloader)}")
-    trainer.predict(model, dataloaders=dataloader, return_predictions=False)
-
-    embeddings = embedding_callback.embeddings
-    print(f"Embeddings shape: {embeddings.shape}")
-    if output_path:
-        assert Path(output_path).suffix == ".npy"
-        np.save(output_path, embeddings)
-    return embeddings
-
-
-def test(cfg: ModelSettings) -> None:
-    """Run test dataset after loading from checkpoint"""
-    if cfg.load_pt_checkpoint is not None:
-        load_strategy = LoadPTCheckpointStrategy(cfg.load_pt_checkpoint, cfg=cfg)
-        model = load_strategy.get_model(DNATransformer)
-    elif cfg.load_ds_checkpoint is not None:
-        # Check if loading from checkpoint - this assumes that you're
-        # loading from a sharded DeepSpeed checkpoint!!!
-        load_strategy = LoadDeepSpeedStrategy(cfg.load_ds_checkpoint, cfg=cfg)
-        model = load_strategy.get_model(DNATransformer)
-        print(f"Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....")
-    else:
-        print("WARNING: running test on randomly initialized architecture")
-        model = DNATransformer(cfg)
-
-    trainer = pl.Trainer(
-        gpus=-1,
-        default_root_dir=str(cfg.checkpoint_dir),
-        strategy=DeepSpeedStrategy(stage=3),
-        accumulate_grad_batches=cfg.accumulate_grad_batches,
-        num_sanity_val_steps=2,
-        precision=cfg.precision,
-        max_epochs=cfg.epochs,
-        num_nodes=cfg.num_nodes,
-    )
-
-    output = trainer.test(model)
-    print(output)
-
-
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", required=True)
-    parser.add_argument("--mode", default="train")
-    parser.add_argument("--inference_fasta", default="")
-    parser.add_argument("--inference_model_load", default="pt", help="deepspeed or pt")
-    parser.add_argument(
-        "--inference_pt_file",
-        type=Path,
-        help="Path to pytorch model weights if inference_model_load==pt",
-    )
-    parser.add_argument(
-        "--inference_output_path", default="./embeddings.npy", type=Path
-    )
     args = parser.parse_args()
     config = ModelSettings.from_yaml(args.config)
 
@@ -562,35 +459,4 @@ if __name__ == "__main__":
         # new config definition
         config = throughput_config(config)
 
-    if args.mode == "train":
-        train(config)
-    elif args.mode == "test":
-        test(config)
-    elif args.mode == "inference" and not config.compute_throughput:
-        if not args.inference_fasta:
-            raise ValueError("Must provide a fasta file to run inference on.")
-
-        if args.inference_output_path.exists():
-            raise FileExistsError(
-                f"inference_output_path: {args.inference_output_path} already exists!"
-            )
-
-        if args.inference_model_load == "pt":
-            model_strategy = LoadPTCheckpointStrategy(
-                args.inference_pt_file, cfg=config
-            )
-        elif args.inference_model_load == "deepspeed":
-            if config.load_ds_checkpoint is None:
-                raise ValueError(
-                    "load_from_checkpoint_dir must be set in the config file"
-                )
-            model_strategy = LoadDeepSpeedStrategy(
-                config.load_ds_checkpoint, cfg=config
-            )
-        else:
-            raise ValueError(
-                f"Invalid inference_model_load {args.inference_model_load}"
-            )
-        inference(
-            config, model_strategy, args.inference_fasta, args.inference_output_path
-        )
+    train(config)
