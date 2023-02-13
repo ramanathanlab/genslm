@@ -38,8 +38,6 @@ class InferenceConfig(BaseSettings):
     """Which layers to generate data for, all by default."""
     output_embeddings: bool = True
     """Whether or not to generate and save embeddings."""
-    mean_embedding_reduction: bool = False
-    """Whether or not to average the embeddings over sequence length."""
     output_attentions: bool = False
     """Whether or not to generate and save attentions."""
     output_logits: bool = False
@@ -132,14 +130,12 @@ class OutputsCallback(Callback):
         self,
         save_dir: Path = Path("./outputs"),
         layer_bounds: Tuple[int, int] = (0, -1),
-        mean_embedding_reduction: bool = False,
         output_embeddings: bool = True,
         output_attentions: bool = False,
         output_logits: bool = False,
     ) -> None:
         self.rank_label = uuid.uuid4()
 
-        self.mean_embedding_reduction = mean_embedding_reduction
         self.output_attentions = output_attentions
         self.output_logits = output_logits
         self.output_embeddings = output_embeddings
@@ -221,12 +217,6 @@ class OutputsCallback(Callback):
                 # User specified list of layers to take
                 if layer not in self.layers:
                     continue
-
-                # if self.mean_embedding_reduction:
-                #     # Compute average over sequence length
-                #     # TODO: Account for padding
-                #     embed = embeddings.detach().mean(dim=1).cpu()
-                # else:
 
                 h5_file = self.h5embeddings_open.get(layer)
                 if h5_file is None:
@@ -316,7 +306,6 @@ def main(config: InferenceConfig) -> None:
     outputs_callback = OutputsCallback(
         save_dir=config.output_path,
         layer_bounds=config.layer_bounds,
-        mean_embedding_reduction=config.mean_embedding_reduction,
         output_embeddings=config.output_embeddings,
         output_attentions=config.output_attentions,
         output_logits=config.output_logits,
@@ -368,5 +357,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = InferenceConfig.from_yaml(args.config)
     main(config)
-
-    # TODO: Implement embedding padding removal
