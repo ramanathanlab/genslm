@@ -53,7 +53,7 @@ conda activate genslm
 echo "$(df -h /local/scratch)"
 
 # NCCL settings
-export NCCL_DEBUG=info
+export NCCL_DEBUG=WARN
 export NCCL_NET_GDR_LEVEL=PHB
 
 # For applications that internally handle binding MPI/OpenMP processes to GPUs

@@ -1,9 +1,11 @@
 import itertools
+
 import numpy as np
 from tokenizers import Tokenizer
 from torch.utils.data import DataLoader
-from genslm import GenSLM, SequenceDataset
 from transformers import PreTrainedTokenizerFast
+
+from genslm import GenSLM, SequenceDataset
 
 
 def generate_random_sequence(min_length: int = 10, max_length: int = 2020) -> str:
@@ -37,9 +39,11 @@ def test_dataset_length():
     # Initialize dataset
     seq_length = 2048
     dataset = SequenceDataset(sequences, seq_length, tokenizer, verbose=False)
-    dataloader = DataLoader(dataset)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     # Basic sanity check
     assert len(dataset) == num_seqs
-    for _ in dataloader:
-        break
+    for batch, seq in zip(dataloader, sequences):
+        batch_seq_len = batch["attention_mask"].sum().item()
+        # If exactly equal, no unknown tokens were added
+        assert batch_seq_len == len(seq) // 3
