@@ -5,6 +5,7 @@ import uuid
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
+from concurrent.futures import ProcessPoolExecutor
 
 import h5py
 import numpy as np
@@ -123,6 +124,56 @@ class InferenceSequenceDataset(Dataset):
             "na_hash": hashlib.md5(raw_seq.encode("utf-8")).hexdigest(),
         }
         return sample
+
+
+def _read_average_embedding_process_fn(
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
+    chunk_idxs: Tuple[int, int],
+) -> np.ndarray:
+    num_embs = chunk_idxs[1] - chunk_idxs[0]
+    embs = np.empty(shape=(num_embs, hidden_dim), dtype=np.float32)
+    emb = np.zeros((seq_len, hidden_dim), dtype=np.float32)
+    with h5py.File(h5_file_path, "r") as f:
+        group = f["embeddings"]
+        for i, idx in enumerate(map(str, range(*chunk_idxs))):
+            seqlen = group[idx].shape[0]
+            f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
+            embs[i] = emb[:seqlen].mean(axis=0)
+    return embs
+
+
+def read_average_embeddings(
+    h5_file_path: Path,
+    hidden_dim: int = 512,
+    seq_len: int = 2048,
+    num_workers: int = 4,
+) -> np.ndarray:
+    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
+    with h5py.File(h5_file_path, "r") as h5_file:
+        total_embeddings = len(h5_file["embeddings"])
+    chunk_size = total_embeddings // num_workers
+    chunk_idxs = [
+        (i, min(i + chunk_size, total_embeddings))
+        for i in range(0, total_embeddings, chunk_size)
+    ]
+
+    read_func = functools.partial(
+        _read_average_embedding_process_fn,
+        h5_file_path=h5_file_path,
+        hidden_dim=hidden_dim,
+        seq_len=seq_len,
+    )
+    out_array = np.empty(shape=(total_embeddings, hidden_dim), dtype=np.float32)
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for chunk_emb, chunk_range in zip(
+            executor.map(read_func, chunk_idxs), chunk_idxs
+        ):
+            out_array[chunk_range[0] : chunk_range[1]] = chunk_emb
+
+    return out_array
 
 
 class OutputsCallback(Callback):
