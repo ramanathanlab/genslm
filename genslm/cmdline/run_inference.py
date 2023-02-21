@@ -147,6 +147,24 @@ def read_average_embeddings(
     seq_len: int = 2048,
     num_workers: int = 4,
 ) -> np.ndarray:
+    """Read average embeddings from an HDF5 file.
+
+    Parameters
+    ----------
+    h5_file_path : Path
+        path to h5 file
+    hidden_dim : int, optional
+        hidden dimension of model that generated embeddings, by default 512
+    seq_len : int, optional
+        sequence length of the model, by default 2048
+    num_workers : int, optional
+        number of workers to use, by default 4
+
+    Returns
+    -------
+    np.ndarray
+        embeddings averaged into hidden_dim
+    """
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
     with h5py.File(h5_file_path, "r") as h5_file:
@@ -194,6 +212,24 @@ def read_full_embeddings(
     seq_len: int = 2048,
     num_workers: int = 4,
 ) -> np.ndarray:
+    """Read token level embeddings from an HDF5 file.
+
+    Parameters
+    ----------
+    h5_file_path : Path
+        path to h5 file
+    hidden_dim : int, optional
+        hidden dimension of the model that generated embeddings, by default 512
+    seq_len : int, optional
+        sequence length of the model, by default 2048
+    num_workers : int, optional
+        number of workers to use, by default 4
+
+    Returns
+    -------
+    np.ndarray
+        token level embeddings
+    """
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
     with h5py.File(h5_file_path, "r") as h5_file:
