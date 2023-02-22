@@ -127,7 +127,10 @@ class InferenceSequenceDataset(Dataset):
 
 
 def _read_average_embedding_process_fn(
-    h5_file_path: Path, hidden_dim: int, seq_len: int, chunk_idxs: Tuple[int, int],
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
+    chunk_idxs: Tuple[int, int],
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.empty(shape=(num_embs, hidden_dim), dtype=np.float32)
@@ -169,7 +172,7 @@ def read_average_embeddings(
 
     with h5py.File(h5_file_path, "r") as h5_file:
         total_embeddings = len(h5_file["embeddings"])
-    chunk_size = total_embeddings // num_workers
+    chunk_size = max(1, total_embeddings // num_workers)
     chunk_idxs = [
         (i, min(i + chunk_size, total_embeddings))
         for i in range(0, total_embeddings, chunk_size)
@@ -192,7 +195,10 @@ def read_average_embeddings(
 
 
 def _read_full_embeddings_process_fn(
-    chunk_idxs: Tuple[int, int], h5_file_path: Path, hidden_dim: int, seq_len: int,
+    chunk_idxs: Tuple[int, int],
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.zeros(shape=(num_embs, seq_len, hidden_dim), dtype=np.float32)
@@ -341,7 +347,9 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs,
+                    f"{fasta_ind}",
+                    data=logit[:seq_len],
+                    **self.h5_kwargs,
                 )
 
         if self.output_embeddings:
@@ -362,7 +370,9 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs,
+                        f"{fasta_ind}",
+                        data=emb[:seq_len],
+                        **self.h5_kwargs,
                     )
 
                 h5_file.flush()
