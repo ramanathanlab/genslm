@@ -4,9 +4,9 @@ import os
 import time
 import uuid
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
-from concurrent.futures import ProcessPoolExecutor
 
 import h5py
 import numpy as np
@@ -173,7 +173,7 @@ def read_average_embeddings(
 
     with h5py.File(h5_file_path, "r") as h5_file:
         total_embeddings = len(h5_file["embeddings"])
-    chunk_size = total_embeddings // num_workers
+    chunk_size = max(1, total_embeddings // num_workers)
     chunk_idxs = [
         (i, min(i + chunk_size, total_embeddings))
         for i in range(0, total_embeddings, chunk_size)
