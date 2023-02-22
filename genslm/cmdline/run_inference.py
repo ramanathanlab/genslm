@@ -1,6 +1,7 @@
 import functools
 import hashlib
 import os
+import time
 import uuid
 from argparse import ArgumentParser
 from pathlib import Path
@@ -127,7 +128,10 @@ class InferenceSequenceDataset(Dataset):
 
 
 def _read_average_embedding_process_fn(
-    h5_file_path: Path, hidden_dim: int, seq_len: int, chunk_idxs: Tuple[int, int],
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
+    chunk_idxs: Tuple[int, int],
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.empty(shape=(num_embs, hidden_dim), dtype=np.float32)
@@ -192,7 +196,10 @@ def read_average_embeddings(
 
 
 def _read_full_embeddings_process_fn(
-    chunk_idxs: Tuple[int, int], h5_file_path: Path, hidden_dim: int, seq_len: int,
+    chunk_idxs: Tuple[int, int],
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.zeros(shape=(num_embs, seq_len, hidden_dim), dtype=np.float32)
@@ -295,6 +302,8 @@ class OutputsCallback(Callback):
             "fletcher32": True,
         }
 
+        self.io_time = 0
+
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
@@ -338,13 +347,18 @@ class OutputsCallback(Callback):
             self.attentions.append(attend)
 
         if self.output_logits:
+            start = time.time()
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs,
+                    f"{fasta_ind}",
+                    data=logit[:seq_len],
+                    **self.h5_kwargs,
                 )
+            self.io_time += time.time() - start
 
         if self.output_embeddings:
+            start = time.time()
             for layer, embeddings in enumerate(outputs.hidden_states):
                 # User specified list of layers to take
                 if layer not in self.layers:
@@ -362,11 +376,13 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs,
+                        f"{fasta_ind}",
+                        data=emb[:seq_len],
+                        **self.h5_kwargs,
                     )
 
                 h5_file.flush()
-
+            self.io_time += time.time() - start
         self.na_hashes.extend(batch["na_hash"])
         self.indices.append(batch["indices"].detach().cpu())
 
@@ -377,6 +393,7 @@ class OutputsCallback(Callback):
         self.indices = torch.cat(self.indices).numpy().squeeze()
 
         if self.output_logits:
+            start = time.time()
             self.h5logit_file.create_dataset(
                 "fasta-indices", data=self.indices, **self.h5_kwargs
             )
@@ -384,8 +401,10 @@ class OutputsCallback(Callback):
                 "na-hashes", data=self.na_hashes, **self.h5_kwargs
             )
             self.h5logit_file.close()
+            self.io_time += time.time() - start
 
         if self.output_embeddings:
+            start = time.time()
             # Write indices to h5 files to map embeddings back to fasta file
             for h5_file in self.h5embeddings_open.values():
                 h5_file.create_dataset(
@@ -398,6 +417,9 @@ class OutputsCallback(Callback):
             # Close all h5 files
             for h5_file in self.h5embeddings_open.values():
                 h5_file.close()
+            self.io_time += time.time() - start
+
+        print("IO time:\t", self.io_time)
 
 
 class LightningGenSLM(pl.LightningModule):
