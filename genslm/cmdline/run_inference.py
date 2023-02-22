@@ -150,7 +150,7 @@ def read_average_embeddings(
     seq_len: int = 2048,
     num_workers: int = 4,
     return_md5: bool = False,
-) -> np.ndarray:
+) -> Dict[str, np.ndarray]:
     """Read average embeddings from an HDF5 file.
 
     Parameters
@@ -166,8 +166,8 @@ def read_average_embeddings(
 
     Returns
     -------
-    np.ndarray
-        embeddings averaged into hidden_dim
+    Dict[str, np.ndarray]
+        embeddings averaged into hidden_dim under the 'embeddings' key, and if specified, the hashes under 'na-hashes'
     """
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -241,8 +241,9 @@ def read_full_embeddings(
 
     Returns
     -------
-    np.ndarray
-        token level embeddings
+Dict[str, np.ndarray]
+        token level embeddings under the 'embeddings' key, and if specified, the hashes under 'na-hashes'
+    """
     """
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     out_data = {}
