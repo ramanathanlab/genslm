@@ -3,9 +3,9 @@ import hashlib
 import os
 import uuid
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
-from concurrent.futures import ProcessPoolExecutor
 
 import h5py
 import numpy as np
