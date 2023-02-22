@@ -3,6 +3,7 @@ import hashlib
 import os
 import uuid
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
@@ -123,6 +124,145 @@ class InferenceSequenceDataset(Dataset):
             "na_hash": hashlib.md5(raw_seq.encode("utf-8")).hexdigest(),
         }
         return sample
+
+
+def _read_average_embedding_process_fn(
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
+    chunk_idxs: Tuple[int, int],
+) -> np.ndarray:
+    num_embs = chunk_idxs[1] - chunk_idxs[0]
+    embs = np.empty(shape=(num_embs, hidden_dim), dtype=np.float32)
+    emb = np.zeros((seq_len, hidden_dim), dtype=np.float32)
+    with h5py.File(h5_file_path, "r") as f:
+        group = f["embeddings"]
+        for i, idx in enumerate(map(str, range(*chunk_idxs))):
+            seqlen = group[idx].shape[0]
+            f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
+            embs[i] = emb[:seqlen].mean(axis=0)
+    return embs
+
+
+def read_average_embeddings(
+    h5_file_path: Path,
+    hidden_dim: int = 512,
+    seq_len: int = 2048,
+    num_workers: int = 4,
+) -> np.ndarray:
+    """Read average embeddings from an HDF5 file.
+
+    Parameters
+    ----------
+    h5_file_path : Path
+        path to h5 file
+    hidden_dim : int, optional
+        hidden dimension of model that generated embeddings, by default 512
+    seq_len : int, optional
+        sequence length of the model, by default 2048
+    num_workers : int, optional
+        number of workers to use, by default 4
+
+    Returns
+    -------
+    np.ndarray
+        embeddings averaged into hidden_dim
+    """
+    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
+    with h5py.File(h5_file_path, "r") as h5_file:
+        total_embeddings = len(h5_file["embeddings"])
+    chunk_size = max(1, total_embeddings // num_workers)
+    chunk_idxs = [
+        (i, min(i + chunk_size, total_embeddings))
+        for i in range(0, total_embeddings, chunk_size)
+    ]
+
+    read_func = functools.partial(
+        _read_average_embedding_process_fn,
+        h5_file_path=h5_file_path,
+        hidden_dim=hidden_dim,
+        seq_len=seq_len,
+    )
+    out_array = np.empty(shape=(total_embeddings, hidden_dim), dtype=np.float32)
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for chunk_emb, chunk_range in zip(
+            executor.map(read_func, chunk_idxs), chunk_idxs
+        ):
+            out_array[chunk_range[0] : chunk_range[1]] = chunk_emb
+
+    return out_array
+
+
+def _read_full_embeddings_process_fn(
+    chunk_idxs: Tuple[int, int],
+    h5_file_path: Path,
+    hidden_dim: int,
+    seq_len: int,
+) -> np.ndarray:
+    num_embs = chunk_idxs[1] - chunk_idxs[0]
+    embs = np.zeros(shape=(num_embs, seq_len, hidden_dim), dtype=np.float32)
+    emb = np.zeros((seq_len, hidden_dim), dtype=np.float32)
+    with h5py.File(h5_file_path, "r") as f:
+        group = f["embeddings"]
+        for i, idx in enumerate(map(str, range(*chunk_idxs))):
+            seqlen = group[idx].shape[0]
+            f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
+            embs[i] = emb
+    return embs
+
+
+def read_full_embeddings(
+    h5_file_path: Path,
+    hidden_dim: int = 512,
+    seq_len: int = 2048,
+    num_workers: int = 4,
+) -> np.ndarray:
+    """Read token level embeddings from an HDF5 file.
+
+    Parameters
+    ----------
+    h5_file_path : Path
+        path to h5 file
+    hidden_dim : int, optional
+        hidden dimension of the model that generated embeddings, by default 512
+    seq_len : int, optional
+        sequence length of the model, by default 2048
+    num_workers : int, optional
+        number of workers to use, by default 4
+
+    Returns
+    -------
+    np.ndarray
+        token level embeddings
+    """
+    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
+    with h5py.File(h5_file_path, "r") as h5_file:
+        total_embeddings = len(h5_file["embeddings"])
+    chunk_size = total_embeddings // num_workers
+    chunk_idxs = [
+        (i, min(i + chunk_size, total_embeddings))
+        for i in range(0, total_embeddings, chunk_size)
+    ]
+
+    read_func = functools.partial(
+        _read_full_embeddings_process_fn,
+        h5_file_path=h5_file_path,
+        hidden_dim=hidden_dim,
+        seq_len=seq_len,
+    )
+
+    out_array = np.empty(
+        shape=(total_embeddings, seq_len, hidden_dim), dtype=np.float32
+    )
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for chunk_emb, chunk_range in zip(
+            executor.map(read_func, chunk_idxs), chunk_idxs
+        ):
+            out_array[chunk_range[0] : chunk_range[1]] = chunk_emb
+
+    return out_array
 
 
 class OutputsCallback(Callback):
