@@ -151,7 +151,7 @@ def read_average_embeddings(
     seq_len: int = 2048,
     num_workers: int = 4,
     return_md5: bool = False,
-) -> np.ndarray:
+) -> Dict[str, np.ndarray]:
     """Read average embeddings from an HDF5 file.
 
     Parameters
@@ -167,8 +167,8 @@ def read_average_embeddings(
 
     Returns
     -------
-    np.ndarray
-        embeddings averaged into hidden_dim
+    Dict[str, np.ndarray]
+        embeddings averaged into hidden_dim under the 'embeddings' key, and if specified, the hashes under 'na-hashes'
     """
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -210,11 +210,11 @@ def _read_full_embeddings_process_fn(
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.zeros(shape=(num_embs, model_seq_len, hidden_dim), dtype=np.float32)
-    emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
     with h5py.File(h5_file_path, "r") as f:
         group = f["embeddings"]
         for i, idx in enumerate(map(str, range(*chunk_idxs))):
             seqlen = group[idx].shape[0]
+            emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
             f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
             embs[i] = emb
     return embs
@@ -229,21 +229,21 @@ def read_full_embeddings(
 ) -> Dict[str, np.ndarray]:
     """Read token level embeddings from an HDF5 file.
 
-    Parameters
-    ----------
-    h5_file_path : Path
-        path to h5 file
-    hidden_dim : int, optional
-        hidden dimension of the model that generated embeddings, by default 512
-    seq_len : int, optional
-        sequence length of the model, by default 2048
-    num_workers : int, optional
-        number of workers to use, by default 4
+        Parameters
+        ----------
+        h5_file_path : Path
+            path to h5 file
+        hidden_dim : int, optional
+            hidden dimension of the model that generated embeddings, by default 512
+        seq_len : int, optional
+            sequence length of the model, by default 2048
+        num_workers : int, optional
+            number of workers to use, by default 4
 
-    Returns
-    -------
-    np.ndarray
-        token level embeddings
+        Returns
+        -------
+    Dict[str, np.ndarray]
+            token level embeddings under the 'embeddings' key, and if specified, the hashes under 'na-hashes'
     """
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     out_data = {}
@@ -363,9 +363,7 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}",
-                    data=logit[:seq_len],
-                    **self.h5_kwargs,
+                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs,
                 )
             self.io_time += time.time() - start
 
@@ -388,9 +386,7 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}",
-                        data=emb[:seq_len],
-                        **self.h5_kwargs,
+                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs,
                     )
 
                 h5_file.flush()
