@@ -209,11 +209,12 @@ def _read_full_embeddings_process_fn(
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.zeros(shape=(num_embs, model_seq_len, hidden_dim), dtype=np.float32)
+    emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
     with h5py.File(h5_file_path, "r") as f:
         group = f["embeddings"]
         for i, idx in enumerate(map(str, range(*chunk_idxs))):
             seqlen = group[idx].shape[0]
-            emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
+            emb[:] = 0  # reset
             f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
             embs[i] = emb
     return embs
