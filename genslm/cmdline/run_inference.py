@@ -5,7 +5,7 @@ import uuid
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple
 
 import h5py
 import numpy as np
@@ -35,8 +35,8 @@ class InferenceConfig(BaseSettings):
     """Directory to write embeddings, attentions, logits to."""
 
     # Which outputs to generate
-    layer_bounds: Union[Tuple[int, int], List[int]] = (0, -1)
-    """Which layers to generate data for, all by default."""
+    layers: List[int] = [-1]
+    """Which layers to generate data for, last only by default."""
     output_embeddings: bool = True
     """Whether or not to generate and save embeddings."""
     output_attentions: bool = False
@@ -282,7 +282,7 @@ class OutputsCallback(Callback):
     def __init__(
         self,
         save_dir: Path = Path("./outputs"),
-        layer_bounds: Tuple[int, int] = (0, -1),
+        layers: List[int] = [-1],
         output_embeddings: bool = True,
         output_attentions: bool = False,
         output_logits: bool = False,
@@ -295,12 +295,7 @@ class OutputsCallback(Callback):
         self.save_dir = save_dir
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
-        if isinstance(layer_bounds, tuple):
-            self.layer_lb, self.layer_ub = layer_bounds
-            self.layers = None
-        elif isinstance(layer_bounds, list):
-            self.layer_lb, self.layer_ub = None, None
-            self.layers = layer_bounds
+        self.layers = layers
 
         # Embeddings: Key layer-id, value embedding array
         self.attentions, self.indices, self.na_hashes = [], [], []
@@ -317,16 +312,8 @@ class OutputsCallback(Callback):
     def on_predict_start(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
-        # Plus one for embedding layer
+        # Plus one for initial embedding layer
         num_hidden_layers = pl_module.model.model.config.num_hidden_layers + 1
-
-        if self.layer_lb is not None and self.layer_lb < 0:
-            self.layer_lb = num_hidden_layers + self.layer_lb
-        if self.layer_ub is not None and self.layer_ub < 0:
-            self.layer_ub = num_hidden_layers + self.layer_ub
-
-        if self.layers is None:
-            self.layers = list(range(self.layer_lb, self.layer_ub))
 
         for ind in range(len(self.layers)):
             layer_num = self.layers[ind]
