@@ -392,7 +392,7 @@ class OutputsCallback(Callback):
             self.h5logit_file.create_dataset(
                 "fasta-indices", data=self.indices, **self.h5_kwargs
             )
-            print(self.na_hashes)
+            print(self.na_hashes, flush=True)
             self.h5logit_file.create_dataset(
                 "na-hashes", data=self.na_hashes, **self.h5_kwargs
             )
