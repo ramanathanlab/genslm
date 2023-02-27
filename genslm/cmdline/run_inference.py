@@ -386,7 +386,7 @@ class OutputsCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
 
-        self.indices = torch.cat(self.indices).numpy().squeeze()
+        self.indices = torch.cat(self.indices).numpy().reshape(-1)
 
         if self.output_logits:
             self.h5logit_file.create_dataset(
