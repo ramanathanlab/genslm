@@ -319,6 +319,7 @@ class OutputsCallback(Callback):
         for ind in range(len(self.layers)):
             layer_num = self.layers[ind]
             if layer_num < 0:
+                # e.g -1 turns into model_layers + -1 (e.g. 12 + -1 = 11 last layer for 0 indexed arrays)
                 self.layers[ind] = num_hidden_layers + layer_num
 
         if self.output_logits:
