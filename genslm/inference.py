@@ -22,25 +22,25 @@ class GenSLM(nn.Module):
     MODELS: Dict[str, Dict[str, str]] = {
         "genslm_25M_patric": {
             "config": str(__architecture_path / "neox" / "neox_25,290,752.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "patric_25m_epoch01-val_loss_0.57_bias_removed.pt",
             "seq_length": "2048",
         },
         "genslm_250M_patric": {
             "config": str(__architecture_path / "neox" / "neox_244,464,576.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "patric_250m_epoch00_val_loss_0.48_attention_removed.pt",
             "seq_length": "2048",
         },
         "genslm_2.5B_patric": {
             "config": str(__architecture_path / "neox" / "neox_2,533,931,008.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "patric_2.5b_epoch00_val_los_0.29_bias_removed.pt",
             "seq_length": "2048",
         },
         "genslm_25B_patric": {
             "config": str(__architecture_path / "neox" / "neox_25,076,188,032.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "model-epoch00-val_loss0.70-v2.pt",
             "seq_length": "2048",
         },
