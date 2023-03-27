@@ -6,7 +6,7 @@ import uuid
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import h5py
 import numpy as np
@@ -17,7 +17,8 @@ from natsort import natsorted
 from pytorch_lightning.callbacks import Callback
 from torch.utils.data import DataLoader, Dataset  # Subset
 from tqdm import tqdm
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, BatchEncoding
+
 
 from genslm.config import BaseSettings, path_validator
 from genslm.inference import GenSLM
@@ -30,8 +31,13 @@ class InferenceConfig(BaseSettings):
     """The genslm model to load."""
     model_cache_dir: Path
     """The directory of the model weights."""
+    nightly: Optional[Dict[str, Dict[str, str]]] = None
+    """The model info dictionary. Necessary if model_id is not in GenSLM.MODELS. (Support for custom models)
+    The value dict needs to contain the following keys: config, tokenizer, weights, seq_length.
+    """
+
     data_file: Path
-    """Data file to run inference on (HDF5)."""
+    """Data file to run inference on (fasta)."""
     output_path: Path
     """Directory to write embeddings, attentions, logits to."""
 
@@ -64,26 +70,25 @@ class InferenceConfig(BaseSettings):
     _model_cache_dir_exists = path_validator("model_cache_dir")
 
 
-class InferenceSequenceDataset(Dataset):
-    """Dataset initialized from fasta files."""
+def read_sequences(fasta_path: Path) -> List[str]:
+    sequences = []
+    if fasta_path.is_dir():
+        fasta_files = natsorted(fasta_path.glob("*.fasta"))
+        for fasta_file in tqdm(fasta_files, desc="Reading fasta files..."):
+            sequences.extend(read_fasta_only_seq(fasta_file))
+    else:
+        sequences = read_fasta_only_seq(fasta_path)
+    return sequences
+
+
+class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
+    """Dataset initialized from a list of sequence strings."""
 
     def __init__(
-        self,
-        fasta_path: Path,
-        seq_length: int,
-        tokenizer: PreTrainedTokenizerFast,
-        kmer_size: int = 3,
+        self, sequences: List[str], seq_length: int, tokenizer: PreTrainedTokenizerFast
     ):
+        self.sequences = sequences
 
-        # Read all fasta files into memory as strings
-        self.raw_sequences = self.read_sequences(fasta_path)
-        # Quick transformation to group sequences by kmers
-        self.sequences = [
-            self.group_by_kmer(seq, kmer_size) for seq in self.raw_sequences
-        ]
-
-        # Define tokenizer function, but wait to tokenize
-        # until a specific batch is requested
         self.tokenizer_fn = functools.partial(
             tokenizer,
             max_length=seq_length,
@@ -92,28 +97,19 @@ class InferenceSequenceDataset(Dataset):
             return_tensors="pt",
         )
 
-    @staticmethod
-    def read_sequences(fasta_path: Path) -> List[str]:
-        sequences = []
-        if fasta_path.is_dir():
-            fasta_files = natsorted(fasta_path.glob("*.fasta"))
-            for fasta_file in tqdm(fasta_files, desc="Reading fasta files..."):
-                sequences.extend(read_fasta_only_seq(fasta_file))
-        else:
-            sequences = read_fasta_only_seq(fasta_path)
-        return sequences
+    def tokenize(self, seq: str) -> BatchEncoding:
+        return self.tokenizer_fn(self.group_by_kmer(seq))
 
     @staticmethod
-    def group_by_kmer(seq: str, kmer: int) -> str:
+    def group_by_kmer(seq: str, kmer: int = 3) -> str:
         return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
 
     def __len__(self) -> int:
         return len(self.sequences)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        raw_seq = self.raw_sequences[idx]
         seq = self.sequences[idx]
-        batch_encoding = self.tokenizer_fn(seq)
+        batch_encoding = self.tokenize(seq)
         # Squeeze so that batched tensors end up with (batch_size, seq_length)
         # instead of (batch_size, 1, seq_length)
         sample = {
@@ -122,7 +118,7 @@ class InferenceSequenceDataset(Dataset):
             "indices": torch.from_numpy(np.array([idx])),
             "seq_lens": batch_encoding["attention_mask"].sum(1),
             # Need raw string for hashing
-            "na_hash": hashlib.md5(raw_seq.encode("utf-8")).hexdigest(),
+            "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
         }
         return sample
 
@@ -352,7 +348,9 @@ class OutputsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs,
+                    f"{fasta_ind}",
+                    data=logit[:seq_len],
+                    **self.h5_kwargs,
                 )
             self.io_time += time.time() - start
 
@@ -375,7 +373,9 @@ class OutputsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs,
+                        f"{fasta_ind}",
+                        data=emb[:seq_len],
+                        **self.h5_kwargs,
                     )
 
                 h5_file.flush()
@@ -443,7 +443,7 @@ def main(config: InferenceConfig) -> None:
     pl.seed_everything(42)
 
     # Load GenSLM model and inject into pytorch lightning
-    model = GenSLM(config.model_id, config.model_cache_dir)
+    model = GenSLM(config.model_id, config.model_cache_dir, nightly=config.nightly)
     # Set the default kwarg values once
     model.forward = functools.partial(
         model.forward,
@@ -472,12 +472,12 @@ def main(config: InferenceConfig) -> None:
         max_epochs=-1,  # Avoid warning
     )
 
-    # This dataset loads each sequence from each fasta file into memory
-    # as strings on each rank and then tokenizes on-the-fly.
+    # This dataset takes a list of strings, and tokenizes them on the fly
+    sequences = read_sequences(config.data_file)
     dataset = InferenceSequenceDataset(
-        config.data_file, model.seq_length, model.tokenizer
+        sequences=sequences, seq_length=model.seq_length, tokenizer=model.tokenizer
     )
-    # dataset = Subset(dataset, np.arange(512))  # for testing
+
     dataloader = DataLoader(
         dataset,
         batch_size=config.batch_size,

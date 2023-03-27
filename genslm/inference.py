@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, Optional
 
 import torch
 import torch.nn as nn
@@ -44,9 +44,23 @@ class GenSLM(nn.Module):
             "weights": "model-epoch00-val_loss0.70-v2.pt",
             "seq_length": "2048",
         },
+        # Inquire about COVID-19 model weights.
+        "genslm_25M_covid": {
+            "config": str(
+                __architecture_path / "neox" / "neox_25,290,752_10240_pos_embed.json"
+            ),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "weights": "model-epoch91-val_loss0.01.pt",
+            "seq_length": "10240",
+        },
     }
 
-    def __init__(self, model_id: str, model_cache_dir: PathLike = ".") -> None:
+    def __init__(
+        self,
+        model_id: str,
+        model_cache_dir: PathLike = ".",
+        nightly: Optional[Dict[str, Dict[str, str]]] = None,
+    ) -> None:
         """GenSLM inference module.
 
         Parameters
@@ -57,6 +71,9 @@ class GenSLM(nn.Module):
             Directory where model weights have been downloaded to (defaults to current
             working directory). If model weights are not found, then they will be
             downloaded, by default "."
+        nightly : Optional[Dict[str, Dict[str, str]]], optional
+            A dictionary containing a single key-value pair of model_id and model_info.
+            To be used for testing non-released models, by default None
 
         Raises
         ------
@@ -64,6 +81,12 @@ class GenSLM(nn.Module):
             If model_id is invalid.
         """
         super().__init__()
+
+        if nightly is not None:
+            # Assume its a dictionary with single key-value pair
+            self.MODELS.update(nightly)
+            model_id = list(nightly.keys())[0]
+
         self.model_cache_dir = Path(model_cache_dir)
         self.model_info = self.MODELS.get(model_id)
         if self.model_info is None:
