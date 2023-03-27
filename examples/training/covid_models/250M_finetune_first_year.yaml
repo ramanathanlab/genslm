@@ -16,7 +16,7 @@ limit_val_batches: 32
 check_val_every_n_epoch: 1
 checkpoint_every_n_train_steps: 500
 checkpoint_every_n_epochs: null
-tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_100vocab.json
+tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_69vocab.json
 train_file: /path/to/data/first_year/first_year_train.h5
 val_file: /path/to/data/first_year/first_year_val.h5
 test_file: /path/to/data/first_year/first_year_val.h5
