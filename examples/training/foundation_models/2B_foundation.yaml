@@ -2,7 +2,7 @@ wandb_active: true
 wandb_project_name: codon_transformer
 wandb_entity_name: gene_mdh_gan
 checkpoint_dir: patric_2.5B_pretraining/checkpoints_v2/
-tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_100vocab.json
+tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_69vocab.json
 train_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_train.h5
 val_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_val.h5
 test_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_test.h5

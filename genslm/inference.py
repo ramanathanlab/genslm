@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import torch
 import torch.nn as nn
@@ -9,6 +9,8 @@ from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFa
 from transformers.utils import ModelOutput
 
 import genslm
+
+PathLike = Union[str, Path]
 
 
 class GenSLM(nn.Module):
@@ -20,38 +22,38 @@ class GenSLM(nn.Module):
     MODELS: Dict[str, Dict[str, str]] = {
         "genslm_25M_patric": {
             "config": str(__architecture_path / "neox" / "neox_25,290,752.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "patric_25m_epoch01-val_loss_0.57_bias_removed.pt",
             "seq_length": "2048",
         },
         "genslm_250M_patric": {
             "config": str(__architecture_path / "neox" / "neox_244,464,576.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "patric_250m_epoch00_val_loss_0.48_attention_removed.pt",
             "seq_length": "2048",
         },
         "genslm_2.5B_patric": {
             "config": str(__architecture_path / "neox" / "neox_2,533,931,008.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "patric_2.5b_epoch00_val_los_0.29_bias_removed.pt",
             "seq_length": "2048",
         },
         "genslm_25B_patric": {
             "config": str(__architecture_path / "neox" / "neox_25,076,188,032.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
+            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
             "weights": "model-epoch00-val_loss0.70-v2.pt",
             "seq_length": "2048",
         },
     }
 
-    def __init__(self, model_id: str, model_cache_dir: str = ".") -> None:
+    def __init__(self, model_id: str, model_cache_dir: PathLike = ".") -> None:
         """GenSLM inference module.
 
         Parameters
         ----------
         model_id : str
             A model ID corresponding to a pre-trained model. (e.g., genslm_25M_patric)
-        model_cache_dir : str, optional
+        model_cache_dir : PathLike, optional
             Directory where model weights have been downloaded to (defaults to current
             working directory). If model weights are not found, then they will be
             downloaded, by default "."
@@ -62,7 +64,7 @@ class GenSLM(nn.Module):
             If model_id is invalid.
         """
         super().__init__()
-        self.model_cache_dir = model_cache_dir
+        self.model_cache_dir = Path(model_cache_dir)
         self.model_info = self.MODELS.get(model_id)
         if self.model_info is None:
             valid_model_ids = list(self.MODELS.keys())
@@ -87,7 +89,7 @@ class GenSLM(nn.Module):
         base_config = AutoConfig.from_pretrained(self.model_info["config"])
         model = AutoModelForCausalLM.from_config(base_config)
 
-        weight_path = Path(self.model_cache_dir) / self.model_info["weights"]
+        weight_path = self.model_cache_dir / self.model_info["weights"]
         if not weight_path.exists():
             # TODO: Implement model download
             raise NotImplementedError
@@ -105,10 +107,7 @@ class GenSLM(nn.Module):
         return tokenizer
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        **kwargs: Dict[str, Any],
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, **kwargs: Any
     ) -> ModelOutput:
         return self.model(
             input_ids, labels=input_ids, attention_mask=attention_mask, **kwargs

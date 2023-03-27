@@ -1,4 +1,4 @@
-"""Model configuration."""
+"""Configuration."""
 import json
 import os
 import warnings
@@ -14,6 +14,21 @@ import genslm
 _T = TypeVar("_T")
 
 PathLike = Union[str, Path]
+
+
+def _resolve_path_exists(value: Optional[Path]) -> Optional[Path]:
+    if value is None:
+        return None
+    p = value.resolve()
+    if not p.exists():
+        raise FileNotFoundError(p)
+    return p
+
+
+def path_validator(field: str) -> classmethod:
+    decorator = validator(field, allow_reuse=True)
+    _validator = decorator(_resolve_path_exists)
+    return _validator
 
 
 class BaseSettings(_BaseSettings):
@@ -116,7 +131,7 @@ class ModelSettings(BaseSettings):
     tokenizer_file: Path = (
         Path(genslm.__file__).parent
         / "tokenizer_files"
-        / "codon_wordlevel_100vocab.json"
+        / "codon_wordlevel_69vocab.json"
     )
     """Path to the tokenizer file."""
     train_file: Path

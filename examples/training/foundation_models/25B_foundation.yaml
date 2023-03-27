@@ -16,7 +16,7 @@ limit_val_batches: 32
 check_val_every_n_epoch: 1
 checkpoint_every_n_train_steps: 50
 checkpoint_every_n_epochs: null
-tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_100vocab.json
+tokenizer_file: ../../genslm/tokenizer_files/codon_wordlevel_69vocab.json
 train_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_train.h5
 val_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_val.h5
 test_file: /path/to/data/patric_89M/pgfam_30k_h5_tts/combined_test.h5

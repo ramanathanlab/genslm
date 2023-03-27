@@ -1,0 +1,209 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "[UNK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 1,
+      "content": "[CLS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 2,
+      "content": "[BOS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 3,
+      "content": "[EOS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 4,
+      "content": "[SEP]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 5,
+      "content": "[PAD]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 6,
+      "content": "[MASK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "SpecialToken": {
+          "id": "[BOS]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[EOS]",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {
+      "[BOS]": {
+        "id": "[BOS]",
+        "ids": [
+          2
+        ],
+        "tokens": [
+          "[BOS]"
+        ]
+      },
+      "[EOS]": {
+        "id": "[EOS]",
+        "ids": [
+          3
+        ],
+        "tokens": [
+          "[EOS]"
+        ]
+      }
+    }
+  },
+  "decoder": null,
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "[UNK]": 0,
+      "[CLS]": 1,
+      "[BOS]": 2,
+      "[EOS]": 3,
+      "[SEP]": 4,
+      "[PAD]": 5,
+      "[MASK]": 6,
+      "GGC": 7,
+      "GCC": 8,
+      "ATC": 9,
+      "GAC": 10,
+      "GAA": 11,
+      "ATG": 12,
+      "GTG": 13,
+      "CTG": 14,
+      "GTC": 15,
+      "GCG": 16,
+      "GAT": 17,
+      "AAA": 18,
+      "GGT": 19,
+      "AAG": 20,
+      "GAG": 21,
+      "ACC": 22,
+      "AAC": 23,
+      "GTT": 24,
+      "ATT": 25,
+      "GCA": 26,
+      "CTC": 27,
+      "CGC": 28,
+      "GCT": 29,
+      "CAG": 30,
+      "CCG": 31,
+      "TTC": 32,
+      "GTA": 33,
+      "TCG": 34,
+      "GGA": 35,
+      "AAT": 36,
+      "TAC": 37,
+      "CTT": 38,
+      "TTG": 39,
+      "ACG": 40,
+      "TCC": 41,
+      "GGG": 42,
+      "AGC": 43,
+      "CCC": 44,
+      "ACA": 45,
+      "ACT": 46,
+      "TCT": 47,
+      "TTA": 48,
+      "CGT": 49,
+      "TAT": 50,
+      "CAA": 51,
+      "CGG": 52,
+      "TTT": 53,
+      "CAC": 54,
+      "CCT": 55,
+      "CCA": 56,
+      "TGG": 57,
+      "ATA": 58,
+      "TCA": 59,
+      "TGC": 60,
+      "AGT": 61,
+      "AGA": 62,
+      "CAT": 63,
+      "TGT": 64,
+      "CTA": 65,
+      "AGG": 66,
+      "TAA": 67,
+      "CGA": 68,
+      "TGA": 69,
+      "TAG": 70
+    },
+    "unk_token": "[UNK]"
+  }
+}
