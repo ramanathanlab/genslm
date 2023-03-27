@@ -6,7 +6,7 @@ import uuid
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import h5py
 import numpy as np
@@ -17,8 +17,7 @@ from natsort import natsorted
 from pytorch_lightning.callbacks import Callback
 from torch.utils.data import DataLoader, Dataset  # Subset
 from tqdm import tqdm
-from transformers import PreTrainedTokenizerFast, BatchEncoding
-
+from transformers import BatchEncoding, PreTrainedTokenizerFast
 
 from genslm.config import BaseSettings, path_validator
 from genslm.inference import GenSLM
@@ -275,7 +274,66 @@ def read_full_embeddings(
     return out_data
 
 
-class OutputsCallback(Callback):
+class AverageEmbeddingsCallback(Callback):
+    """Saves the averaged embeddings (along the sequence length dimension)
+    to HDF5 files (one per-rank).
+
+    The HDF5 files will have datasets with the names
+    embeddings: (N, D) -- The embeddings (N sequences, D hidden dimension).
+    seq-indices: (N,) -- The indices into the original input dataset.
+    na-hashes: (N,) -- The md5 of each input sequence.
+    """
+
+    def __init__(self, save_dir: Path = Path("./outputs")) -> None:
+        """
+        Parameters
+        ----------
+        save_dir : Path, optional
+            The output directory to save embeddings-<uuid>.h5 files to
+            (will save a unique file per-rank), by default Path("./outputs")
+        """
+        self.save_dir = save_dir
+        self.save_dir.mkdir(parents=True, exist_ok=True)
+
+        # Buffers
+        self.embeddings, self.indices, self.na_hashes = [], [], []
+
+    def on_predict_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+        dataloader_idx: int,
+    ) -> None:
+        """Collect embeddings, na-hashes, and indices."""
+
+        seq_lens = batch["seq_lens"].detach().cpu().numpy().reshape(-1)
+
+        # outputs.hidden_states shape: (layers, batch_size, sequence_length, hidden_size)
+        # Use last layer for hidden states
+        for seq_len, emb in zip(seq_lens, outputs.hidden_states[-1]):
+            # Compute average over sequence length
+            self.embeddings.append(
+                emb[:seq_len].detach().mean(dim=0).cpu().numpy().reshape(1, -1)
+            )
+
+        self.na_hashes.extend(batch["na_hash"])
+        self.indices.extend(batch["indices"].detach().cpu().numpy().reshape(-1))
+
+    def on_predict_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
+        """Write output embeddings file."""
+        fname = self.save_dir / f"embeddings-{uuid.uuid4()}.h5"
+        with h5py.File(fname, "w") as fp:
+            fp.create_dataset("embeddings", data=self.embeddings)
+            fp.create_dataset("seq-indices", data=self.indices)
+            fp.create_dataset("na-hashes", data=self.na_hashes)
+
+
+class FullEmbeddingsCallback(Callback):
     def __init__(
         self,
         save_dir: Path = Path("./outputs"),
@@ -453,7 +511,7 @@ def main(config: InferenceConfig) -> None:
     ptl_model = LightningGenSLM(model)
 
     # Create callback to save model outputs to disk
-    outputs_callback = OutputsCallback(
+    outputs_callback = FullEmbeddingsCallback(
         save_dir=config.output_path,
         layer_bounds=config.layer_bounds,
         output_embeddings=config.output_embeddings,
