@@ -387,13 +387,14 @@ class OutputsCallback(Callback):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
 
-        self.indices = torch.cat(self.indices).numpy().squeeze()
+        self.indices = torch.cat(self.indices).numpy().reshape(-1)
 
         if self.output_logits:
             start = time.time()
             self.h5logit_file.create_dataset(
                 "fasta-indices", data=self.indices, **self.h5_kwargs
             )
+            print(self.na_hashes, flush=True)
             self.h5logit_file.create_dataset(
                 "na-hashes", data=self.na_hashes, **self.h5_kwargs
             )
