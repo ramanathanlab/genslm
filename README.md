@@ -21,10 +21,6 @@ pip3 install -r requirements/dev.txt
 pip3 install -r requirements/requirements.txt
 pip3 install -e .
 ```
-If you would like to use mmseqs2 for sequence analysis, install into a conda environment with:
-```
-conda install -c bioconda mmseqs2
-```
 
 To run dev tools (isort, flake8, black, mypy): `make`
 
