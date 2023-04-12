@@ -307,7 +307,7 @@ class OutputsCallback(Callback):
         self.h5_kwargs = {
             # "compression": "gzip",
             # "compression_opts": 4, Compression is too slow for current impl
-            "fletcher32": True,
+            # "fletcher32": True,
         }
 
         self.io_time = 0
