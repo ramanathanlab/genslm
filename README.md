@@ -24,6 +24,8 @@ GenSLMs were trained on the [Polaris](https://www.alcf.anl.gov/polaris) and [Per
 ## Usage
 > :warning: **Model weights will be unavailable May 5, 2023 to May 12, 2023**
 
+> :warning: **Model weights downloaded prior to May 3, 2023 have a small issue in name space. Please redownload models for fix.**
+
 Our pre-trained models and datasets can be downloaded from this [Globus Endpoint](https://app.globus.org/file-manager?origin_id=25918ad0-2a4e-4f37-bcfc-8183b19c3150&origin_path=%2F).
 
 Use GenSLMs to compute sequence embeddings for downsteam tasks, generate synthetic sequences, or easily extend them to your own application.
