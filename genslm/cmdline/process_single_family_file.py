@@ -31,7 +31,7 @@ if __name__ == "__main__":
         "--tokenizer_file",
         help="Path to tokenizer file",
         default=(
-            fp.parent.parent / "genslm/tokenizer_files/codon_wordlevel_100vocab.json"
+            fp.parent.parent / "genslm/tokenizer_files/codon_wordlevel_69vocab.json"
         ),
     )
     parser.add_argument(

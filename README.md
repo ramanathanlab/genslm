@@ -22,6 +22,9 @@ pip install git+https://github.com/ramanathanlab/genslm
 GenSLMs were trained on the [Polaris](https://www.alcf.anl.gov/polaris) and [Perlmutter](https://perlmutter.carrd.co/) supercomputers. For installation on these systems, please see [`INSTALL.md`](https://github.com/ramanathanlab/genslm/blob/main/docs/INSTALL.md).
 
 ## Usage
+> :warning: **Model weights will be unavailable May 5, 2023 to May 12, 2023**
+
+> :warning: **Model weights downloaded prior to May 3, 2023 have a small issue in name space. Please redownload models for fix.**
 
 Our pre-trained models and datasets can be downloaded from this [Globus Endpoint](https://app.globus.org/file-manager?origin_id=25918ad0-2a4e-4f37-bcfc-8183b19c3150&origin_path=%2F).
 
@@ -34,8 +37,13 @@ import numpy as np
 from torch.utils.data import DataLoader
 from genslm import GenSLM, SequenceDataset
 
+# Load model
 model = GenSLM("genslm_25M_patric", model_cache_dir="/content/gdrive/MyDrive")
 model.eval()
+
+# Select GPU device if it is available, else use CPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model.to(device)
 
 # Input data is a list of gene sequences
 sequences = [
@@ -50,9 +58,15 @@ dataloader = DataLoader(dataset)
 embeddings = []
 with torch.no_grad():
     for batch in dataloader:
-        outputs = model(batch["input_ids"], batch["attention_mask"], output_hidden_states=True)
+        for batch in dataloader:
+        outputs = model(
+            batch["input_ids"].to(device),
+            batch["attention_mask"].to(device),
+            output_hidden_states=True,
+        )
         # outputs.hidden_states shape: (layers, batch_size, sequence_length, hidden_size)
-        emb = outputs.hidden_states[0].detach().cpu().numpy()
+        # Use the embeddings of the last layer
+        emb = outputs.hidden_states[-1].detach().cpu().numpy()
         # Compute average over sequence length
         emb = np.mean(emb, axis=1)
         embeddings.append(emb)
@@ -67,11 +81,16 @@ embeddings.shape
 ```python
 from genslm import GenSLM
 
+# Load model
 model = GenSLM("genslm_25M_patric", model_cache_dir="/content/gdrive/MyDrive")
 model.eval()
 
+# Select GPU device if it is available, else use CPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model.to(device)
+
 # Prompt the language model with a start codon
-prompt = model.tokenizer.encode("ATG", return_tensors="pt")
+prompt = model.tokenizer.encode("ATG", return_tensors="pt").to(device)
 
 tokens = model.model.generate(
     prompt,

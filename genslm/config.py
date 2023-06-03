@@ -131,7 +131,7 @@ class ModelSettings(BaseSettings):
     tokenizer_file: Path = (
         Path(genslm.__file__).parent
         / "tokenizer_files"
-        / "codon_wordlevel_100vocab.json"
+        / "codon_wordlevel_69vocab.json"
     )
     """Path to the tokenizer file."""
     train_file: Path

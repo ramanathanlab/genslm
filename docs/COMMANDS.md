@@ -29,7 +29,7 @@ python -m genslm.cmdline.remove_neox_attention_bias \
 2. Setup a config file that looks like this: 
 ```
 load_pt_checkpoint: /home/hippekp/CVD-Mol-AI/hippekp/model_training/25m_genome_embeddings/model-epoch69-val_loss0.01.pt
-tokenizer_file: /home/hippekp/github/genslm/genslm/tokenizer_files/codon_wordlevel_100vocab.json
+tokenizer_file: /home/hippekp/github/genslm/genslm/tokenizer_files/codon_wordlevel_69vocab.json
 data_file: $DATA.h5
 embeddings_out_path: /home/hippekp/CVD-Mol-AI/hippekp/model_training/25m_genome_embeddings/train_embeddings/
 model_config_json: /lus/eagle/projects/CVD-Mol-AI/hippekp/model_training/genome_finetuning_25m/config/neox_25,290,752.json
@@ -64,7 +64,7 @@ Converting a directory of fasta files into a directory of h5 files (Step one of 
 python -m genslm.cmdline.fasta_to_h5 \
   --fasta $PATH_TO_FASTA_DIR \
   --h5_dir $PATH_TO_OUTDIR \
-  --tokenizer_file ~/github/genslm/genslm/tokenizer_files/codon_wordlevel_100vocab.json
+  --tokenizer_file ~/github/genslm/genslm/tokenizer_files/codon_wordlevel_69vocab.json
 ```
 
 Converting a directory of h5 files into a single h5 file (Step two of data preprocessing for pretraining, output of this step is what we use for pretraining) 
@@ -83,7 +83,7 @@ Converting individual fasta files into individual h5 files (Useful for getting e
 python -m genslm.cmdline.single_fasta_to_h5 \
   -f $PATH_TO_SINGLE_FASTA \
   --h5 $PATH_TO_SINGLE_H5 \
-  -t ~/github/genslm/genslm/tokenizer_files/codon_wordlevel_100vocab.json \
+  -t ~/github/genslm/genslm/tokenizer_files/codon_wordlevel_69vocab.json \
   -b 10240 \
   -n 16\
   --train_val_test_split
