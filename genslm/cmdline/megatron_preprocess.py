@@ -32,7 +32,7 @@ def process_ffn_file(
     for seq in sequences[::subsample]:
         if add_bos_eos:
             sequence_text = group_by_kmer(seq, kmer_size, block_size - 2)
-            sequence_text = f"[BOS] {sequence_text} [EOS]"
+            sequence_text = f"BOS {sequence_text} EOS"
         else:
             sequence_text = group_by_kmer(seq, kmer_size, block_size)
         sequence_tag = seq.tag
