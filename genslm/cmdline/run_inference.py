@@ -361,7 +361,7 @@ class FullEmbeddingsCallback(Callback):
         self.h5_kwargs = {
             # "compression": "gzip",
             # "compression_opts": 4, Compression is too slow for current impl
-            "fletcher32": True,
+            # "fletcher32": True,
         }
 
         self.io_time = 0
@@ -406,9 +406,7 @@ class FullEmbeddingsCallback(Callback):
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
                 self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}",
-                    data=logit[:seq_len],
-                    **self.h5_kwargs,
+                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs
                 )
             self.io_time += time.time() - start
 
@@ -431,9 +429,7 @@ class FullEmbeddingsCallback(Callback):
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
                     h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}",
-                        data=emb[:seq_len],
-                        **self.h5_kwargs,
+                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs
                     )
 
                 h5_file.flush()
