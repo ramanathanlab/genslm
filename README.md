@@ -58,7 +58,6 @@ dataloader = DataLoader(dataset)
 embeddings = []
 with torch.no_grad():
     for batch in dataloader:
-        for batch in dataloader:
         outputs = model(
             batch["input_ids"].to(device),
             batch["attention_mask"].to(device),
