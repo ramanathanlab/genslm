@@ -39,6 +39,8 @@ class InferenceConfig(BaseSettings):
     """Data file to run inference on (fasta)."""
     output_path: Path
     """Directory to write embeddings, attentions, logits to."""
+    kmer_size: int = 3
+    """Kmer size to use for tokenization."""
 
     # Which outputs to generate
     layers: List[int] = [-1]
@@ -84,7 +86,11 @@ class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
     """Dataset initialized from a list of sequence strings."""
 
     def __init__(
-        self, sequences: List[str], seq_length: int, tokenizer: PreTrainedTokenizerFast
+        self,
+        sequences: List[str],
+        seq_length: int,
+        tokenizer: PreTrainedTokenizerFast,
+        kmer_size: int = 3,
     ):
         self.sequences = sequences
 
@@ -96,8 +102,10 @@ class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
             return_tensors="pt",
         )
 
+        self.kmer_size = kmer_size
+
     def tokenize(self, seq: str) -> BatchEncoding:
-        return self.tokenizer_fn(self.group_by_kmer(seq))
+        return self.tokenizer_fn(self.group_by_kmer(seq, kmer=self.kmer_size))
 
     @staticmethod
     def group_by_kmer(seq: str, kmer: int = 3) -> str:

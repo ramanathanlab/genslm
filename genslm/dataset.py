@@ -10,18 +10,17 @@ from typing import Any, Dict, List, Optional, Tuple
 import h5py
 import numpy as np
 import torch
-from Bio import SeqIO  # type: ignore[import]
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import BatchEncoding, PreTrainedTokenizerFast
 
 from genslm.config import PathLike
+from genslm.utils import read_fasta, Sequence
 
 
-# TODO: Remove dependecy for BioPython
 # NOTE: Legacy H5 conversion code
-def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
-    seq = str(s.seq).upper()  # need to make sure it's in upper case
+def group_by_kmer(s: Sequence, n: int) -> str:
+    seq = str(s.sequence).upper()  # need to make sure it's in upper case
     return " ".join(seq[i : i + n] for i in range(0, len(seq), n))
 
 
@@ -78,7 +77,7 @@ class H5PreprocessMixin:
                 )
 
         # Load in sequences and take an even subsample
-        sequences = list(SeqIO.parse(fasta_file, "fasta"))[::subsample]
+        sequences = read_fasta(fasta_file)[::subsample]
         print(f"File: {fasta_file}, num sequences: {len(sequences)}")
 
         sequence_splits = {}
@@ -136,14 +135,14 @@ class H5PreprocessMixin:
 
     @staticmethod
     def _parallel_preprocess_helper(
-        seq_record: SeqIO.SeqRecord,
+        sequence: Sequence,
         tokenizer: PreTrainedTokenizerFast,
         kmer_size: int,
         block_size: int,
     ) -> Dict[str, List[Any]]:
 
         batch_encoding = tokenizer(
-            group_by_kmer(seq_record, kmer_size),
+            group_by_kmer(sequence, kmer_size),
             max_length=block_size,
             padding="max_length",
             return_tensors="np",
@@ -151,11 +150,11 @@ class H5PreprocessMixin:
         )
 
         data = {}
-        for field in ["input_ids", "attention_mask"]:
+        for field in ["input_ids"]:
             data[field] = batch_encoding[field].astype(np.int8)
-        data["id"] = seq_record.id
-        data["description"] = seq_record.description
-        data["sequence"] = str(seq_record.seq).upper()
+        data["id"] = sequence.tag.split("\t")[0]
+        data["description"] = sequence.tag
+        data["sequence"] = str(sequence.sequence).upper()
         return data
 
     @staticmethod
@@ -171,7 +170,7 @@ class H5PreprocessMixin:
     ) -> None:
 
         # Load in sequences and take an even subsample
-        sequences = list(SeqIO.parse(fasta_file, "fasta"))[::subsample]
+        sequences = read_fasta(fasta_file)[::subsample]
         print(f"File: {fasta_file}, num sequences: {len(sequences)}")
 
         if train_val_test_split is not None:
@@ -204,12 +203,15 @@ class H5PreprocessMixin:
             data = defaultdict(list)
             chunksize = max(1, len(split_sequences) // num_workers)
             with ProcessPoolExecutor(max_workers=num_workers) as pool:
-                for datum in pool.map(func, split_sequences, chunksize=chunksize):
-                    for key in datum:
-                        data[key].append(datum[key])
+                with tqdm(total=len(split_sequences)) as pbar:
+                    for datum in pool.map(func, split_sequences, chunksize=chunksize):
+                        for key in datum:
+                            data[key].append(datum[key])
+                        pbar.update(len(datum["input_ids"]))
 
             # Gather model input into numpy arrays
-            for key in ["input_ids", "attention_mask"]:
+            print("Tokenization complete. Concatenating data...")
+            for key in ["input_ids"]:
                 data[key] = np.concatenate(data[key])
 
             local_output_file = Path(output_file)
@@ -218,6 +220,7 @@ class H5PreprocessMixin:
                     local_output_file.parent
                     / f"{local_output_file.stem}_{split_name}{local_output_file.suffix}"
                 )
+            print(f"Saving to {local_output_file}...")
             H5PreprocessMixin.write_h5(local_output_file, data)
 
             print(f"File saved to: {local_output_file}")

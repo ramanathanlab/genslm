@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -30,10 +31,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("-n", "--num_workers", type=int, default=1)
     parser.add_argument(
-        "-tvts",
         "--train_val_test_split",
-        help="Whether or not to split files in to individual train/test/split h5 files (Will default to 0.8 train 0.1 val 0.1 test)",
-        action="store_true",
+        type=float,
+        nargs=3,
+        default=None,
+        help="Train, val, test split as a percentage, e.g. 0.8 0.1 0.1",
     )
     parser.add_argument(
         "-jv",
@@ -43,17 +45,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # Turn off parallelism for tokenizers because we will be using ProcessPools
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = PreTrainedTokenizerFast(
         tokenizer_object=Tokenizer.from_file(args.tokenizer)
     )
     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
     if args.train_val_test_split:
-        train_test_val_split = {"train": 0.8, "val": 0.1, "test": 0.1}
-    elif args.just_validation_split:
-        train_test_val_split = {"train": 0.8, "val": 0.2, "test": 0.0}
+        train_val_test_split = {
+            "train": args.train_val_test_split[0],
+            "val": args.train_val_test_split[1],
+            "test": args.train_val_test_split[2],
+        }
     else:
-        train_test_val_split = None
+        train_val_test_split = None
 
     H5PreprocessMixin.parallel_preprocess(
         args.fasta,
@@ -63,5 +69,5 @@ if __name__ == "__main__":
         args.kmer_size,
         args.subsample,
         args.num_workers,
-        train_val_test_split=train_test_val_split,
+        train_val_test_split=train_val_test_split,
     )
