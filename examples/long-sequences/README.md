@@ -1,6 +1,4 @@
 # Loooooooong Sequence Lengths
-Sam Foreman
-2023-09-12
 
 <div id="fig-ds4sci">
 
