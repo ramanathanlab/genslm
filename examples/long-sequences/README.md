@@ -417,7 +417,8 @@ possible.
 <div style="padding:0.5rem; border: 1px solid var(--dim-text); border-radius: 0.2rem;">
 
 
-![[W&B Report](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)](./assets/wbthumbnail.png)
+[![W&B Report](./assets/wbthumbnail.png)](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)
+
 <!-- <iframe src="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1" style="border:none;height:1024px;width:100%"> -->
 <!-- </iframe> -->
 
