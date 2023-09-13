@@ -19,7 +19,7 @@ Additional details can be found in the [📁
 `DeepSpeed4Science`](https://github.com/microsoft/Megatron-DeepSpeed/examples_deepspeed/deepspeed4science/megatron_long_seq_support/README.md)
 folder.
 
-## DeepSpeed4Science (09/2023)
+## [DeepSpeed4Science](https://github.com/microsoft/Megatron-DeepSpeed/examples_deepspeed/deepspeed4science/megatron_long_seq_support/README.md) (09/2023)
 
 ### New Features
 
@@ -401,6 +401,8 @@ Figure 3: TP stands for tensor parallelism.
 
 ## ZeRO Offloading
 
+[🚀 **W\&B Report**: _Looooooooong Sequences_](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)
+
 These newly introduced optimizations, in combination with
 [ZeRO-Offload](https://www.deepspeed.ai/tutorials/zero-offload/) allows
 us to go even further.
@@ -416,8 +418,13 @@ possible.
 
 <div style="padding:0.5rem; border: 1px solid var(--dim-text); border-radius: 0.2rem;">
 
+<a href="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1">
+<img src="./assets/wbthumbnail.png" width="100%" />
+</a>    
 
+<!--
 [![W&B Report](./assets/wbthumbnail.png)](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)
+-->
 
 <!-- <iframe src="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1" style="border:none;height:1024px;width:100%"> -->
 <!-- </iframe> -->
