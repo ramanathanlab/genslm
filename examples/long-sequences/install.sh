@@ -43,29 +43,32 @@ function setupALCF() {
   fi
 }
 
-function installAPEX() {
-  if [[ ! -d "${DEPS}/apex" ]]; then
-    git clone https://github.com/NVIDIA/apex "${DEPS}/apex"
+function installApex() {
+  APEX_DIR="${DEPS}/apex"
+  echo "Installing NVIDIA/apex to: ${APEX_DIR}"
+  if [[ ! -d "${APEX_DIR}" ]]; then
+    git clone https://github.com/NVIDIA/apex "${APEX_DIR}"
   fi
-  echo "Installing NVIDIA/apex to ${DEPS}/apex"
-  python3 -m pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" -e "${DEPS}/apex"  --require-virtualenv
+  echo "Installing NVIDIA/apex to ${APEX_DIR}"
+  python3 -m pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" -e "${APEX_DIR}"  --require-virtualenv
 }
 
 function installTriton() {
-  # cd "${HERE}/deps"
-  if [[ ! -d "${DEPS}/triton" ]]; then
-    git clone -b legacy-backend https://github.com/openai/triton "${DEPS}/triton"
+  TRITON_DIR="${DEPS}/triton"
+  echo "Installing openai/triton to: ${TRITON_DIR}"
+  if [[ ! -d  "${TRITON_DIR}" ]]; then
+    git clone -b legacy-backend https://github.com/openai/triton "${TRITON_DIR}"
   fi
-  python3 -m pip install "${DEPS}/triton"  --require-virtualenv
-  # cd "${HERE}"
+  python3 -m pip install "${TRITON_DIR}/python" --require-virtualenv
 }
 
 function installMegatronDS() {
-  # cd "${HERE}/deps"
-  if [[ ! -d "${DEPS}/Megatron-DeepSpeed" ]]; then
-    git clone -b chengming/deepspeed4science https://github.com/microsoft/Megatron-DeepSpeed "${DEPS}/Megatron-DeepSpeed"
+  MDS_DIR="${DEPS}/Megatron-DeepSpeed"
+  echo "Installing Megatron-DeepSpeed to ${MDS_DIR}"
+  if [[ ! -d "${MDS_DIR}" ]]; then
+    git clone -b chengming/deepspeed4science https://github.com/microsoft/Megatron-DeepSpeed "${MDS_DIR}"
   fi
-  python3 -m pip install -e "${DEPS}/Megatron-DeepSpeed"  --require-virtualenv
+  python3 -m pip install -e "${MDS_DIR}" --require-virtualenv
 }
 
 # ----------------------------------------------------------------------------
@@ -92,10 +95,15 @@ echo "========================================"
 
 [ "./deps" ] && echo "Found ./deps/" || mkdir -p "${HERE}/deps"
 
-python3 -m pip install pybind11 cmake --require-virtualenv
-python3 -m pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
+python3 -m pip install --require-virtualenv torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
+
 python3 -m pip install --upgrade --force-reinstall deepspeed --require-virtualenv
-python3 -m pip install -e "git+https://github.com/saforem2/ezpz.git#egg=ezpz" --require-virtualenv
+
 installApex
+
+python3 -m pip install pybind11 cmake --require-virtualenv
+
 installTriton
 installMegatronDS
+
+python3 -m pip install -e "git+https://github.com/saforem2/ezpz.git#egg=ezpz" --require-virtualenv
