@@ -2,7 +2,7 @@
 
 <div id="fig-ds4sci">
 
-![](./assets/deepspeed4science1.svg)
+![](./assets/ds4sci.svg)
 
 Figure 1: This work was done as part of the DeepSpeed4Science project,
 in collaboration with Microsoft.
