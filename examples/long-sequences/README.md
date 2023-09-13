@@ -2,7 +2,7 @@
 
 <div id="fig-ds4sci">
 
-![](../assets/deepspeed4science1.svg)
+![](./assets/deepspeed4science1.svg)
 
 Figure 1: This work was done as part of the DeepSpeed4Science project,
 in collaboration with Microsoft.
@@ -367,9 +367,9 @@ for idx, (model_size, d) in enumerate(data.items()):
 
 </details>
 
-![GPT-`25B` Model](dsblog_files/figure-commonmark/cell-4-output-1.svg)
+![GPT-`25B` Model](./assets/figure-commonmark/cell-4-output-1.svg)
 
-![GPT-`33B` Model](dsblog_files/figure-commonmark/cell-4-output-2.svg)
+![GPT-`33B` Model](./assets/figure-commonmark/cell-4-output-2.svg)
 
 Figure 2: Pre-training with long sequence support across different model
 sizes and numbers of GPUs. In each case, the `new` (current)
@@ -416,8 +416,10 @@ possible.
 
 <div style="padding:0.5rem; border: 1px solid var(--dim-text); border-radius: 0.2rem;">
 
-<iframe src="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1" style="border:none;height:1024px;width:100%">
-</iframe>
+
+![[W&B Report](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)](./assets/wbthumbnail.png)
+<!-- <iframe src="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1" style="border:none;height:1024px;width:100%"> -->
+<!-- </iframe> -->
 
 </div>
 
