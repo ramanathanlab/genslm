@@ -2,6 +2,7 @@
 
 """Pretrain GPT"""
 
+import os
 import torch
 import math
 from functools import partial
@@ -97,6 +98,7 @@ def model_provider(pre_process=True, post_process=True):
                 post_process=post_process
             )
     see_memory_usage(f"After Building Model", force=True)
+    wb_project_name = os.environ.get('WB_PROJECT', 'GenSLM-Megatron-DS')
     setup_wandb()
     return model
 
