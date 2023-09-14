@@ -82,7 +82,7 @@ condaThetaGPU230111() {
   module load conda/2023-01-11 ; conda activate base
 #   conda activate \
 #     /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2023-01-11-deepspeed
-  VENV_DIR="${PARENT}/venvs/thetaGPU/2023-01-11-deepspeed"
+  VENV_DIR="${PARENT}/venvs/thetaGPU/2023-01-11"
   if [[ -d "${VENV_DIR}" ]] ; then
     echo "Found venv at: ${VENV_DIR}"
     # shellcheck source='../venvs/thetaGPU/2023-01-10/bin/activate'
@@ -167,7 +167,8 @@ setupThetaGPU() {
     HOSTFILE="${COBALT_NODEFILE}"
     # -- Python / Conda setup -------------------------------------------------
     thetagpuMPI
-    condaThetaGPU230426
+    # condaThetaGPU230426
+    condaThetaGPU230111
   else
     echo "Unexpected hostname: $(hostname)"
   fi
