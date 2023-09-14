@@ -27,14 +27,22 @@ function setupVenv() {
 function setupALCF() {
   if [[ "$(hostname)"==thetagpu* ]]; then
     export MACHINE="ThetaGPU"
-    export VENV_DIR="${HERE}/venvs/thetaGPU/2023-01-11"
-    HOSTFILE="${COBALT_NODEFILE}"
-    module load conda/2023-01-11; conda activate base
+    export HOSTFILE="${COBALT_NODEFILE}"
+    export DATE_STR="2023-01-11"
+    export CONDA_MODULE="${DATE_STR}"
+    export VENV_DIR="${HERE}/venvs/thetaGPU/${DATE_STR}"
+    # [ "$CONDA_EXE" ] && echo "Using: ${CONDA_EXE}" || module load conda/2023-01-11
+    # [ "$VIRTUAL_ENV" ] && echo "Using ${VIRTUAL_ENV}" || setupVenv  # source "${VENV_DIR:-$(setupVenv)}"
+    # export VENV_DIR="${HERE}/venvs/thetaGPU/2023-01-11"
+    # HOSTFILE="${COBALT_NODEFILE}"
+    # module load conda/2023-01-11; conda activate base
   elif [[ "$(hostname)"==x3* ]]; then
     export MACHINE="Polaris"
-    HOSTFILE="${PBS_NODEFILE}"
-    export VENV_DIR="${HERE}/venvs/thetaGPU/2023-01-10"
-    module load conda/2023-01-10-unstable; conda activate base
+    export HOSTFILE="${PBS_NODEFILE}"
+    export DATE_STR="2023-01-10"
+    export CONDA_MODULE="${DATE_STR}-unstable"
+    export VENV_DIR="${HERE}/venvs/thetaGPU/${DATE_STR}"
+    # module load conda/2023-01-10-unstable; conda activate base
   else
     HOSTFILE="${HERE}/hostfile"
     echo "$(hostname)" >> "$HOSTFILE"
@@ -78,8 +86,14 @@ setupALCF
 NHOSTS=$(wc -l < "${HOSTFILE}");
 [ "$(which nvidia-smi)" ] && NGPU_PER_HOST="$(nvidia-smi -L | wc -l)" || NGPU_PER_HOST=0
 [ "$NGPU_PER_HOST" -ge 0 ] && NGPUS="$((${NHOSTS}*${NGPU_PER_HOST}))" || NGPUS=0
+[ "$CONDA_EXE" ] && echo "Using: ${CONDA_EXE}" || module load "${CONDA_MODULE:-conda}"
+[ "$VIRTUAL_ENV" ] && echo "Using ${VIRTUAL_ENV}" || setupVenv  "${VENV_DIR:-venv}" # source "${VENV_DIR:-$(setupVenv)}"
+# setupVenv "${VENV_DIR}"
 
-setupVenv "${VENV_DIR}"
+echo "++++++++++++++++++++++++++++++++++"
+echo "Using Python 🐍: $(which python3)"
+echo "++++++++++++++++++++++++++++++++++"
+
 python3 -m pip install --upgrade pip setuptools wheel --require-virtualenv
 
 echo "========================================"
