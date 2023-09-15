@@ -30,31 +30,9 @@ echo "ALCF_DIR: ${ALCF_DIR}"
 echo "PARENT: ${PARENT}"
 echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
 
-if [[ $(hostname) == theta* || $(hostname) == x3* ]]; then
-  if [[ $(hostname) == theta* ]]; then
-    echo "Setting up ThetaGPU from $(hostname)"
-    HOSTFILE="${COBALT_NODEFILE}"
-  elif [[ $(hostname) == x3* ]]; then
-    echo "Setting up Polaris from $(hostname)"
-    HOSTFILE="${PBS_NODEFILE}"
-  else
-    echo "Unknown hostname $(hostname)"
-    # exit 1
-  fi
-  NHOSTS=$(wc -l < "${HOSTFILE}")
-  NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
-  NGPUS="$(( NHOSTS * NGPU_PER_HOST ))"
-elif [[ $(hostname) == nid*  || $(hostname) == login* ]]; then
-  echo "Setting up from Perlmutter on $(hostname)"
-  [ "$SLURM_NNODES" ] && NHOSTS="$SLURM_NNODES" || NHOSTS=1
-  NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
-  # NHOSTS="$SLURM_NNODES"
-  # NGPU_PER_HOST="$SLURM_GPUS_ON_NODE"
-  NGPUS="$(( NHOSTS * NGPU_PER_HOST ))"
-else
-  echo "Unexpected hostname $(hostname)"
-  # exit 1
-fi
+
+HOSTNAME=$(hostname)
+sourceFile "${ALCF_DIR}/setup.sh"
 
 WORLD_SIZE="${NGPUS}"
 PARALLEL_SIZE="${WORLD_SIZE}"
@@ -93,48 +71,48 @@ export SP_TYPE=${SP_TYPE:-"megatron"} # set ds or megatron
 # Deal with Sequence Parallel implementation ---------------------------------------
 # ----------------------------------------------------------------------------------
 if [[ ${SP_TYPE} == "ds" ]]; then
-  # NOTE: --------------------------------------------------------------------
-  # SP_TYPE="ds" has NO effect, essentially running with no Seq. parallelism
-  # --------------------------------------------------------------------------
-  if [[ "$MPSIZE" == "${WORLD_SIZE}" ]]; then
-    # hacky workaround to try and use SP_TYPE="ds" + MPSIZE="${WORLD_SIZE}"
-    # ------------------------------------------------------------------------
-    # Update [2023-08-22]: Chengming mentioned that this is an internal issue
-    # and will NOT work currently
-    # ------------------------------------------------------------------------
-    echo "Caught MPSIZE: $MPSIZE from env. Setting SPSIZE=1"
-    SPSIZE=1
-    MPSIZE="${MPSIZE}"
-  else
-    echo "Didn't catch MPSIZE from env. Setting SPSIZE=${WORLD_SIZE}, MPSIZE=1"
-    MPSIZE=1
-    SPSIZE="${WORLD_SIZE}"
-  fi
-  if [ -z "${ZERO_STAGE}" ]; then
-    echo "ZERO_STAGE not set, setting to 3 for ${SP_TYPE}"
-    ZERO_STAGE=3
-  else
-    echo "Caught ZERO_STAGE=${ZERO_STAGE} with ${SP_TYPE}"
-  fi
-  export SPSIZE="${SPSIZE:-$WORLD_SIZE}"
-  export MPSIZE="${MPSIZE:-1}"
-  export USE_SEQUENCE_PARALLEL=0
-  export ZERO_STAGE="${ZERO_STAGE}"
+    # NOTE: --------------------------------------------------------------------
+    # SP_TYPE="ds" has NO effect, essentially running with no Seq. parallelism
+    # --------------------------------------------------------------------------
+    if [[ "$MPSIZE" == "${WORLD_SIZE}" ]]; then
+        # hacky workaround to try and use SP_TYPE="ds" + MPSIZE="${WORLD_SIZE}"
+        # ------------------------------------------------------------------------
+        # Update [2023-08-22]: Chengming mentioned that this is an internal issue
+        # and will NOT work currently
+        # ------------------------------------------------------------------------
+        echo "Caught MPSIZE: $MPSIZE from env. Setting SPSIZE=1"
+        SPSIZE=1
+        MPSIZE="${MPSIZE}"
+    else
+        echo "Didn't catch MPSIZE from env. Setting SPSIZE=${WORLD_SIZE}, MPSIZE=1"
+        MPSIZE=1
+        SPSIZE="${WORLD_SIZE}"
+    fi
+    if [ -z "${ZERO_STAGE}" ]; then
+        echo "ZERO_STAGE not set, setting to 3 for ${SP_TYPE}"
+        ZERO_STAGE=3
+    else
+        echo "Caught ZERO_STAGE=${ZERO_STAGE} with ${SP_TYPE}"
+    fi
+    export SPSIZE="${SPSIZE:-$WORLD_SIZE}"
+    export MPSIZE="${MPSIZE:-1}"
+    export USE_SEQUENCE_PARALLEL=0
+    export ZERO_STAGE="${ZERO_STAGE}"
 elif [[ ${SP_TYPE} == "megatron" ]]; then
-  # NOTE: --------------------------------------------------------------------------
-  # SP_TYPE="megatron" will use Megatron's Seq. || implementation with ZERO_STAGE=0
-  # --------------------------------------------------------------------------------
-  [ "$SPSIZE" ] && echo "Caught SPSIZE: ${SPSIZE} from env" || SPSIZE=1
-  [ "$MPSIZE" ] && echo "Caught MPSIZE: ${MPSIZE} from env" || MPSIZE="${WORLD_SIZE}"
-  [ "$ZERO_STAGE" ] && echo "Caught ${ZERO_STAGE} from env" || ZERO_STAGE=0
-  [ "$USE_SEQUENCE_PARALLEL" ] && echo "Caught USE_SP: $USE_SEQUENCE_PARALLEL from env" || USE_SEQUENCE_PARALLEL=1
-  export SPSIZE="${SPSIZE}"
-  export MPSIZE="${MPSIZE}"
-  export ZERO_STAGE="${ZERO_STAGE}"
-  export USE_SEQUENCE_PARALLEL="${USE_SEQUENCE_PARALLEL:-1}"
+    # NOTE: --------------------------------------------------------------------------
+    # SP_TYPE="megatron" will use Megatron's Seq. || implementation with ZERO_STAGE=0
+    # --------------------------------------------------------------------------------
+    [ "$SPSIZE" ] && echo "Caught SPSIZE: ${SPSIZE} from env" || SPSIZE=1
+    [ "$MPSIZE" ] && echo "Caught MPSIZE: ${MPSIZE} from env" || MPSIZE="${WORLD_SIZE}"
+    [ "$ZERO_STAGE" ] && echo "Caught ${ZERO_STAGE} from env" || ZERO_STAGE=0
+    [ "$USE_SEQUENCE_PARALLEL" ] && echo "Caught USE_SP: $USE_SEQUENCE_PARALLEL from env" || USE_SEQUENCE_PARALLEL=1
+    export SPSIZE="${SPSIZE}"
+    export MPSIZE="${MPSIZE}"
+    export ZERO_STAGE="${ZERO_STAGE}"
+    export USE_SEQUENCE_PARALLEL="${USE_SEQUENCE_PARALLEL:-1}"
 else
-  echo "Unexpected SP_TYPE: ${SP_TYPE}"
-  # exit 1
+    echo "Unexpected SP_TYPE: ${SP_TYPE}"
+    # exit 1
 fi
 # ------------------------------------------------------------------------
 
@@ -158,6 +136,11 @@ echo "GB = NGPUS * MB * GAS = ${NGPUS} * ${MICRO_BATCH} * ${GRADIENT_ACCUMULATIO
 
 GLOBAL_BATCH=$(( GLOBAL_BATCH / MPSIZE / PPSIZE / SPSIZE))
 echo "GB = (NGPUS * MB * GAS) / (MP * PP * SP) = (${NGPUS} * ${MICRO_BATCH} * ${GRADIENT_ACCUMULATION_STEPS}) / (${MPSIZE} * ${PPSIZE} * ${SPSIZE}) = ${GLOBAL_BATCH}"
+
+if [[ "${GLOBAL_BATCH}" == 0 ]]; then
+  GLOBAL_BATCH=1
+fi
+# [ "${GLOBAL_BATCH:-${GLOBAL_BATCH}}" == 0 ] && GLOBAL_BATCH=1 || echo "GLOBAL_BATCH: ${GLOBAL_BATCH}"
 export GLOBAL_BATCH="$GLOBAL_BATCH"
 
 echo "--------------------------------"
@@ -167,9 +150,16 @@ echo "--------------------------------"
 # ┏━━━━━━━━━━━━┓
 # ┃ Data paths ┃
 # ┗━━━━━━━━━━━━┛
+[ "$(hostname)==login*" ] && MEGATRON_DIR="/global/homes/f/foremans/m3957/foremans/projects/saforem2/Megatron-DeepSpeed"
+[ "$(hostname)==nid*" ] && MEGATRON_DIR="/global/homes/f/foremans/m3957/foremans/projects/saforem2/Megatron-DeepSpeed"
+[ "$(hostname)==theta*" ] && MEGATRON_DIR="/lus/grand/projects/datascience/foremans/locations/thetaGPU/projects/saforem2/Megatron-DS-Benchmarking"
+[ "$(hostname)==x3*" ] && MEGATRON_DIR="/lus/grand/projects/datascience/foremans/locations/thetaGPU/projects/saforem2/Megatron-DS-Benchmarking"
+
 # DATA_PATH=/lus/grand/projects/datascience/vsastry/genslm_subsample_200k_sequence_document/genslm_subsample_200k_sequence_document
 # MEGATRON_DIR=$(FindMegatron)
-MEGATRON_DIR="/lus/grand/projects/datascience/foremans/locations/thetaGPU/projects/saforem2/Megatron-DS-Benchmarking"
+# MEGATRON_DIR="/lus/grand/projects/datascience/foremans/locations/thetaGPU/projects/saforem2/Megatron-DS-Benchmarking"
+# [ "${MEGATRON_DIR}" ] || MEGATRON_DIR="~/m3957/foremans/projects/saforem2/Megatron-DS-Benchmarking/"
+# MEGATRON_DIR="/global/homes/f/foremans/m3957/foremans/projects/saforem2/Megatron-DeepSpeed"
 DATA_DIR="${MEGATRON_DIR}/dataset"
 DATA_PATH="${DATA_DIR}/BookCorpusDataset_text_document"
 VOCAB_FILE="${DATA_DIR}/gpt2-vocab.json"
@@ -191,9 +181,23 @@ RUN_STR="mp${MPSIZE}_pp${PPSIZE}_sp${SPSIZE}_${RUN_STR}"
 RUN_STR="z${ZERO_STAGE}_seqlen${SEQ_LEN}_${RUN_STR}"
 RUN_STR="${MODEL_SIZE}_${RUN_STR}"
 
-if [[ $USE_FLASH_ATTN == 1 ]] ; then
-  RUN_STR="flashAttn_${RUN_STR}"
+if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
+    echo "Not using Flash Attention!!"
+else
+    # Flash Attention 1
+    [ "${USE_FLASH_ATTN}" ] && RUN_STR="flashAttn_v1_${RUN_STR}"
+    [ "${USE_FLASH_ATTN1}" ] && RUN_STR="flashAttn_v1_${RUN_STR}"
+    [ "${USE_FLASH_ATTN_V1}" ] && RUN_STR="flashAttn_v1_${RUN_STR}"
+
+
+    # Flash Attention 2
+    [ "${USE_FLASH_ATTN2}" ] && RUN_STR="flashAttn_v2_${RUN_STR}"
+    [ "${USE_FLASH_ATTN_V2}" ] && RUN_STR="flashAttn_v2_${RUN_STR}"
+
+    # Triton + Flash Attn
+    [ "${USE_FLASH_ATTN_TRITON}" ] && RUN_STR="flashAttn_triton_${RUN_STR}"
 fi
+
 if [[ $DDP_IMPL == 'FSDP' ]]; then
   RUN_STR="FSDP_${RUN_STR}"
 fi
@@ -556,26 +560,40 @@ else
   )
 fi
 
-# Flash Attention 1
-[ "${USE_FLASH_ATTN}" ] && gpt_args+=("--use-flash-attn-v1")
-[ "${USE_FLASH_ATTN1}" ] && gpt_args+=("--use-flash-attn-v1")
-[ "${USE_FLASH_ATTN_V1}" ] && gpt_args+=("--use-flash-attn-v1")
+# # Flash Attention 1
+# [ "${USE_FLASH_ATTN}" ] && gpt_args+=("--use-flash-attn-v1")
+# [ "${USE_FLASH_ATTN1}" ] && gpt_args+=("--use-flash-attn-v1")
+# [ "${USE_FLASH_ATTN_V1}" ] && gpt_args+=("--use-flash-attn-v1")
+#
+#
+# # Flash Attention 2
+# [ "${USE_FLASH_ATTN2}" ] && gpt_args+=("--use-flash-attn2")
+# [ "${USE_FLASH_ATTN_V2}" ] && gpt_args+=("--use-flash-attn-v2")
+#
+#
+# # Triton + Flash Attn
+# [ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
 
-
-# Flash Attention 2
-[ "${USE_FLASH_ATTN2}" ] && gpt_args+=("--use-flash-attn2")
-[ "${USE_FLASH_ATTN_V2}" ] && gpt_args+=("--use-flash-attn-v2")
-
-
-# Triton + Flash Attn
-[ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
-
-
-if [[ "$USE_FLASH_ATTN_TRITON" == 1 ]] ; then
-  gpt_args+=(
-    "--use-flash-attn-triton"
-  )
+if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
+    echo "Not using Flash Attention!"
+else
+    # Flash Attention v1
+    [ "${USE_FLASH_ATTN}" ] && gpt_args+=("--use-flash-attn-v1")
+    [ "${USE_FLASH_ATTN1}" ] && gpt_args+=("--use-flash-attn-v1")
+    [ "${USE_FLASH_ATTN_V1}" ] && gpt_args+=("--use-flash-attn-v1")
+    # Flash Attention 2
+    [ "${USE_FLASH_ATTN2}" ] && gpt_args+=("--use-flash-attn-v2")
+    [ "${USE_FLASH_ATTN_V2}" ] && gpt_args+=("--use-flash-attn-v2")
+    # Triton + Flash Attn
+    [ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
 fi
+
+
+# if [[ "$USE_FLASH_ATTN_TRITON" == 1 ]] ; then
+#   gpt_args+=(
+#     "--use-flash-attn-triton"
+#   )
+# fi
 
 if [[ "$USE_SEQUENCE_PARALLEL" == 1 ]]; then
   gpt_args+=(
