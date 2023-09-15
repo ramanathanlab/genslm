@@ -1,158 +1,442 @@
-# GenSLMs: Genome-scale language models reveal SARS-CoV-2 evolutionary dynamics
+# Loooooooong Sequence Lengths
+Sam Foreman
+2023-09-15
 
-<img width="1220" alt="genslm_header" src="https://user-images.githubusercontent.com/59709404/201488225-25d7eefb-29c9-4780-a1c1-d9820abcbdc3.png">
+<div id="fig-ds4sci" style="text-align:center;">
 
-## Preprint
-Available here: https://www.biorxiv.org/content/10.1101/2022.10.10.511571v2
+<!-- ![](https://raw.githubusercontent.com/ramanathanlab/genslm/foremans/ds4sci/examples/long-sequences/assets/deepspeed4science1.svg) -->
+<!-- [![](../assets/deepspeed4science1.svg)]{.stretch} -->
 
-## Table of Contents
-1. [Installation](#installation)
-2. [Usage](#usage)
-3. [Contributing](#contributing)
-4. [License](#license)
-5. [Citations](#citations)
+<span class="stretch">![](../assets/deepspeed4science.light.svg)</span>
+
+Figure 1: This work was done as part of the DeepSpeed4Science project,
+in collaboration with Microsoft.
+
+</div>
+
+The new
+[Megatron-DeepSpeed](https://github.com/microsoft/Megatron-DeepSpeed)
+release contains a variety of improvements / optimizations to enable
+pre-training Transformer based architectures with significantly longer
+sequences than was previously possible.
+
+<!-- > **Note**<br> -->
+<!-- > Additional details can be found in the -->
+<!-- > [📁 `DeepSpeed4Science`](https://github.com/microsoft/Megatron-DeepSpeed/examples_deepspeed/deepspeed4science/megatron_long_seq_support/README.md) -->
+<!-- > folder. -->
+
+<div>
+
+> **Additional Details**
+>
+> Additional details can be found in the [📁
+> `DeepSpeed4Science`](https://github.com/microsoft/Megatron-DeepSpeed/examples_deepspeed/deepspeed4science/megatron_long_seq_support/README.md)
+> folder.
+
+</div>
+
+## [DeepSpeed4Science](https://github.com/microsoft/Megatron-DeepSpeed/examples_deepspeed/deepspeed4science/megatron_long_seq_support/README.md) (09/2023)
+
+### New Features
+
+- Enabled Megatron-LM’s sequence parallel.
+
+- Enabled rotary positional embedding.
+
+- Enabled FlashAttention v1 and v2.
+
+- Enabled new fused kernels from NVIDIA.
+
+### New optimizations
+
+- Enabled attention map memory optimization, where we first generated
+  attention mask on CPU memory and then moved it into GPU memory to
+  avoid out-of-memory errors when training with very large sequence
+  lengths.
+
+- Position embedding partitioning, where we split weights of position
+  encoding across all GPUs when enabling sequence parallel to further
+  reduce the memory footprint.
+
+## Initial Results
+
+<!-- ::: {.callout-warning title="PRE-RELEASE" collapse="false" style="width: 100%;"} -->
+<!---->
+<!-- I've kept in the (executable) code blocks for the time being (just to show how -->
+<!-- I'm generating the bar plots in [@fig-seq-len]) but these can be ommitted in -->
+<!-- the actual README -->
+<!---->
+<!-- ::: -->
+<details>
+<summary>Imports + Setup</summary>
+
+``` python
+%matplotlib inline
+import matplotlib_inline
+import os
+import numpy as np
+import datetime
+from typing import Tuple
+import matplotlib.pyplot as plt
+from pathlib import Path
+# NOTE:
+# - [Toolbox](https://github.com/saforem2/toolbox)
+from toolbox import set_plot_style
+import seaborn as sns
+from opinionated import STYLES
+import seaborn as sns
+
+sns.set_context('talk')
+set_plot_style()
+matplotlib_inline.backend_inline.set_matplotlib_formats('svg')
+
+plt.style.use('default')
+set_plot_style()
+plt.style.use(STYLES['opinionated_min'])
+plt.rcParams['ytick.labelsize'] = 14.0
+plt.rcParams['xtick.labelsize'] = 14.0
+plt.rcParams['grid.alpha'] = 0.4
+
+grid_color = plt.rcParams['grid.color']
+
+def save_figure(
+        fname: str,
+        outdir: os.PathLike,
+):
+    pngdir = Path(outdir).joinpath('pngs')
+    svgdir = Path(outdir).joinpath('svgs')
+    pngdir.mkdir(exist_ok=True, parents=True)
+    svgdir.mkdir(exist_ok=True, parents=True)
+    pngfile = pngdir.joinpath(f'{fname}.png')
+    svgfile = svgdir.joinpath(f'{fname}.svg')
+    _ = plt.savefig(pngfile, dpi=400, bbox_inches='tight')
+    _ = plt.savefig(svgfile, dpi=400, bbox_inches='tight')
+```
+
+</details>
+<details>
+<summary>Data</summary>
+
+``` python
+gpus = ('32', '64', '128')
+
+colors = {
+    'Old Megatron-DS': '#FF5252',
+    'Megatron-LM': '#76b900',
+    'New Megatron-DS':  '#1A8FFF',
+}
+
+data = {
+    '25B': {
+        'Old Megatron-DS': np.array([28, 32, 32]),
+        'Megatron-LM': np.array([14, 46, 52]),
+        'New Megatron-DS': np.array([128, 384, 448]),
+    },
+    '33B': {
+        'Old Megatron-DS': np.array([36, 42, 42]),
+        'Megatron-LM': np.array([26, 48, 52]),
+        'New Megatron-DS': np.array([192, 448, 512]),
+    }
+}
+```
+
+</details>
+
+<div id="fig-seq-len" style="background-color:none;">
+
+<details>
+<summary>Make the plots</summary>
+
+``` python
+x = np.arange(len(gpus))
+width = 0.25
+multiplier = 0
+
+outdir = Path(os.getcwd()).joinpath('assets')
+outdir.mkdir(exist_ok=True, parents=True)
+
+improvement = {}
+for idx, (model_size, d) in enumerate(data.items()):
+    multiplier = 0
+    figure, axes = plt.subplots(figsize=(7.5, 4))
+    fig = plt.gcf()
+    ax = plt.gca()
+    for label, value in d.items():
+        offset = width * multiplier
+        rects = ax.barh(
+          x + offset,
+          value,
+          width,
+          label=label,
+          color=colors[label],
+          alpha=0.8
+        )
+        ax.bar_label(
+          rects,
+          padding=3,
+          color=colors[label],
+          family='monospace',
+          weight='bold'
+        )
+        multiplier += 1
+    ax.set_ylabel(
+        'GPUs',
+        fontsize=18,
+        family='sans-serif',
+        loc='center',
+    )
+    ax.set_yticks(x + width, gpus)
+    plt.figtext(
+        0.005, 0.93, f"{model_size}", fontsize=24, fontweight='bold', ha='left'
+    )
+    ax.set_xlabel(
+        'Sequence Length (k)', fontsize=18, loc='center'
+    )
+    ax.legend(
+        bbox_to_anchor=(0.005, 1.04, 0.99, .098),
+        alignment='center',
+        edgecolor="#83838320",
+        frameon=True,
+        ncols=3,
+        fontsize=13,
+        mode="expand",
+        borderaxespad=0.01
+    )
+    save_figure(fname=f'{model_size}', outdir=outdir)
+    _ = plt.show()
+```
+
+</details>
+
+![GPT-`25B` Model](dsblog_files/figure-commonmark/cell-4-output-1.svg)
+
+![GPT-`33B` Model](dsblog_files/figure-commonmark/cell-4-output-2.svg)
+
+Figure 2: Pre-training with long sequence support across different model
+sizes and numbers of GPUs. In each case, the `new` (current)
+implementation **significantly** outperforms both NVIDIA/Megatron-LM as
+well as our previous implementation.
+
+</div>
+
+<div id="fig-table">
+
+| Sequence Length |     Old Megatron-DeepSpeed (TFLOPS)      |      New Megatron-DeepSpeed (TFLOPS)      |
+|:---------------:|:----------------------------------------:|:-----------------------------------------:|
+|       2k        | <span style="text-weight:600;">25</span> | <span style="text-weight:600;">68</span>  |
+|       4k        | <span style="text-weight:600;">28</span> | <span style="text-weight:600;">80</span>  |
+|       8k        |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">86</span>  |
+|       16k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">92</span>  |
+|       32k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">100</span> |
+|       64k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">106</span> |
+|      128k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">119</span> |
+|      256k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">94</span>  |
+
+Figure 3: The following experiments are performed on 4 NVIDIA DGX
+A100-40GB nodes, all using `TPSIZE=32`[^1], connected through 8 HDR
+InfiniBand (200Gb/s per HDR).
+
+</div>
 
 ## Installation
 
-To install `genslm` on most systems:
-```bash
-pip install git+https://github.com/ramanathanlab/genslm
+### Using [`install.sh`](https://github.com/ramanathanlab/genslm/blob/foremans/ds4sci/examples/long-sequences/install.sh)
+
+> **Important**<br> To install, simply:
+>
+> ``` bash
+> git clone https://github.com/ramanthanlab/GenSLM/
+> cd GenSLM/examples/long-sequences/
+> ./install.sh
+> ```
+>
+> Explicitly,
+> [`./install.sh`](https://github.com/ramanathanlab/genslm/blob/foremans/ds4sci/examples/long-sequences/install.sh)
+> will:
+>
+> 1.  **Automatically** create a virtual environment *on top of* the
+>     latest `conda` module
+> 2.  Install (+ update[^2]) / build all the required
+>     [dependencies](#dependencies) into this virtual environment
+
+### Step-by-Step
+
+For completeness, we describe below the steps for installing and
+building each of the dependencies:
+
+1.  Clone GitHub repo:
+
+    ``` bash
+    git clone https://github.com/ramanthanlab/GenSLM
+    ```
+
+2.  Load `conda` module:
+
+    - ThetaGPU:
+
+      ``` bash
+      # ThetaGPU:
+      export MACHINE="ThetaGPU"
+      export CONDA_DATE="2023-01-10"
+      module load conda/2023-01-11
+      conda activate base
+      ```
+
+    - Polaris:
+
+      ``` bash
+      # Polaris:
+      export MACHINE="Polaris"
+      export CONDA_DATE="2023-01-10"
+      module load conda/2023-01-10-unstable
+      conda activate base
+      ```
+
+3.  Setup Virtual Environment:
+
+    ``` bash
+    # create a new virtual environment
+    cd Megatron-DeepSpeed
+    python3 -m venv "venvs/${MACHINE}/${CONDA_DATE}" --system-site-packages
+    source "venvs/${MACHINE}/${CONDA_DATE}/bin/activate"
+    ```
+
+#### Dependencies
+
+1.  [ `saforem2/ezpz`](https://github.com/saforem2/ezpz)
+
+    ``` bash
+    pip install -e "git+https://github.com/saforem2/ezpz.git#egg=ezpz"
+    ```
+
+2.  [ `Microsoft/DeepSpeed`](https://github.com/microsoft/DeepSpeed)
+
+    ``` bash
+    git clone https://github.com/microsoft/DeepSpeed.git
+    cd DeepSpeed
+    python3 -m pip install -e .
+    ```
+
+3.  [
+    `Microsoft/Megatron-DeepSpeed`](https://github.com/microsoft/Megatron-DeepSpeed):
+
+    ``` bash
+    git clone https://github.com/microsoft/Megatron-DeepSpeed.git
+    ```
+
+4.  [ `NVIDIA/apex`](https://github.com/NVIDIA/apex)
+
+    ``` bash
+    git clone https://github.com/NVIDIA/apex
+    cd ../apex/
+    pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" -e ./
+    ```
+
+5.  [ `pybind/PyBind11`](https://github.com/pybind/pybind11)
+
+    ``` bash
+    pip install pybind11
+    ```
+
+6.  [
+    `Dao-AILab/flash-attention`](https://github.com/Dao-AILab/flash-attention):
+
+    <div>
+
+    > **Flash Attention**
+    >
+    > - The new release supports three different implementations of
+    >   FlashAttention: (`v1.0.4`, `v2.x`, `triton`)
+    > - FlashAttention `v2.x` may have numerical instability issues. For
+    >   the best performance, we recommend using FlashAttention + Triton
+
+    </div>
+
+    - `v1.0.4`:
+
+      ``` bash
+      python3 -m pip install flash-attn==1.0.4
+      ```
+
+    - `v2.x`:
+
+      ``` bash
+      git clone https://github.com/Dao-AILab/flash-attention
+      cd flash-attention
+      python3 setup.py install
+      ```
+
+    - `openai/triton`:
+
+      ``` bash
+      git clone -b legacy-backend https://github.com/openai/triton
+      cd triton/python
+      python3 -m pip install cmake
+      python3 -m pip install .
+      ```
+
+### Running
+
+The [`ALCF/`](./ALCF/) directory contains shell scripts for setting up
+the environment and specifying the options to be used when launching.
+
+Various options can be specified dynamically at runtime by setting them
+in your environment, e.g.:
+
+``` bash
+MODEL_SIZE_KEY="GPT25B" SEQ_LEN=128000 USE_FLASH_ATTN=1 MICRO_BATCH=1 GAS=1 SP_TYPE="megatron" ZERO_STAGE=1 ./ALCF/train-gpt3.sh
 ```
 
-GenSLMs were trained on the [Polaris](https://www.alcf.anl.gov/polaris) and [Perlmutter](https://perlmutter.carrd.co/) supercomputers. For installation on these systems, please see [`INSTALL.md`](https://github.com/ramanathanlab/genslm/blob/main/docs/INSTALL.md).
+Explicitly:
 
-## Usage
-> :warning: **Model weights will be unavailable May 5, 2023 to May 12, 2023**
+- [`ALCF/train-gpt3.sh`](./ALCF/train-gpt3.sh): **Main entry point for
+  training**
+  - This script will **automatically** source the rest of the required
+    [`ALCF/*.sh`](./ALCF/) scripts below
+- [`ALCF/models.sh`](./ALCF/models.sh): Contains some example model
+  architectures for GPT3-style models
+- [`ALCF/args.sh`](./ALCF/args.sh): Logic for parsing / setting up
+  runtime options for Megatron and DeepSpeed
+- [`ALCF/setup.sh`](./ALCF/args.sh): Locate and activate virtual
+  environment to be used, ensure MPI variables are set properly
+- [`ALCF/launch.sh`](./ALCF/launch.sh): Identify available resources and
+  build the command to be executed
+  - i.e. figure out how many: `{nodes, GPUs per node, GPUs total}`, to
+    pass to `mpi{run,exec}`
+  - then, use this to build
+    `mpiexec <mpiexec-args> python3 pretrain_gpt.py`
 
-> :warning: **Model weights downloaded prior to May 3, 2023 have a small issue in name space. Please redownload models for fix.**
+## ZeRO Offloading
 
-Our pre-trained models and datasets can be downloaded from this [Globus Endpoint](https://app.globus.org/file-manager?origin_id=25918ad0-2a4e-4f37-bcfc-8183b19c3150&origin_path=%2F).
+These newly introduced optimizations, in combination with
+[ZeRO-Offload](https://www.deepspeed.ai/tutorials/zero-offload/) allows
+us to go even further.
 
-Use GenSLMs to compute sequence embeddings for downsteam tasks, generate synthetic sequences, or easily extend them to your own application.
+By employing ZeRO-Offloading, we are able to free up additional memory
+which can be used for *even longer* sequences.
 
-### Compute embeddings [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/embedding.ipynb)
-```python
-import torch
-import numpy as np
-from torch.utils.data import DataLoader
-from genslm import GenSLM, SequenceDataset
+Though work is still ongoing, this is a promising direction that will
+allow us to consider significantly larger genomes than previously
+possible.
 
-# Load model
-model = GenSLM("genslm_25M_patric", model_cache_dir="/content/gdrive/MyDrive")
-model.eval()
+<div id="fig-wandb">
 
-# Select GPU device if it is available, else use CPU
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)
+<div style="padding:0.5rem; border: 1px solid var(--dim-text); border-radius: 0.2rem;">
 
-# Input data is a list of gene sequences
-sequences = [
-    "ATGAAAGTAACCGTTGTTGGAGCAGGTGCAGTTGGTGCAAGTTGCGCAGAATATATTGCA",
-    "ATTAAAGATTTCGCATCTGAAGTTGTTTTGTTAGACATTAAAGAAGGTTATGCCGAAGGT",
-]
+<iframe src="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1" style="border:none;height:1024px;width:100%">
+</iframe>
 
-dataset = SequenceDataset(sequences, model.seq_length, model.tokenizer)
-dataloader = DataLoader(dataset)
+</div>
 
-# Compute averaged-embeddings for each input sequence
-embeddings = []
-with torch.no_grad():
-    for batch in dataloader:
-        for batch in dataloader:
-        outputs = model(
-            batch["input_ids"].to(device),
-            batch["attention_mask"].to(device),
-            output_hidden_states=True,
-        )
-        # outputs.hidden_states shape: (layers, batch_size, sequence_length, hidden_size)
-        # Use the embeddings of the last layer
-        emb = outputs.hidden_states[-1].detach().cpu().numpy()
-        # Compute average over sequence length
-        emb = np.mean(emb, axis=1)
-        embeddings.append(emb)
+Figure 4: Weights & Biases Report
 
-# Concatenate embeddings into an array of shape (num_sequences, hidden_size)
-embeddings = np.concatenate(embeddings)
-embeddings.shape
->>> (2, 512)
-```
+</div>
 
-### Generate synthetic sequences [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ramanathanlab/genslm/blob/main/examples/generate.ipynb)
-```python
-from genslm import GenSLM
+[^1]:
 
-# Load model
-model = GenSLM("genslm_25M_patric", model_cache_dir="/content/gdrive/MyDrive")
-model.eval()
+    TP stands for `tensor-model-parallel-size` parallelism.
 
-# Select GPU device if it is available, else use CPU
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)
+[^2]:
 
-# Prompt the language model with a start codon
-prompt = model.tokenizer.encode("ATG", return_tensors="pt").to(device)
-
-tokens = model.model.generate(
-    prompt,
-    max_length=10,  # Increase this to generate longer sequences
-    min_length=10,
-    do_sample=True,
-    top_k=50,
-    top_p=0.95,
-    num_return_sequences=2,  # Change the number of sequences to generate
-    remove_invalid_values=True,
-    use_cache=True,
-    pad_token_id=model.tokenizer.encode("[PAD]")[0],
-    temperature=1.0,
-)
-
-sequences = model.tokenizer.batch_decode(tokens, skip_special_tokens=True)
-
-for sequence in sequences:
-    print(sequence)
-
->>> ATG GTT ATT TCA TCT GAT TTA CCA ACT
->>> ATG TTC ATT CTT CCG GCA CTT ATC GAA
-```
-
-### Diffusion Model
-A novel hierarchical language model with two levels: the top level uses a diffusion model to capture global context and longer-range interactions across the entire genome sequence; the bottom level uses a transformer for codon-level modeling, guided by the top-level diffusion model. This model enables us to prospectively model SARS-CoV-2 evolution by leveraging its generative capabilities.
-
-Please refer to this codebase for diffusion model usage: https://github.com/da03/hierarchical_diffusion_LM
-
-### High Performance Computing
-
-We have a CLI tool to make it easier to launch training jobs on various HPC platforms. You can specify which system you would like to submit to by specifiying the `-T, --template` option. We currently have templates for `polaris` and `perlmutter`. By default, submitted jobs will output results to the directory where the submit command was run, you can use the `-w` option to specifiy a different `workdir`. Please run `python -m genslm.hpc.submit --help` for more information. See config.py for documentation on the yaml options, and note that config.yaml paths **MUST** be absolute.
-```
-module load conda/2022-07-19
-conda activate genslm
-python -m genslm.hpc.submit -T polaris -a gpu_hack -q debug -t 00:10:00 -n 1 -j test-job-0 -v "-c config.yaml" 
-```
-*Module specific arguments are passed verbatim by the `-v` flag, args must be inside quotes.*
-
-For additional commands, please see [`COMMANDS.md`](https://github.com/ramanathanlab/genslm/blob/main/docs/COMMANDS.md).
-
-## Contributing
-
-Please report **bugs**, **enhancement requests**, or **questions** through the [Issue Tracker](https://github.com/ramanathanlab/genslm/issues).
-
-If you are looking to contribute, please see [`CONTRIBUTING.md`](https://github.com/ramanathanlab/genslm/blob/main/CONTRIBUTING.md).
-
-
-## License
-
-genslm has a MIT license, as seen in the [`LICENSE.md`](https://github.com/ramanathanlab/genslm/blob/main/LICENSE.md) file.
-
-## Citations
-
-If you use our models in your research, please cite this paper:
-
-```bibtex
-@article{zvyagin2022genslms,
-  title={GenSLMs: Genome-scale language models reveal SARS-CoV-2 evolutionary dynamics.},
-  author={Zvyagin, Max T and Brace, Alexander and Hippe, Kyle and Deng, Yuntian and Zhang, Bin and Bohorquez, Cindy Orozco and Clyde, Austin and Kale, Bharat and Perez-Rivera, Danilo and Ma, Heng and others},
-  journal={bioRxiv},
-  year={2022},
-  publisher={Cold Spring Harbor Laboratory}
-}
-```
+    2.  `deepspeed-0.10.3`
+    3.  `pytorch==2.0.0+cu118`
