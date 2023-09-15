@@ -19,6 +19,11 @@ from megatron.training import pretrain
 from megatron.utils import get_ltor_masks_and_position_ids
 from megatron.utils import average_losses_across_data_parallel_group
 from megatron.arguments import core_transformer_config_from_args
+from megatron.utils import (
+    report_memory,
+    throughput_calculator,
+    checkpoint_throughput_calculator
+)
 
 import deepspeed
 from deepspeed.runtime.utils import see_memory_usage
@@ -30,7 +35,7 @@ import torch.nn.functional as F
 
 from ezpz.dist import setup_torch, setup_wandb
 
-setup_torch(
+RANK = setup_torch(
     backend='deepspeed',
     port='5432',
 )
@@ -42,6 +47,16 @@ def model_provider(pre_process=True, post_process=True):
     see_memory_usage(f"Before Building Model", force=True)
     args = get_args()
     config = core_transformer_config_from_args(args)
+    # args = get_args()
+    # timers = get_timers()
+    if RANK == 0:
+        wb_project_name = os.environ.get('WB_PROJECT', 'GenSLM-Megatron-DS')
+        setup_wandb(
+            wb_project_name,
+            config=vars(args)
+        )
+        git_ds_info()
+
     with deepspeed.zero.Init(sequence_data_parallel_group=mpu.get_sequence_data_parallel_group(),
                              remote_device=None if args.remote_device == 'none' else args.remote_device,
                              config_dict_or_path=args.deepspeed_config,
@@ -98,8 +113,6 @@ def model_provider(pre_process=True, post_process=True):
                 post_process=post_process
             )
     see_memory_usage(f"After Building Model", force=True)
-    wb_project_name = os.environ.get('WB_PROJECT', 'GenSLM-Megatron-DS')
-    setup_wandb()
     return model
 
 
@@ -365,11 +378,81 @@ def git_ds_info():
     print(f'**** Git info for Megatron: git_hash={git_hash} git_branch={git_branch} ****')
 
 
+def main():
+    model = pretrain(
+        train_valid_test_datasets_provider,
+        model_provider,
+        ModelType.encoder_or_decoder,
+        forward_step,
+        args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+        data_post_process=data_post_process
+    )
+    import wandb
+    # from megatron.training import get_model
+    if wandb.run is not None:
+        args = get_args()
+        timers = get_timers()
+        # model = get_model(model_provider, ModelType.encoder_or_decoder)
+        elapsed_time = timers('interval-time').elapsed(barrier=True)
+        total_iterations = os.environ.get(
+            "TOTAL_ITERATIONS",
+            (args.train_iters + args.eval_iters)
+        )
+        seq_len = args.seq_length
+        elapsed_time_per_iteration = elapsed_time / total_iterations
+        if model is not None:
+            samples_per_sec, tflops, approx_params_in_billions = throughput_calculator(
+                model,
+                args,
+                elapsed_time,
+                total_iterations,
+            )
+            # Compute throughput.
+            samples_per_sec_per_replica = samples_per_sec / args.data_parallel_size
+            tokens_per_sec = samples_per_sec * seq_len
+            tokens_per_sec_per_replica = tokens_per_sec / args.data_parallel_size
+            sample_consumption_rate = args.consumed_train_samples / elapsed_time
+            token_consumption_rate = args.consumed_train_tokens / elapsed_time
+            # Tensorboard values.
+            tdata = {
+                # 'iteration': iteration,
+                'consumed_train_samples': args.consumed_train_samples,
+                'consumed_train_tokens': args.consumed_train_tokens,
+                # 'learning_rate': learning_rate,
+                # 'batch_size': batch_size,
+                # 'loss_scale': loss_scale,
+                # 'grad_norm': grad_norm,
+            }
+            # for key in loss_dict:
+            #     tdata[f'lm-loss/{key}'] = loss_dict[key]
+
+            tdata = {f'train/{k}': v for k, v in tdata.items()}
+            # if wbrun is not None and wbrun is wandb.run:
+            if wandb.run is not None:
+                wandb.run.log(tdata, commit=False)
+            if wandb.run is not None:
+                tput = {
+                    'throughput/iteration-time': elapsed_time_per_iteration,  # 1000 ms / s
+                    'throughput/samples_per_sec': samples_per_sec,
+                    'throughput/samples_per_sec_per_replica': samples_per_sec_per_replica,
+                    'throughput/tokens_per_sec': tokens_per_sec,
+                    'throughput/tokens_per_sec_per_replica': tokens_per_sec_per_replica,
+                    'throughput/tflops': tflops,
+                    'throughput/approx_params_in_billions': approx_params_in_billions,
+                    'throughput/sample_consumption_rate': sample_consumption_rate,
+                    'throughput/token_consumption_rate': token_consumption_rate,
+                    'throughput/elapsed_ms_per_iteration': elapsed_time_per_iteration,
+                }
+                wandb.run.log(tput)
+
+
+
 if __name__ == "__main__":
-    git_ds_info()
-    pretrain(train_valid_test_datasets_provider,
-             model_provider,
-             ModelType.encoder_or_decoder,
-             forward_step,
-             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
-             data_post_process=data_post_process)
+    # git_ds_info()
+    # pretrain(train_valid_test_datasets_provider,
+    #          model_provider,
+    #          ModelType.encoder_or_decoder,
+    #          forward_step,
+    #          args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+    #          data_post_process=data_post_process)
+    main()
