@@ -17,220 +17,321 @@ HERE=$(WhereAmI)
 ALCF_DIR=$(find "${HERE}" -name "ALCF")
 PARENT=$(dirname "${ALCF_DIR}")
 
-export CUDA_DEVICE_MAX_CONNECTIONS=1
+# export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-thetagpuMPI() {
-  NHOSTS=$(wc -l < "${COBALT_NODEFILE}")
-  NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
-  NGPUS=$((${NHOSTS}*${NGPU_PER_HOST}))
-  NVME_PATH="/raid/scratch/"
-  MPI_COMMAND=$(which mpirun)
-  # export PATH="${CONDA_PREFIX}/bin:${PATH}"
-  MPI_DEFAULTS="\
-    --hostfile ${HOSTFILE} \
-    -x CFLAGS \
-    -x LDFLAGS \
-    -x http_proxy \
-    -x PYTHONUSERBASE \
-    -x https_proxy \
-    -x PATH \
-    -x CUDA_DEVICE_MAX_CONNECTIONS \
-    -x LD_LIBRARY_PATH"
-  MPI_ELASTIC="\
-    -n ${NGPUS} \
-    -npernode ${NGPU_PER_HOST}"
+function setupVenv() {
+    VENV_DIR="$1"
+    # VENV_DIR="${PARENT}/venvs/perlmutter/torch2.0.1/"
+    if [[ -d "${VENV_DIR}" ]]; then
+        echo "Found venv at: ${VENV_DIR}"
+        source "${VENV_DIR}/bin/activate"
+    else
+        echo "Skipping setupVenv() on $(hostname)"
+    fi
 }
 
-polarisMPI() {
-  NHOSTS=$(wc -l < "${PBS_NODEFILE}")
-  NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
-  NGPUS=$((${NHOSTS}*${NGPU_PER_HOST}))
-  MPI_COMMAND=$(which mpiexec)
-  NVME_PATH="/local/scratch/"
-  MPI_DEFAULTS="\
-    --envall \
-    --verbose \
-    --hostfile ${HOSTFILE}"
-  MPI_ELASTIC="\
-    -n ${NGPUS} \
-    --ppn ${NGPU_PER_HOST}"
+function thetagpuMPI() {
+    if [[ $(hostname) == theta* ]]; then
+        export HOSTFILE="${COBALT_NODEFILE}"
+        NHOSTS=$(wc -l < "${COBALT_NODEFILE}")
+        NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
+        NGPUS=$((${NHOSTS}*${NGPU_PER_HOST}))
+        NVME_PATH="/raid/scratch/"
+        MPI_COMMAND=$(which mpirun)
+        # export PATH="${CONDA_PREFIX}/bin:${PATH}"
+        MPI_DEFAULTS=(
+            "--hostfile ${HOSTFILE}"
+            "-x CFLAGS"
+            "-x LDFLAGS"
+            "-x http_proxy"
+            "-x PYTHONUSERBASE"
+            "-x https_proxy"
+            "-x PATH"
+            "-x CUDA_DEVICE_MAX_CONNECTIONS"
+            "-x LD_LIBRARY_PATH"
+        )
+        MPI_DEFAULTS=(
+            "--hostfile ${HOSTFILE}"
+            "-x CFLAGS"
+            "-x LDFLAGS"
+            "-x http_proxy"
+            "-x PYTHONUSERBASE"
+            "-x https_proxy"
+            "-x PATH"
+            "-x CUDA_DEVICE_MAX_CONNECTIONS"
+            "-x LD_LIBRARY_PATH"
+        )
+        MPI_ELASTIC=(
+            "-n ${NGPUS}"
+            "-npernode ${NGPU_PER_HOST}"
+        )
+    else
+        echo "Skipping thetaGPUMPI() on $(hostname)"
+    fi
 }
 
-setupMPI() {
-  if [[ $(hostname) == theta* ]]; then
-    echo "Setting up MPI on ThetaGPU from $(hostname)"
-    thetagpuMPI
-  elif [[ $(hostname) == x* ]]; then
-    echo "Setting up MPI on Polaris from $(hostname)"
-    polarisMPI
-  else
-    echo "Unexpected hostname $(hostname)"
-  fi
+function polarisMPI() {
+    if [[ $(hostname) == x3* ]]; then
+        export HOSTFILE="${PBS_NODEFILE}"
+        export NHOSTS=$(wc -l < "${PBS_NODEFILE}")
+        export NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
+        export NGPUS=$((${NHOSTS}*${NGPU_PER_HOST}))
+        export MPI_COMMAND=$(which mpiexec)
+        export NVME_PATH="/local/scratch/"
+        export MPI_DEFAULTS=(
+            "--envall"
+            "--verbose"
+            "--hostfile ${HOSTFILE}"
+        )
+        export MPI_ELASTIC=(
+            "-n ${NGPUS}"
+            "--ppn ${NGPU_PER_HOST}"
+        )
+    else
+        echo "Skipping polarisMPI() on $(hostname)"
+    fi
 }
 
-condaThetaGPU220701() {
-  module load conda/2022-07-01 ; conda activate base
-  conda activate \
-    /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2022-07-01
-  # if [[ -f "${PARENT}/.venvs/thetaGPU/2022-07-01-deepspeed/bin/activate" ]]; then
-  #   echo "Found virtual environment!"
-  #   source "${PARENT}/.venvs/thetaGPU/2022-07-01-deepspeed/bin/activate"
-  # fi
+function setupMPI() {
+    if [[ $(hostname) == theta* ]]; then
+        echo "Setting up MPI on ThetaGPU from $(hostname)"
+        thetagpuMPI
+    elif [[ $(hostname) == x* ]]; then
+        echo "Setting up MPI on Polaris from $(hostname)"
+        polarisMPI
+    else
+        echo "Skipping setupMPI() on hostname $(hostname)"
+    fi
 }
 
-condaThetaGPU230111() {
-  module load conda/2023-01-11 ; conda activate base
-#   conda activate \
-#     /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2023-01-11-deepspeed
-  VENV_DIR="${PARENT}/venvs/thetaGPU/2023-01-11"
-  if [[ -d "${VENV_DIR}" ]] ; then
-    echo "Found venv at: ${VENV_DIR}"
-    # shellcheck source='../venvs/thetaGPU/2023-01-10/bin/activate'
-    source "${VENV_DIR}/bin/activate"
-  fi
-}
+# condaPolaris230110() {
+#     DATE_STR="2023-01-10"
+#     module load "conda/${DATE_STR}--unstable"
+#     conda activate base
+#     # VENV_DIR="${PARENT}/venvs/polaris/${DATE_STR}"
+#     # setupVenv "${VENV_DIR}"
+#     # echo "Loading: 'module load conda 2023-01-10-unstable ; conda activate base'"
+#     # module load conda/2023-01-10-unstable ; conda activate base
+#     # export CFLAGS="-I${CONDA_PREFIX}/include"
+#     # export LDFLAGS="-L${CONDA_PREFIX}/lib"
+#     # VENV_DIR="${PARENT}/venvs/polaris/2023-01-10/"
+#     # if [[ -d "${VENV_DIR}" ]]; then
+#     #   echo "Found venv at: ${VENV_DIR}"
+#     #   # shellcheck source=../venvs/polaris/2023-01-10/bin/activate
+#     #   source "${VENV_DIR}/bin/activate"
+#     # fi
+# }
+#
+#
+# condaThetaGPU230111() {
+#     DATE_STR="2023-01-11"
+#     module load "conda/${DATE_STR}"
+#     conda activate base
+#     # VENV_DIR="${PARENT}/venvs/thetaGPU/${DATE_STR}"
+#     # setupVenv "${VENV_DIR}"
+# }
+#
+#
+# condaThetaGPU230426() {
+#   module load conda/2023-01-11
+#   conda activate base
+#   conda activate /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2023-04-26
+#   # VENV_DIR="${PARENT}/venvs/thetaGPU/2023-04-26"
+#   # setupVenv "${VENV_DIR}"
+#   # [ "${VIRTUAL_ENV}" ] || setupVenv "${VENV_DIR}"
+#   # thetagpuMPI
+#   # export CFLAGS="-I${CONDA_PREFIX}/include"
+#   # export LDFLAGS="-L${CONDA_PREFIX}/lib"
+# }
+#
 
-condaThetaGPU() {
-  module load conda/2022-07-01 ; conda activate base
-  conda activate \
-    /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2022-07-01
-  echo "USING PYTHON: $(which python3)"
-}
-
-condaThetaGPU_mtanaka() {
-  # module load conda/2023-01-11 ; conda activate base
-  # conda activate \
-  #   /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2023-01-11-deepspeed
-  VENV_DIR="/lus/grand/projects/datascience/mtanaka/dsseq/venv/dsseq"
-  if [[ -d "${VENV_DIR}" ]] ; then
-    echo "Found venv at: ${VENV_DIR}"
-    # shellcheck source='../venvs/thetaGPU/2023-01-10/bin/activate'
-    source "${VENV_DIR}/bin/activate"
-  fi
-}
-
-condaPolaris220908() {
-  echo "Loading: 'module load conda 2022-09-08 ; conda activate base'"
-  module load conda/2022-09-08 ; conda activate base
-  conda activate /lus/grand/projects/datascience/foremans/locations/polaris/miniconda3/envs/2022-09-08-deepspeed
-  export CFLAGS="-I${CONDA_PREFIX}/include"
-  export LDFLAGS="-L${CONDA_PREFIX}/lib"
-  VENV_DIR="${PARENT}/venvs/polaris/2022-09-08"
-  if [[ -d "${VENV_DIR}" ]]; then
-    echo "Found venv at: ${VENV_DIR}"
-    source "${VENV_DIR}/bin/activate"
-  fi
-}
-
-condaPolaris230110() {
-  echo "Loading: 'module load conda 2023-01-10-unstable ; conda activate base'"
-  module load conda/2023-01-10-unstable ; conda activate base
-  export CFLAGS="-I${CONDA_PREFIX}/include"
-  export LDFLAGS="-L${CONDA_PREFIX}/lib"
-  # conda activate \
-  #   /lus/grand/projects/datascience/foremans/locations/polaris/miniconda3/envs/2023-01-10
-  VENV_DIR="${PARENT}/venvs/polaris/2023-01-10/"
-  if [[ -d "${VENV_DIR}" ]]; then
-    echo "Found venv at: ${VENV_DIR}"
-    # shellcheck source=../venvs/polaris/2023-01-10/bin/activate
-    source "${VENV_DIR}/bin/activate"
-  fi
-}
-
-condaThetaGPU230426() {
-  echo "Loading: 'module load conda 2023-01-10-unstable ; conda activate base'"
-  module load conda/2023-01-11
-  conda activate base
-  conda activate /lus/grand/projects/datascience/foremans/locations/thetaGPU/miniconda3/envs/2023-04-26
-  VENV_DIR="${PARENT}/venvs/thetaGPU/2023-04-26/"
-  if [[ -d "${VENV_DIR}" ]]; then
-    echo "Found venv at: ${VENV_DIR}"
-    # shellcheck source=../venvs/thetaGPU/2023-04-26/
-    source "${VENV_DIR}/bin/activate"
-  fi
-  thetagpuMPI
-  export CFLAGS="-I${CONDA_PREFIX}/include"
-  export LDFLAGS="-L${CONDA_PREFIX}/lib"
-}
-
-condaPolaris() {
-  condaPolaris230110
-  echo "USING PYTHON: $(which python3)"
-}
-
+# function setupPythonThetaGPU() {
+#     DATE_STR="$1"
+#     module load "conda/${DATE_STR}"
+#     conda activate base;
+#     [ "${VIRTUAL_ENV}" ] \
+#         && echo "Caught venv at: ${VIRTUAL_ENV}" \
+#         || setupVenv "${PARENT}/venvs/thetaGPU/${DATE_STR}"
+# }
 # ┏━━━━━━━━━━┓
 # ┃ ThetaGPU ┃
 # ┗━━━━━━━━━━┛
-setupThetaGPU() {
-  if [[ $(hostname) == theta* ]]; then
-    export MACHINE="ThetaGPU"
-    HOSTFILE="${COBALT_NODEFILE}"
-    # -- Python / Conda setup -------------------------------------------------
-    thetagpuMPI
-    # condaThetaGPU230426
-    condaThetaGPU230111
-  else
-    echo "Unexpected hostname: $(hostname)"
-  fi
+# function setupThetaGPU() {
+#     if [[ $(hostname) == theta* ]]; then
+#         export MACHINE="ThetaGPU"
+#         HOSTFILE="${COBALT_NODEFILE}"
+#         # -- Python / Conda setup -------------------------------------------------
+#         thetagpuMPI
+#         # condaThetaGPU230426
+#         condaThetaGPU230111
+#     else
+#         echo "Unexpected hostname: $(hostname)"
+#     fi
+# }
+
+# # ┏━━━━━━━━━┓
+# # ┃ Polaris ┃
+# # ┗━━━━━━━━━┛
+# setupPolaris()  {
+#     if [[ $(hostname) == x* ]]; then
+#         export MACHINE="Polaris"
+#         HOSTFILE="${PBS_NODEFILE}"
+#         # -- MPI / Comms Setup ----------------------------------------------------
+#         condaPolaris
+#         polarisMPI
+#         # export IBV_FORK_SAFE=1
+#     else
+#         echo "Unexpected hostname: $(hostname)"
+#     fi
+# }
+#
+
+function condaPolaris() {
+    if [[ "$(hostname)" == x3* ]]; then
+        module load conda/2023-01-10-unstable
+        conda activate base
+        if [[ "${VIRTUAL_ENV}" ]]; then
+            echo "Caught venv at: ${VIRTUAL_ENV}"
+        else
+            setupVenv "${PARENT}/venvs/polaris/2023-01-10"
+        fi
+        echo "USING PYTHON: $(which python3)"
+    else
+        echo "Skipping condaPolaris() on $(hostname)"
+    fi
 }
 
-# ┏━━━━━━━━━┓
-# ┃ Polaris ┃
-# ┗━━━━━━━━━┛
-setupPolaris()  {
-  if [[ $(hostname) == x* ]]; then
-    export MACHINE="Polaris"
-    HOSTFILE="${PBS_NODEFILE}"
-    # -- MPI / Comms Setup ----------------------------------------------------
-    condaPolaris
-    polarisMPI
-    # export IBV_FORK_SAFE=1
-  else
-    echo "Unexpected hostname: $(hostname)"
-  fi
+function condaThetaGPU() {
+    if [[ "$(hostname)" == theta* ]]; then
+        DATE_STR="2023-01-11"
+        module load "conda/${DATE_STR}"
+        conda activate base
+        if [[ "${VIRTUAL_ENV}" ]]; then
+            echo "Caught venv at: ${VIRTUAL_ENV}"
+        else
+            setupVenv "${PARENT}/venvs/thetaGPU/${DATE_STR}"
+        fi
+    else
+        echo "Skipping condaThetaGPU() on $(hostname)"
+    fi
+}
+
+function setupThetaGPU() {
+    if [[ $(hostname) == theta* ]]; then
+        setupMPI
+        condaThetaGPU
+        export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
+        export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
+        export MPI_COMMAND="${MPI_COMMAND[*]:-}"
+    else
+        echo "Skipping setupThetaGPU() on $(hostname)"
+    fi
+}
+
+function setupPolaris() {
+    if [[ $(hostname) == x3* ]]; then
+        setupMPI
+        condaPolaris
+        export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
+        export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
+        export MPI_COMMAND="${MPI_COMMAND[*]:-}"
+    else
+        echo "Skipping setupPolaris() on $(hostname)"
+    fi
+}
+
+function setupALCF() {
+    if [[ $(hostname) == theta* || $(hostname) == x3* ]]; then
+        setupMPI
+        [ "$(hostname)==theta*" ] && condaThetaGPU
+        [ "$(hostname)==x3*" ] && condaPolaris
+        export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
+        export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
+        export MPI_COMMAND="${MPI_COMMAND[*]:-}"
+    else
+        echo "Skipping setupALCF() on $(hostname)"
+    fi
+}
+
+
+# ┏━━━━━━━┓
+# ┃ NERSC ┃
+# ┗━━━━━━━┛
+function setupPerlmutter() {
+    if [[ $(hostname) == login* || $(hostname) == nid* ]]; then
+        module load libfabric cudatoolkit pytorch/2.0.1
+        if [[ $(hostname) == login* ]]; then
+            export MACHINE="NERSC"
+            module load pytorch/2.0.1
+            export NHOSTS=1
+            export NGPU_PER_HOST=1
+            export NGPUS=1
+            # echo "$(hostname)" > "${HERE}/hostfile"
+        elif [[ $(hostname) == nid* ]]; then
+            export NODELIST="${SLURM_JOB_NODELIST:-$(hostname)}"
+            # NHOSTS="${SLURM_JOB_NUM_NODES:-1}"
+            # NGPU_PER_HOST="${SLURM_GPUS_PER_NODE:-$(nvidia-smi -L | wc -l)}"
+            export NODE_RANK=0
+            export CUDA_DEVICE_MAX_CONNECTIONS=1
+            export MACHINE="PERLMUTTER"
+            export NHOSTS="${SLURM_NNODES:-1}"
+            export NGPU_PER_HOST="${SLURM_GPUS_ON_NODE:-$(nvidia-smi -L | wc -l)}"
+            export NGPUS="$(( NHOSTS * NGPU_PER_HOST ))"
+            # export NHOSTS="${NHOSTS}"
+            # export NGPU_PER_HOST="${NGPU_PER_HOST}"
+            # export NGPUS="${NGPUS}"
+        else
+            echo "Unexpected $(hostname) on NERSC"
+        fi
+        # VENV_DIR="${PARENT}/venvs/perlmutter/torch2.0.1/"
+        # [ "${VIRTUAL_ENV}" ] && echo "Caught venv: ${VIRTUAL_ENV}" || setupVenv "${VENV_DIR}"
+        echo "+++++++++++++++++++++++++++++++++++"
+        echo "Using python: $(which python3)"
+        echo "+++++++++++++++++++++++++++++++++++"
+    else
+        echo "Skipping setupPerlmutter() on $(hostname)"
+    fi
+}
+
+function setupMachine() {
+    HOSTNAME="$(hostname)"
+    [ "${HOSTNAME}==theta*" ] && condaThetaGPU
+    [ "${HOSTNAME}==x3*" ] && condaPolaris
+    [ "${HOSTNAME}==login*" ] && setupPerlmutter
+    [ "${HOSTNAME}==nid*" ] && setupPerlmutter
 }
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ SETUP CONDA + MPI ENVIRONMENT @ ALCF ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-setup() {
-  # unset PYTHONUSERBASE
-  export NCCL_DEBUG=warn
-  export WANDB_CACHE_DIR="./cache/wandb"
-  CFLAGS="-I${CONDA_PREFIX}/include/"
-  LDFLAGS="-L${CONDA_PREFIX}/lib/"
-  # export CFLAGS="${CFLAGS}"
-  # export LDFLAGS="${LDFLAGS}"
-  # export PATH="${CONDA_PREFIX}/bin:${PATH}"
-
-  export NVME_PATH="${NVME_PATH}"
-  export MPI_DEFAULTS="${MPI_DEFAULTS}"
-  export MPI_ELASTIC="${MPI_ELASTIC}"
-  export MPI_COMMAND="${MPI_COMMAND}"
-
-  PYTHON_EXECUTABLE="$(which python3)"
-  export PYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}"
-  echo "USING PYTHON: $(which python3)"
-  echo "CFLAGS: ${CFLAGS}"
-  echo "LDFLAGS: ${LDFLAGS}"
-  # source "${DIR}/args.sh"
-
-  if [[ $(hostname) == theta* ]]; then
-    echo "Setting up ThetaGPU from $(hostname)"
-    setupThetaGPU
-  elif [[ $(hostname) == x* ]]; then
-    echo "Setting up Polaris from $(hostname)"
-    setupPolaris
-  else
-    echo "Unexpected hostname $(hostname)"
-  fi
-  export NODE_RANK=0
-  # export RANK=0
-  export NNODES=$NHOSTS
-  export GPUS_PER_NODE=$NGPU_PER_HOST
-  export WORLD_SIZE=$NGPUS
-  export NGPUS="${NGPUS}"
-  export NHOSTS="${NHOSTS}"
-  export NGPU_PER_HOST="${NGPU_PER_HOST}"
-  export CUDA_DEVICE_MAX_CONNECTIONS=1
+function setup() {
+    export NCCL_DEBUG=warn
+    # TORCH_EXTENSIONS_DIR="${HERE}/.cache/torch_extensions"
+    export WANDB_CACHE_DIR="./cache/wandb"
+    setupMachine
+    # export NVME_PATH="${NVME_PATH:/dev/}"
+    # [ "${MPI_DEFAULTS}" ] && export MPI_DEFAULTS="${MPI_DEFAULTS}"
+    # [ "${MPI_ELASTIC}" ] && export MPI_ELASTIC="${MPI_ELASTIC}"
+    # [ "${MPI_COMMAND}" ] && export MPI_COMMAND="${MPI_COMMAND}"
+    # export MPI_COMMAND="${MPI_COMMAND}"
+    PYTHON_EXECUTABLE="$(which python3)"
+    export PYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}"
+    echo "USING PYTHON: $(which python3)"
+    # echo "CFLAGS: ${CFLAGS}"
+    # echo "LDFLAGS: ${LDFLAGS}"
+    export NODE_RANK=0
+    export NNODES=$NHOSTS
+    export GPUS_PER_NODE=$NGPU_PER_HOST
+    export WORLD_SIZE=$NGPUS
+    export NGPUS="${NGPUS}"
+    export NHOSTS="${NHOSTS}"
+    export NGPU_PER_HOST="${NGPU_PER_HOST}"
+    export CUDA_DEVICE_MAX_CONNECTIONS=1
+    echo "########################################"
+    echo "NHOSTS: ${NHOSTS}"
+    echo "NGPU_PER_HOST: ${NGPU_PER_HOST}"
+    echo "NGPUS: (${NHOSTS} * ${NGPU_PER_HOST}) = ${NGPUS}"
+    echo "########################################"
 }
+
+setup
