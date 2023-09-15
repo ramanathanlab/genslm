@@ -1,23 +1,25 @@
 #!/bin/bash -login
 
 function FindMegatron() {
-  MEGATRON_INSTALL=$(python3 -c 'import megatron; print(megatron.__file__)' | tail -1)
-  MEGATRON_DIR=$(dirname $(dirname $(python3 -c 'import megatron; print(megatron.__file__)' | tail -1)))
+    MEGATRON_INSTALL=$(python3 -c 'import megatron; print(megatron.__file__)' | tail -1)
+    MEGATRON_DIR=$(dirname $(dirname $(python3 -c 'import megatron; print(megatron.__file__)' | tail -1)))
 }
 
 function WhereAmI() {
-  python3 -c 'import os; print(os.getcwd())'
+    python3 -c 'import os; print(os.getcwd())'
 }
 
+function join_by { local d=${1-} f=${2-}; if shift 2; then printf %s "$f" "${@/#/$d}"; fi; }
+
 function sourceFile() {
-  FILE="$1"
-  echo "source-ing ${FILE}"
-  if [[ -f "${FILE}" ]]; then
-    # shellcheck source="${FILE}"
-    source "${FILE}"
-  else
-    echo "ERROR: UNABLE TO SOURCE ${FILE}"
-  fi
+    FILE="$1"
+    echo "source-ing ${FILE}"
+    if [[ -f "${FILE}" ]]; then
+        # shellcheck source="${FILE}"
+        source "${FILE}"
+    else
+        echo "ERROR: UNABLE TO SOURCE ${FILE}"
+    fi
 }
 
 
@@ -57,7 +59,7 @@ MODEL_TYPE=${MODEL_TYPE:-gpt}
 # ----------
 # NHOSTS=$(wc -l < "${PBS_NODEFILE}")
 export DDP_IMPL="local"   # FSDP | local | torch
-export USE_FLASH_ATTN=${USE_FLASH_ATTN:-0}  # 1 | 0
+# export USE_FLASH_ATTN=${USE_FLASH_ATTN:-0}  # 1 | 0
 export USE_ACTIVATION_CHECKPOINTING=1  # 1 | 0
 export SEQ_LEN=${SEQ_LEN:-2048}
 export PPSIZE=${PPSIZE:-1}
@@ -138,7 +140,7 @@ GLOBAL_BATCH=$(( GLOBAL_BATCH / MPSIZE / PPSIZE / SPSIZE))
 echo "GB = (NGPUS * MB * GAS) / (MP * PP * SP) = (${NGPUS} * ${MICRO_BATCH} * ${GRADIENT_ACCUMULATION_STEPS}) / (${MPSIZE} * ${PPSIZE} * ${SPSIZE}) = ${GLOBAL_BATCH}"
 
 if [[ "${GLOBAL_BATCH}" == 0 ]]; then
-  GLOBAL_BATCH=1
+    GLOBAL_BATCH=1
 fi
 # [ "${GLOBAL_BATCH:-${GLOBAL_BATCH}}" == 0 ] && GLOBAL_BATCH=1 || echo "GLOBAL_BATCH: ${GLOBAL_BATCH}"
 export GLOBAL_BATCH="$GLOBAL_BATCH"
@@ -181,31 +183,33 @@ RUN_STR="mp${MPSIZE}_pp${PPSIZE}_sp${SPSIZE}_${RUN_STR}"
 RUN_STR="z${ZERO_STAGE}_seqlen${SEQ_LEN}_${RUN_STR}"
 RUN_STR="${MODEL_SIZE}_${RUN_STR}"
 
-if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
-    echo "Not using Flash Attention!!"
-else
+# if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
+#     echo "Not using Flash Attention!!"
+# else
+#
+if [[ "${USE_FLASH_ATTN1}" || "${USE_FLASH_ATTN_V1}" ]]; then
     # Flash Attention 1
     [ "${USE_FLASH_ATTN}" ] && RUN_STR="flashAttn_v1_${RUN_STR}"
     [ "${USE_FLASH_ATTN1}" ] && RUN_STR="flashAttn_v1_${RUN_STR}"
     [ "${USE_FLASH_ATTN_V1}" ] && RUN_STR="flashAttn_v1_${RUN_STR}"
-
-
+elif [[ "${USE_FLASH_ATTN2}" || "${USE_FLASH_ATTN_V2}" ]]; then
     # Flash Attention 2
     [ "${USE_FLASH_ATTN2}" ] && RUN_STR="flashAttn_v2_${RUN_STR}"
     [ "${USE_FLASH_ATTN_V2}" ] && RUN_STR="flashAttn_v2_${RUN_STR}"
-
+elif [[ "${USE_FLASH_ATTN_TRITON}" ]]; then
+    # Triton + Flash Attn
     # Triton + Flash Attn
     [ "${USE_FLASH_ATTN_TRITON}" ] && RUN_STR="flashAttn_triton_${RUN_STR}"
 fi
 
 if [[ $DDP_IMPL == 'FSDP' ]]; then
-  RUN_STR="FSDP_${RUN_STR}"
+    RUN_STR="FSDP_${RUN_STR}"
 fi
 if [[ $USE_ACTIVATION_CHECKPOINTING == 1 ]] ;then
-  RUN_STR="actCkpt_${RUN_STR}"
+    RUN_STR="actCkpt_${RUN_STR}"
 fi
 if [[ $USE_SEQUENCE_PARALLEL == 1 ]] ; then
-  RUN_STR="SP_${RUN_STR}"
+    RUN_STR="SP_${RUN_STR}"
 fi
 
 RUN_STR="${MODEL_TYPE}_${RUN_STR}"
@@ -241,9 +245,9 @@ echo "OUTPUT TO: ${OUTPUT_DIR}"
 # echo "NVME_PATH: ${NVME_PATH}"
 
 if [[ $MODEL_TYPE == "gpt" ]] ; then
-  DATA_LOAD_ARGS="--data-path $DATA_PATH --vocab-file $VOCAB_FILE --merge-file $MERGE_FILE"
+    DATA_LOAD_ARGS="--data-path $DATA_PATH --vocab-file $VOCAB_FILE --merge-file $MERGE_FILE"
 else
-  DATA_LOAD_ARGS=""
+    DATA_LOAD_ARGS=""
 fi
 
 # Set to cpu for offloading to cpu for larger models
@@ -280,124 +284,124 @@ echo "!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!"
 #   }
 # },
 if [[ $ZERO_STAGE == "3" ]] ; then
-cat <<EOT > "$DS_CONFIG"
-{
-  "train_micro_batch_size_per_gpu": $MICRO_BATCH,
-  "steps_per_print": 1,
-  "wall_clock_breakdown" : true,
-  "gradient_accumulation_steps": $GRADIENT_ACCUMULATION_STEPS,
-  "gradient_clipping": 1.0,
-  "zero_optimization": {
-    "stage": 3,
-    "stage3_max_live_parameters": 3e9,
-    "stage3_max_reuse_distance": 3e9,
-    "stage3_param_persistence_threshold": 1e5,
-    "stage3_prefetch_bucket_size": 1e9,
-    "contiguous_gradients": true,
-    "overlap_comm": true,
-    "reduce_bucket_size": 90000000,
-    "sub_group_size": 5e7,
-    "offload_param": {
-      "device": "cpu",
-      "pin_memory": true
+    cat <<EOT > "$DS_CONFIG"
+    {
+        "train_micro_batch_size_per_gpu": $MICRO_BATCH,
+        "steps_per_print": 1,
+        "wall_clock_breakdown" : true,
+        "gradient_accumulation_steps": $GRADIENT_ACCUMULATION_STEPS,
+        "gradient_clipping": 1.0,
+        "zero_optimization": {
+        "stage": 3,
+        "stage3_max_live_parameters": 3e9,
+        "stage3_max_reuse_distance": 3e9,
+        "stage3_param_persistence_threshold": 1e5,
+        "stage3_prefetch_bucket_size": 1e9,
+        "contiguous_gradients": true,
+        "overlap_comm": true,
+        "reduce_bucket_size": 90000000,
+        "sub_group_size": 5e7,
+        "offload_param": {
+        "device": "cpu",
+        "pin_memory": true
     },
     "offload_optimizer": {
-      "device": "cpu",
-      "buffer_count": 4,
-      "pipeline_read": false,
-      "pipeline_write": false,
-      "pin_memory": true
-    }
-  },
-  "fp16": {
-    "enabled": true,
-    "initial_scale_power" : 12,
-    "loss_scale_window": 1000,
-    "hysteresis": 2,
-    "min_loss_scale": 1
-  },
-  "aio": {
-    "block_size": 1048576,
-    "queue_depth": 16,
-    "single_submit": false,
-    "overlap_events": true,
-    "thread_count": 2
-  },
-  "flops_profiler": {
-    "enabled": true,
-    "profile_step": 1,
-    "module_depth": -1,
-    "top_modules": 3,
-    "detailed": true,
-    "output_file": null
-  },
-  "comms_logger": {
-    "enabled": true,
-    "verbose": false,
-    "prof_all": false,
-    "debug": false
-  },
-  "wandb": {
-    "enabled": true,
-    "project": "Megatron-DeepSpeed-Rebase"
-  }
+    "device": "cpu",
+    "buffer_count": 4,
+    "pipeline_read": false,
+    "pipeline_write": false,
+    "pin_memory": true
+}
+},
+"fp16": {
+"enabled": true,
+"initial_scale_power" : 12,
+"loss_scale_window": 1000,
+"hysteresis": 2,
+"min_loss_scale": 1
+},
+"aio": {
+"block_size": 1048576,
+"queue_depth": 16,
+"single_submit": false,
+"overlap_events": true,
+"thread_count": 2
+},
+"flops_profiler": {
+"enabled": true,
+"profile_step": 1,
+"module_depth": -1,
+"top_modules": 3,
+"detailed": true,
+"output_file": null
+},
+"comms_logger": {
+"enabled": true,
+"verbose": false,
+"prof_all": false,
+"debug": false
+},
+"wandb": {
+"enabled": true,
+"project": "Megatron-DeepSpeed-Rebase"
+}
 }
 EOT
 else
-cat <<EOT > "$DS_CONFIG"
-{
-  "train_micro_batch_size_per_gpu": $MICRO_BATCH,
-  "gradient_accumulation_steps": $GRADIENT_ACCUMULATION_STEPS,
-  "steps_per_print": 1,
-  "wall_clock_breakdown" : true,
-  "zero_force_ds_cpu_optimizer": false,
-  "zero_optimization": {
-    "stage": $ZERO_STAGE,
-    "allgather_partitions": true,
-    "reduce_scatter": true,
-    "allgather_bucket_size": 5e8,
-    "overlap_comm": true,
-    "contiguous_gradients": true,
-    "offload_param": {
-      "device": "cpu",
-      "nvme_path": "/raid/scratch",
-      "pin_memory": false
+    cat <<EOT > "$DS_CONFIG"
+    {
+        "train_micro_batch_size_per_gpu": $MICRO_BATCH,
+        "gradient_accumulation_steps": $GRADIENT_ACCUMULATION_STEPS,
+        "steps_per_print": 1,
+        "wall_clock_breakdown" : true,
+        "zero_force_ds_cpu_optimizer": false,
+        "zero_optimization": {
+        "stage": $ZERO_STAGE,
+        "allgather_partitions": true,
+        "reduce_scatter": true,
+        "allgather_bucket_size": 5e8,
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "offload_param": {
+        "device": "cpu",
+        "nvme_path": "/raid/scratch",
+        "pin_memory": false
     },
     "offload_optimizer": {
-      "device": "cpu",
-      "nvme_path": "/raid/scratch/"
-    }
-  },
-  "scheduler": {
-   "type": "WarmupLR",
-   "params": {
-     "warmup_min_lr": 0,
-     "warmup_max_lr": 0.001,
-     "warmup_num_steps": 1000
-   }
-  },
-  "fp16": {
-    "enabled": true,
-    "initial_scale_power": 12
-  },
-  "flops_profiler": {
-    "enabled": true,
-    "profile_step": 1,
-    "module_depth": -1,
-    "top_modules": 3,
-    "detailed": true,
-    "output_file": null
-  },
-  "comms_logger": {
-    "enabled": true,
-    "verbose": false,
-    "prof_all": false,
-    "debug": false
-  },
-  "wandb": {
-    "enabled": true,
-    "project": "Megatron-DS-Benchmarking"
-  }
+    "device": "cpu",
+    "nvme_path": "/raid/scratch/"
+}
+},
+"scheduler": {
+"type": "WarmupLR",
+"params": {
+"warmup_min_lr": 0,
+"warmup_max_lr": 0.001,
+"warmup_num_steps": 1000
+}
+},
+"fp16": {
+"enabled": true,
+"initial_scale_power": 12
+},
+"flops_profiler": {
+"enabled": true,
+"profile_step": 1,
+"module_depth": -1,
+"top_modules": 3,
+"detailed": true,
+"output_file": null
+},
+"comms_logger": {
+"enabled": true,
+"verbose": false,
+"prof_all": false,
+"debug": false
+},
+"wandb": {
+"enabled": true,
+"project": "Megatron-DS-Benchmarking"
+}
 }
 EOT
 fi
@@ -420,7 +424,7 @@ fi
 # }
 # "train_batch_size" : $GLOBAL_BATCH,
 # 'offload_optimizer': 'cpu'
-  # "train_batch_size" : $GLOBAL_BATCH,
+# "train_batch_size" : $GLOBAL_BATCH,
 # "offload_optimizer": {
 #   "device": "cpu",
 #   "nvme_path": "/raid/scratch/"
@@ -482,59 +486,59 @@ fi
 # ┃ DeepSpeed Arguments ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━┛
 if [[ "$DDP_IMPL" != "FSDP" ]] ; then
-  ds_args=""
-  ds_args=" --deepspeed ${ds_args}"
-  ds_args=" --deepspeed_mpi ${ds_args}"
-  ds_args=" --deepspeed_config=$DS_CONFIG ${ds_args}"
-  ds_args=" --zero-stage=$ZERO_STAGE ${ds_args}"
-  if [[ "$PPSIZE" == 1 ]]; then
-    ds_args="--no-pipeline-parallel ${ds_args}"
-  else
-    ds_args=" --pipeline-model-parallel-size ${PPSIZE} ${ds_args}"
-  fi
-  if [[ "$USE_ACTIVATION_CHECKPOINTING" == 1 ]]; then
-    ds_args=" --deepspeed-activation-checkpointing ${ds_args}"
-  fi
+    ds_args=""
+    ds_args=" --deepspeed ${ds_args}"
+    ds_args=" --deepspeed_mpi ${ds_args}"
+    ds_args=" --deepspeed_config=$DS_CONFIG ${ds_args}"
+    ds_args=" --zero-stage=$ZERO_STAGE ${ds_args}"
+    if [[ "$PPSIZE" == 1 ]]; then
+        ds_args="--no-pipeline-parallel ${ds_args}"
+    else
+        ds_args=" --pipeline-model-parallel-size ${PPSIZE} ${ds_args}"
+    fi
+    if [[ "$USE_ACTIVATION_CHECKPOINTING" == 1 ]]; then
+        ds_args=" --deepspeed-activation-checkpointing ${ds_args}"
+    fi
 fi
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ MEGATRON-LM SETTINGS ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━┛
 gpt_args=(
-  "--no-async-tensor-model-parallel-allreduce"
-  "--seed ${RANDOM}"
-  "--DDP-impl ${DDP_IMPL}"
-  "--pipeline-model-parallel-size ${PPSIZE}"
-  "--tensor-model-parallel-size ${MPSIZE}"
-  "--ds-sequence-parallel-size ${SPSIZE}"
-  "--num-layers ${NLAYERS}"
-  "--hidden-size ${HIDDEN}"
-  "--num-attention-heads ${ATEN_HEADS}"
-  "--micro-batch-size ${MICRO_BATCH}"
-  "--global-batch-size ${GLOBAL_BATCH}"
-  "--seq-length ${SEQ_LEN}"
-  "--max-position-embeddings ${SEQ_LEN}"
-  "--train-iters 10"
-  "--lr-decay-iters 320000"
-  "--num-workers 1"
-  "$DATA_LOAD_ARGS"
-  "--data-impl mmap"
-  "--split 949,50,1"
-  "--distributed-backend nccl"
-  "--lr 0.00015"
-  "--lr-decay-style cosine"
-  "--min-lr 1.0e-5"
-  "--weight-decay 1e-2"
-  "--clip-grad 1.0"
-  "--lr-warmup-fraction .01"
-  "--log-interval 1"
-  "--save-interval 1000"
-  "--eval-interval 1000"
-  "--eval-iters 10"
-  "--override-opt_param-scheduler"
-  "--tensorboard-dir ${TENSORBOARD_DIR}"
-  "--log-timers-to-tensorboard"
-  "--tensorboard-log-interval 1"
+    "--no-async-tensor-model-parallel-allreduce"
+    "--seed ${RANDOM}"
+    "--DDP-impl ${DDP_IMPL}"
+    "--pipeline-model-parallel-size ${PPSIZE}"
+    "--tensor-model-parallel-size ${MPSIZE}"
+    "--ds-sequence-parallel-size ${SPSIZE}"
+    "--num-layers ${NLAYERS}"
+    "--hidden-size ${HIDDEN}"
+    "--num-attention-heads ${ATEN_HEADS}"
+    "--micro-batch-size ${MICRO_BATCH}"
+    "--global-batch-size ${GLOBAL_BATCH}"
+    "--seq-length ${SEQ_LEN}"
+    "--max-position-embeddings ${SEQ_LEN}"
+    "--train-iters 10"
+    "--lr-decay-iters 320000"
+    "--num-workers 1"
+    "$DATA_LOAD_ARGS"
+    "--data-impl mmap"
+    "--split 949,50,1"
+    "--distributed-backend nccl"
+    "--lr 0.00015"
+    "--lr-decay-style cosine"
+    "--min-lr 1.0e-5"
+    "--weight-decay 1e-2"
+    "--clip-grad 1.0"
+    "--lr-warmup-fraction .01"
+    "--log-interval 1"
+    "--save-interval 1000"
+    "--eval-interval 1000"
+    "--eval-iters 10"
+    "--override-opt_param-scheduler"
+    "--tensorboard-dir ${TENSORBOARD_DIR}"
+    "--log-timers-to-tensorboard"
+    "--tensorboard-log-interval 1"
 )
 
 
@@ -543,21 +547,21 @@ gpt_args=(
 # --recompute-method uniform \
 # --recompute-num-layers 1 \
 if [[ "$USE_ACTIVATION_CHECKPOINTING" == 1 ]]; then
-  gpt_args+=(
+    gpt_args+=(
     "--checkpoint-activations"
     "--checkpoint-num-layers 1"
-  )
+)
 fi
 
 if [[ "$DDP_IMPL" != "FSDP" ]] ; then
-  gpt_args+=(
+    gpt_args+=(
     # "${gpt_args[*]}"
     "--fp16"
-  )
+)
 else
-  gpt_args+=(
+    gpt_args+=(
     "--bf16"
-  )
+)
 fi
 
 # # Flash Attention 1
@@ -574,16 +578,19 @@ fi
 # # Triton + Flash Attn
 # [ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
 
-if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
-    echo "Not using Flash Attention!"
-else
-    # Flash Attention v1
+# if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
+#     echo "Not using Flash Attention!"
+# else
+# Flash Attention v1
+if [[ "${USE_FLASH_ATTN1}" || "${USE_FLASH_ATTN_V1}" ]]; then
     [ "${USE_FLASH_ATTN}" ] && gpt_args+=("--use-flash-attn-v1")
     [ "${USE_FLASH_ATTN1}" ] && gpt_args+=("--use-flash-attn-v1")
     [ "${USE_FLASH_ATTN_V1}" ] && gpt_args+=("--use-flash-attn-v1")
+elif [[ "${USE_FLASH_ATTN2}" || "${USE_FLASH_ATTN_V2}" ]]; then
     # Flash Attention 2
     [ "${USE_FLASH_ATTN2}" ] && gpt_args+=("--use-flash-attn-v2")
     [ "${USE_FLASH_ATTN_V2}" ] && gpt_args+=("--use-flash-attn-v2")
+elif [[ "${USE_FLASH_ATTN_TRITON}" ]]; then
     # Triton + Flash Attn
     [ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
 fi
@@ -596,21 +603,23 @@ fi
 # fi
 
 if [[ "$USE_SEQUENCE_PARALLEL" == 1 ]]; then
-  gpt_args+=(
+    gpt_args+=(
     "--sequence-parallel"
-  )
+)
 fi
 
 if [[ "$ZERO_STAGE" > "0" ]] ; then
-  gpt_args+=(
+    gpt_args+=(
     "--cpu-optimizer"
-  )
+)
 fi
 
 export gpt_args=(
-  "${gpt_args[*]}"
-  "${ds_args[*]}"
+"${gpt_args[*]}"
+"${ds_args[*]}"
 )
+ARGS="$(join_by ' ' ${gpt_args[*]})"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "gpt_args: ${gpt_args[*]}"
+# echo "gpt_args: ${gpt_args[*]}"
+echo "ARGS: ${ARGS}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

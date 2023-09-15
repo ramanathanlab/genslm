@@ -18,6 +18,9 @@ ALCF_DIR=$(find "${HERE}" -name "ALCF")
 PARENT=$(dirname "${ALCF_DIR}")
 
 # export CUDA_DEVICE_MAX_CONNECTIONS=1
+#
+# function join_by { local IFS="$1"; shift; echo "$*"; }
+function join_by { local d=${1-} f=${2-}; if shift 2; then printf %s "$f" "${@/#/$d}"; fi; }
 
 function setupVenv() {
     VENV_DIR="$1"
@@ -49,7 +52,7 @@ function thetagpuMPI() {
         NVME_PATH="/raid/scratch/"
         MPI_COMMAND=$(which mpirun)
         # export PATH="${CONDA_PREFIX}/bin:${PATH}"
-        MPI_DEFAULTS=(
+        _MPI_DEFAULTS=(
             "--hostfile ${HOSTFILE}"
             "-x CFLAGS"
             "-x LDFLAGS"
@@ -60,21 +63,21 @@ function thetagpuMPI() {
             "-x CUDA_DEVICE_MAX_CONNECTIONS"
             "-x LD_LIBRARY_PATH"
         )
-        MPI_DEFAULTS=(
-            "--hostfile ${HOSTFILE}"
-            "-x CFLAGS"
-            "-x LDFLAGS"
-            "-x http_proxy"
-            "-x PYTHONUSERBASE"
-            "-x https_proxy"
-            "-x PATH"
-            "-x CUDA_DEVICE_MAX_CONNECTIONS"
-            "-x LD_LIBRARY_PATH"
-        )
-        MPI_ELASTIC=(
+        _MPI_ELASTIC=(
             "-n ${NGPUS}"
             "-npernode ${NGPU_PER_HOST}"
         )
+        export MPI_DEFAULTS="$(join_by ' ' ${_MPI_DEFAULTS})"
+        export MPI_ELASTIC="$(join_by ' ' ${_MPI_ELASTIC})"
+        # MPI_DEFAULTS=""
+        # MPI_ELASTIC=""
+        # for index in ${!_MPI_DEFAULTS[*]}; do
+        #     MPI_DEFAULTS="$MPI_DEFAULTS ${_MPI_DEFAULTS[$index]}"
+        #     MPI_ELASTIC="$MPI_ELASTIC ${_MPI_ELASTIC[$index]}"
+        # done
+        # # export MPI_DEFAULTS=$(join_by \ "${_MPI_DEFAULTS[*]}")
+        # export MPI_DEFAULTS="${MPI_DEFAULTS}"
+        # export MPI_ELASTIC="${MPI_ELASTIC}"
     else
         echo "Skipping thetaGPUMPI() on $(hostname)"
     fi
@@ -88,15 +91,28 @@ function polarisMPI() {
         export NGPUS=$((${NHOSTS}*${NGPU_PER_HOST}))
         export MPI_COMMAND=$(which mpiexec)
         export NVME_PATH="/local/scratch/"
-        export MPI_DEFAULTS=(
+        _MPI_DEFAULTS=(
             "--envall"
             "--verbose"
             "--hostfile ${HOSTFILE}"
         )
-        export MPI_ELASTIC=(
+        _MPI_ELASTIC=(
             "-n ${NGPUS}"
             "--ppn ${NGPU_PER_HOST}"
         )
+        # MPI_DEFAULTS=""
+        # MPI_ELASTIC=""
+        # for index in ${!_MPI_DEFAULTS[*]}; do
+        #     MPI_DEFAULTS="$MPI_DEFAULTS ${_MPI_DEFAULTS[$index]}"
+        #     MPI_ELASTIC="$MPI_ELASTIC ${_MPI_ELASTIC[$index]}"
+        # done
+        export MPI_DEFAULTS="$(join_by ' ' ${_MPI_DEFAULTS})"
+        export MPI_ELASTIC="$(join_by ' ' ${_MPI_ELASTIC})"
+        # export MPI_DEFAULTS=$(join_by \ "${_MPI_DEFAULTS[*]}")
+        # export MPI_DEFAULTS="${_MPI_DEFAULTS}"
+        # export MPI_ELASTIC="${_MPI_ELASTIC}"
+        # export MPI_DEFAULTS="${_MPI_DEFAULTS}"
+        # export MPI_ELASTIC="${_MPI_ELASTIC}"
     else
         echo "Skipping polarisMPI() on $(hostname)"
     fi
@@ -240,31 +256,37 @@ function condaThetaGPU() {
 }
 
 function setupThetaGPU() {
+    export LAB="ALCF"
+    export MACHINE="ThetaGPU"
     if [[ $(hostname) == theta* ]]; then
         setupMPI
         DATE_STR="2023-01-11"
-        [ "${CONDA_EXE}" ] || loadCondaEnv "${DATE_STR}"
-        [ "${VIRTUAL_ENV}" ] || setupVenv "${DATE_STR}"
-        export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
-        export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
-        export MPI_COMMAND="${MPI_COMMAND[*]:-}"
+        # [ "${CONDA_EXE}" ] || loadCondaEnv "${DATE_STR}"
+        # [ "${VIRTUAL_ENV}" ] || setupVenv "${DATE_STR}"
+        [ "${CONDA_EXE}" ] || loadCondaEnv "${DATE_STR}" || echo "Caught CONDA_EXE: ${CONDA_EXE}"
+        [ "${VIRTUAL_ENV}" ] || setupVenv "${DATE_STR}" || echo "Caught VIRTUAL_ENV: ${VIRTUAL_ENV}"
+        # export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
+        # export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
+        # export MPI_COMMAND="${MPI_COMMAND[*]:-}"
     else
         echo "Skipping setupThetaGPU() on $(hostname)"
     fi
 }
 
 function setupPolaris() {
+    export LAB="ALCF"
+    export MACHINE="Polaris"
     if [[ "$(hostname)" == x3* ]]; then
         # SETUP MPI --------------------------------
         setupMPI
-        export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
-        export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
-        export MPI_COMMAND="${MPI_COMMAND[*]:-}"
+        # export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
+        # export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
+        # export MPI_COMMAND="${MPI_COMMAND[*]:-}"
         # SETUP Python --------------------------------
         DATE_STR="2023-01-10"
-        [ "${CONDA_EXE}" ] || loadCondaEnv "${DATE_STR}-unstable"
-        [ "${VIRTUAL_ENV}" ] || setupVenv "${DATE_STR}"
-        condaPolaris
+        [ "${CONDA_EXE}" ] || loadCondaEnv "${DATE_STR}-unstable" || echo "Caught CONDA_EXE: ${CONDA_EXE}"
+        [ "${VIRTUAL_ENV}" ] || setupVenv "${DATE_STR}" || echo "Caught VIRTUAL_ENV: ${VIRTUAL_ENV}"
+        # condaPolaris
     else
         echo "Skipping setupPolaris() on $(hostname)"
     fi
@@ -273,11 +295,11 @@ function setupPolaris() {
 function setupALCF() {
     if [[ $(hostname) == theta* || $(hostname) == x3* ]]; then
         setupMPI
-        export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
-        export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
-        export MPI_COMMAND="${MPI_COMMAND[*]:-}"
-        [ "$(hostname)==theta*" ] && setupThetaGPU
-        [ "$(hostname)==x3*" ] && setupPolaris
+        # export MPI_DEFAULTS="${MPI_DEFAULTS[*]:-}"
+        # export MPI_ELASTIC="${MPI_ELASTIC[*]:-}"
+        # export MPI_COMMAND="${MPI_COMMAND[*]:-}"
+        [ "$(hostname)==theta*" ] && setupThetaGPU || echo "Skipping setupThetaGPU from $(hostname)"
+        [ "$(hostname)==x3*" ] && setupPolaris || echo "Skipping setupPolaris from $(hostname)"
     else
         echo "Skipping setupALCF() on $(hostname)"
     fi
@@ -329,14 +351,20 @@ function setupMachine() {
     # [ "${HOSTNAME}==x3*" ] && condaPolaris
     # [ "${HOSTNAME}==login*" ] && setupPerlmutter
     # [ "${HOSTNAME}==nid*" ] && setupPerlmutter
-    if [[ "${HOSTNAME}== nid*" || "${HOSTNAME}== login*"  ]]; then
-        export LAB="NERSC"
-        [ "${HOSTNAME}==login*" ] && setupPerlmutter
-        [ "${HOSTNAME}==nid*" ] && setupPerlmutter
-    elif [[ "${HOSTNAME}==theta*" || "${HOSTNAME}==x3*" || "${HOSTNAME}==x1*" ]]; then
+    if [[ $(hostname) == theta* || $(hostname) == x3* ]]; then
         export LAB="ALCF"
+        setupALCF
         [ "${HOSTNAME}==theta*" ] && condaThetaGPU
         [ "${HOSTNAME}==x3*" ] && condaPolaris
+    elif [[ "${HOSTNAME}== nid*" || "${HOSTNAME}== login*"  ]]; then
+        export LAB="NERSC"
+        setupPerlmutter
+        [ "${HOSTNAME}==login*" ] && setupPerlmutter
+        [ "${HOSTNAME}==nid*" ] && setupPerlmutter
+    # elif [[ "${HOSTNAME}==theta*" || "${HOSTNAME}==x3*" || "${HOSTNAME}==x1*" ]]; then
+    #     export LAB="ALCF"
+    #     [ "${HOSTNAME}==theta*" ] && condaThetaGPU
+    #     [ "${HOSTNAME}==x3*" ] && condaPolaris
     else
         echo "Unexpected hostname: $(hostname)"
     fi
@@ -360,7 +388,7 @@ function setup() {
     echo "USING PYTHON: $(which python3)"
     # echo "CFLAGS: ${CFLAGS}"
     # echo "LDFLAGS: ${LDFLAGS}"
-    export NODE_RANK=0
+    # export NODE_RANK=0
     export NNODES=$NHOSTS
     export GPUS_PER_NODE=$NGPU_PER_HOST
     export WORLD_SIZE=$NGPUS
