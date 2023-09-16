@@ -294,8 +294,8 @@ building each of the dependencies.
     installing dependencies locally:
 
     ``` bash
-    mkdir -p "deps/${MACHINE}"
-    cd "deps/${MACHINE}"
+    mkdir -p "deps"
+    cd "deps"
     ```
 
 #### Dependencies
@@ -303,38 +303,48 @@ building each of the dependencies.
 We provide below the details needed to install each of the required
 dependencies.
 
-1. [`saforem2/ezpz`](https://github.com/saforem2/ezpz):
 
-    ``` bash
-    pip install -e "git+https://github.com/saforem2/ezpz.git#egg=ezpz"
-    ```
+> **Note**<br>
+> All dependencies below should be cloned into the `./deps/` directory
+> (created in Step 4. above)
 
+1. [`pytorch/pytorch`](https://github.com/pytorch/pytorch):
+
+   ``` bash
+   python3 -m pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
+   ```
+  
 2. [`Microsoft/DeepSpeed`](https://github.com/microsoft/DeepSpeed):
 
     ``` bash
     git clone https://github.com/microsoft/DeepSpeed.git
-    cd DeepSpeed
+    cd deepspeed
     python3 -m pip install -e .
+    cd ../
     ```
 
 3. [`Microsoft/Megatron-DeepSpeed`](https://github.com/microsoft/Megatron-DeepSpeed):
 
     ``` bash
     git clone https://github.com/microsoft/Megatron-DeepSpeed.git
+    cd ./Megatron-DeepSpeed
+    python3 -m pip install -e .
     ```
 
 4. [`NVIDIA/apex`](https://github.com/NVIDIA/apex):
 
     ``` bash
     git clone https://github.com/NVIDIA/apex
-    pip install \
-        -v  \
+    cd ./apex
+    python3 -m \
+        pip install -v \
+        --require-virtualenv \
         --disable-pip-version-check \
         --no-cache-dir \
         --no-build-isolation \
-        --global-option="--cpp_ext" \
-        --global-option="--cuda_ext" \
-        -e .
+        --config-settings "--build-option=--cpp_ext" \
+        --config-settings "--build-option=--cuda_ext" \
+        ./
     ```
 
 5. [`pybind/PyBind11`](https://github.com/pybind/pybind11):
@@ -378,6 +388,13 @@ dependencies.
       python3 -m pip install cmake
       python3 -m pip install .
       ```
+
+7. [`saforem2/ezpz`](https://github.com/saforem2/ezpz):
+
+    ``` bash
+    pip install -e "git+https://github.com/saforem2/ezpz.git#egg=ezpz"
+    ```
+
 
 ## Running
 
