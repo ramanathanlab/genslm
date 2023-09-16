@@ -51,21 +51,20 @@ sequences than was previously possible.
 
 ## Initial Results
 
-<div id="tbl-results" style="text-align:center!important;">
+<div id="tbl-results" align="center" style="text-align:left;">
 
 | Sequence Length |     Old Megatron-DeepSpeed (TFLOPS)      |      New Megatron-DeepSpeed (TFLOPS)      |
 |:---------------:|:----------------------------------------:|:-----------------------------------------:|
 |       2k        | <span style="text-weight:600;">25</span> | <span style="text-weight:600;">68</span>  |
 |       4k        | <span style="text-weight:600;">28</span> | <span style="text-weight:600;">80</span>  |
-|       8k        |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">86</span>  |
-|       16k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">92</span>  |
-|       32k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">100</span> |
-|       64k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">106</span> |
-|      128k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">119</span> |
-|      256k       |    <span class="red-text">OOM</span>     | <span style="text-weight:600;">94</span>  |
+|       8k        |    <span style="color:#FF5252">OOM</span>     | <span style="text-weight:600;">86</span>  |
+|       16k       |    <span style="color:#FF5252">OOM</span>     | <span style="text-weight:600;">92</span>  |
+|       32k       |    <span style="color:#FF5252">OOM</span>     | <span style="text-weight:600;">100</span> |
+|       64k       |    <span style="color:#FF5252">OOM</span>     | <span style="text-weight:600;">106</span> |
+|      128k       |    <span style="color:#FF5252">OOM</span>     | <span style="text-weight:600;">119</span> |
+|      256k       |    <span style="color:#FF5252">OOM</span>     | <span style="text-weight:600;">94</span>  |
 
-Table 1: The following experiments are performed on 4 NVIDIA DGX
-A100-40GB nodes, all using `TPSIZE=32`[^1], connected through 8 HDR
+Table 1: Using: 4 NVIDIA DGX A100-40GB nodes, all using `TPSIZE=32`[^1], connected through 8 HDR
 InfiniBand (200Gb/s per HDR).
 
 </div>
@@ -218,7 +217,7 @@ for idx, (model_size, d) in enumerate(data.items()):
 Figure 2: Pre-training with long sequence support across different model
 sizes and numbers of GPUs. In each case, the `new` (current)
 implementation **significantly** outperforms both NVIDIA/Megatron-LM as
-well as our previous implementation.
+well as the previous implementation.
 
 </div>
 
@@ -335,7 +334,7 @@ dependencies.
         --no-build-isolation \
         --global-option="--cpp_ext" \
         --global-option="--cuda_ext" \
-        -e ./
+        -e .
     ```
 
 5. [`pybind/PyBind11`](https://github.com/pybind/pybind11):
@@ -427,38 +426,36 @@ Though work is still ongoing, this is a promising direction that will
 allow us to consider significantly larger genomes than previously
 possible.
 
-We use [Weights & Biases](https://wandb.ai) to track these experiments,
-and have aggregated our initial results in the [W&B
-Report](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)
-below.
-
 We can evaluate the performance of our model by looking at two different
 metrics for throughput: `samples_per_sec` and `TFLOPS`.
 
 Explicitly, we see that we are able to scale up to significantly longer
-sequences (`420k / 128k ~ 3.3x`) with only a minimal impact on
-throughput performance (`81 / 105 ~ 77\%`)[^4].
+sequences (`420k / 128k ~ 3.3x`)  
 
-<div id="tbl-seqlen">
+with only a minimal impact on throughput performance (`81 / 105 ~ 77%`)[^4].
 
-|  Name  | `seq_length` (k) | `seq_len / min_seq_len` |  TFLOPS  | TFLOPS (% of peak) |
-|:------:|:----------------:|:-----------------------:|:--------:|:------------------:|
-| GPT25B |       420        |       **3.28125**       | 81.77225 |     **77.867**     |
-| GPT25B |       400        |          3.125          |  90.62   |       86.297       |
-| GPT25B |       360        |         2.8125          | 81.6325  |      77.7348       |
-| GPT25B |       360        |         2.8125          | 82.6824  |      78.7346       |
-| GPT25B |       192        |           1.5           | 115.8228 |      110.2927      |
-| GPT25B |       128        |            1            | 106.672  |      101.5788      |
-| GPT25B |       128        |            1            | 105.014  |       100.00       |
+<div id="tbl-seqlen" align="center">
 
-Table 2: Impact on TFLOPS as a function of increasing sequence length.
+| `seq_length` (k) | `seq_len / min_seq_len` |  TFLOPS  | TFLOPS (% of peak) |
+|:----------------:|:-----------------------:|:--------:|:------------------:|
+|       420        |       **3.28125**       | 81.77225 |     **77.867**     |
+|       400        |          3.125          |  90.62   |       86.297       |
+|       360        |         2.8125          | 81.6325  |      77.7348       |
+|       360        |         2.8125          | 82.6824  |      78.7346       |
+|       192        |           1.5           | 115.8228 |      110.2927      |
+|       128        |            1            | 106.672  |      101.5788      |
+|       128        |            1            | 105.014  |       100.00       |
+
+Table 2: Impact on TFLOPS as a function of increasing sequence length, 
+for a `25B` parameter model.
 Table from:
 [`throughput/TFLOPS`](https://api.wandb.ai/links/l2hmc-qcd/awklywn7)
 
 </div>
 
-<!-- [^config]: Using: `{model_size: 25B, WORLD_SIZE: 32, micro_batch: 1}` -->
-<!-- <iframe src="https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking?workspace=user-saforem2" style="border:none;height:1024px;width:100%"> -->
+We use [Weights & Biases](https://wandb.ai) to track these experiments,
+and have aggregated our initial results in the [W&B
+Report](https://wandb.ai/l2hmc-qcd/Megatron-DS-Benchmarking/reports/Looooooong-Sequences--Vmlldzo1MzI2NjA1)
 
 <div id="fig-wandb">
 
@@ -486,7 +483,7 @@ Figure 3: Weights & Biases Report
     2.  `deepspeed-0.10.3`
     3.  `pytorch==2.0.0+cu118`
 
-[^3]: Where `"${MACHINE}"` $\isins$ `{"ThetaGPU", "Polaris"}` and
-    `"${CONDA_DATE}"` $\isins$ `{"2023-01-10", "2023-01-11"}`
+[^3]: Where `"${MACHINE}"` $\in$ `{"ThetaGPU", "Polaris"}` and
+    `"${CONDA_DATE}"` $\in$ `{"2023-01-10", "2023-01-11"}`
 
 [^4]: [`throughput/TFLOPS`](https://api.wandb.ai/links/l2hmc-qcd/awklywn7)
