@@ -26,7 +26,7 @@ sequences than was previously possible.
 
 </div>
 
-## [DeepSpeed4Science](https://github.com/microsoft/Megatron-DeepSpeed/examples_deepspeed/deepspeed4science/megatron_long_seq_support/README.md) (09/2023)
+## [DeepSpeed4Science](https://deepspeed4science.ai/2023/08/28/model-showcase-genslms/) (09/2023)
 
 ### New Features
 
