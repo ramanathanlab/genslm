@@ -10,7 +10,8 @@ function WhereAmI() {
 }
 
 HERE=$(WhereAmI)
-ALCF_DIR=$(find "${HERE}" -name "ALCF")
+# ALCF_DIR=$(find "${HERE}" -name "ALCF")
+ALCF_DIR="${HERE}/ALCF"
 
 
 # ALCF_DIR="$(dirname $(dirname $(python3 -c 'import megatron; print(megatron.__file__)' | tail -1)))/ALCF"
