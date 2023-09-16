@@ -1,4 +1,4 @@
-#!/bin/bash -login
+#!/bin/bash --login
 
 function FindMegatron() {
     MEGATRON_INSTALL=$(python3 -c 'import megatron; print(megatron.__file__)' | tail -1)
@@ -181,6 +181,8 @@ elif [[ "${USE_FLASH_ATTN_TRITON}" ]]; then
     # Triton + Flash Attn
     # Triton + Flash Attn
     [ "${USE_FLASH_ATTN_TRITON}" ] && RUN_STR="flashAttn_triton_${RUN_STR}"
+else
+    echo "Not using Flash Attention!"
 fi
 
 if [[ $DDP_IMPL == 'FSDP' ]]; then
@@ -422,7 +424,7 @@ gpt_args=(
     "--log-interval 1"
     "--save-interval 1000"
     "--eval-interval 1000"
-    "--eval-iters 10"
+    "--eval-iters 0"
     "--override-opt_param-scheduler"
     "--tensorboard-dir ${TENSORBOARD_DIR}"
     "--log-timers-to-tensorboard"

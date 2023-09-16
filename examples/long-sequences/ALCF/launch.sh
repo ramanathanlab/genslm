@@ -60,23 +60,6 @@ launchJob() {
     ${EXEC} "$@" # >> "${OUTPUT_LOG}" 2>&1 &
 }
 
-singleGPU() {
-    echo "\
-        Running on 1 host \
-        with 1 GPUs each \
-        for a total of 1 GPUs"
-            EXEC="\
-                $(which python3) \
-                ${MAIN} \
-                ${gpt_args} \
-                ${ds_args}"
-                            OUTPUT_LOG="${OUTPUT_DIR}/logs/$USER-$HOST-nhosts1-ngpu1-$TSTAMP.log"
-                            mkdir -p "$(dirname "${OUTPUT_LOG}")"
-                            echo "${OUTPUT_LOG}" >> "${PARENT}/logfiles"
-                            printJobInfo | tee -a "${OUTPUT_LOG}"
-                            launchJob "$@" >> "${OUTPUT_LOG}" 2>&1 &
-                        }
-
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ Use all available GPUs a single nodes ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
@@ -143,16 +126,20 @@ elasticDistributed() {
             "${gpt_args}"
             "${ds_args}"
         )
-    elif [[ $(hostname) == nid* ]]; then
+    elif [[ "$(hostname)==nid*"  || "$(hostname)==login*" ]]; then
         echo "Setting up from Perlmutter on $(hostname)"
-        NHOSTS="$SLURM_NNODES"
-        NGPU_PER_HOST="$SLURM_GPUS_ON_NODE"
+        [ "$(hostname)==nid*" ] && NHOSTS="$SLURM_NNODES" || NHOSTS=1
+        [ "$(hostname)==nid*" ] && export MACHINE="perlmutter" || export MACHINE="NERSC"
+        NGPU_PER_HOST=$(nvidia-smi -L | wc -l)
+        # NGPU_PER_HOST="$SLURM_GPUS_ON_NODE"
         NGPUS="$(( NHOSTS * NGPU_PER_HOST ))"
-        export MACHINE="perlmutter"
+        # export MACHINE="perlmutter"
         export MASTER_ADDR="127.0.0.1"
         export MASTER_PORT="5432"
         EXEC_STR=(
             "srun"
+            "-N ${NHOSTS}"
+            "-n ${NGPUS}"
             "-l -u"
             "$(which python3)"
             "${MAIN}"
@@ -161,7 +148,6 @@ elasticDistributed() {
         )
     else
         echo "Unexpected hostname $(hostname)"
-        exit 1
     fi
     export WORLD_SIZE="${NGPUS}"
     echo "\
