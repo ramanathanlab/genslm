@@ -25,7 +25,7 @@ function sourceFile() {
 
 USER=$(whoami)
 HERE=$(WhereAmI)
-ALCF_DIR=$(find "${HERE}" -name "ALCF")
+ALCF_DIR="${HERE}/ALCF"
 PARENT=$(dirname "${ALCF_DIR}")
 echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
 echo "ALCF_DIR: ${ALCF_DIR}"
@@ -52,20 +52,12 @@ MODEL_TYPE=${MODEL_TYPE:-gpt}
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ Model Parallel / Pipeline Parallel ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-# ----------
-# Originals
-# MPSIZE=8
-# PPSIZE=16
-# ----------
-# NHOSTS=$(wc -l < "${PBS_NODEFILE}")
 export DDP_IMPL="local"   # FSDP | local | torch
-# export USE_FLASH_ATTN=${USE_FLASH_ATTN:-0}  # 1 | 0
 export USE_ACTIVATION_CHECKPOINTING=1  # 1 | 0
 export SEQ_LEN=${SEQ_LEN:-2048}
 export PPSIZE=${PPSIZE:-1}
 export MICRO_BATCH=${MICRO_BATCH:-1}
 export GRADIENT_ACCUMULATION_STEPS=${GAS:-1}
-
 export MODEL_TYPE=${MODEL_TYPE:-"gpt"} # set bert or gpt
 export SP_TYPE=${SP_TYPE:-"megatron"} # set ds or megatron
 
@@ -158,21 +150,10 @@ echo "--------------------------------"
 [ "$(hostname)==x3*" ] && MEGATRON_DIR="/lus/grand/projects/datascience/foremans/locations/thetaGPU/projects/saforem2/Megatron-DS-Benchmarking"
 
 # DATA_PATH=/lus/grand/projects/datascience/vsastry/genslm_subsample_200k_sequence_document/genslm_subsample_200k_sequence_document
-# MEGATRON_DIR=$(FindMegatron)
-# MEGATRON_DIR="/lus/grand/projects/datascience/foremans/locations/thetaGPU/projects/saforem2/Megatron-DS-Benchmarking"
-# [ "${MEGATRON_DIR}" ] || MEGATRON_DIR="~/m3957/foremans/projects/saforem2/Megatron-DS-Benchmarking/"
-# MEGATRON_DIR="/global/homes/f/foremans/m3957/foremans/projects/saforem2/Megatron-DeepSpeed"
 DATA_DIR="${MEGATRON_DIR}/dataset"
 DATA_PATH="${DATA_DIR}/BookCorpusDataset_text_document"
 VOCAB_FILE="${DATA_DIR}/gpt2-vocab.json"
 MERGE_FILE="${DATA_DIR}/gpt2-merges.txt"
-
-# DATA_PATH="/home/czh5/genome/Megatron-DeepSpeed/dataset/BookCorpusDataset_text_document"
-# VOCAB_FILE="/home/czh5/genome/Megatron-DeepSpeed/dataset/gpt2-vocab.json"
-# MERGE_FILE="/home/czh5/genome/Megatron-DeepSpeed/dataset/gpt2-merges.txt"
-# DATA_PATH="/lus/eagle/projects/MDClimSim/chengming/gpt_datasets1/BookCorpusDataset_text_document"
-# VOCAB_FILE="/lus/eagle/projects/MDClimSim/chengming/gpt_datasets1/gpt2-vocab.json"
-# MERGE_FILE="/lus/eagle/projects/MDClimSim/chengming/gpt_datasets1/gpt2-merges.txt"
 
 # ┏━━━━━━━━━━━━━━━━━━━┓
 # ┃ FILE I/O SETTINGS ┃
@@ -265,24 +246,7 @@ DS_CONFIG=${PARENT}/ds_config-gpt.json
 echo "!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!"
 echo " DS_CONFIG: ${DS_CONFIG}"
 echo "!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!"
-# "optimizer": {
-#   "type": "Adam",
-#   "params": {
-#     "lr": 0.001,
-#     "betas": [0.8, 0.999],
-#     "eps": 1e-8,
-#     "weight_decay": 3e-7
-#   }
-# },
 
-# "zero_allow_untested_optimizer": false,
-# "train_batch_size" : $GLOBAL_BATCH,
-# "zero_force_ds_cpu_optimizer": false,
-#   "offload_params": 
-#   "offload_optimizer": {
-#     "device": "cpu"
-#   }
-# },
 if [[ $ZERO_STAGE == "3" ]] ; then
     cat <<EOT > "$DS_CONFIG"
     {
@@ -405,82 +369,6 @@ else
 }
 EOT
 fi
-# "optimizer": {
-#   "type": "Adam",
-#   "params": {
-#     "lr": 0.001,
-#     "betas": [0.8, 0.999],
-#     "eps": 1e-8,
-#     "weight_decay": 3e-7
-#   }
-# },
-#
-# "offload_optimizer": {
-#   "device": "$OFFLOAD_DEVICE",
-#   "buffer_count": 4,
-#   "pipeline_read": false,
-#   "pipeline_write": false,
-#   "pin_memory": true
-# }
-# "train_batch_size" : $GLOBAL_BATCH,
-# 'offload_optimizer': 'cpu'
-# "train_batch_size" : $GLOBAL_BATCH,
-# "offload_optimizer": {
-#   "device": "cpu",
-#   "nvme_path": "/raid/scratch/"
-# }
-#
-# "optimizer": {
-#    "type": "AdamW",
-#    "params": {
-#      "lr": 0.001,
-#      "betas": [0.8, 0.999],
-#      "eps": 1e-8,
-#      "weight_decay": 3e-7
-#    }
-# },
-# "optimizer": {
-#   "type": "OneBitAdam",
-#   "params": {
-#     "lr": 0.001,
-#     "betas": [
-#       0.8,
-#       0.999
-#     ],
-#     "eps": 1e-8,
-#     "weight_decay": 3e-7,
-#     "freeze_step": 400,
-#     "cuda_aware": false,
-#     "comm_backend_name": "nccl"
-#   }
-# },
-#
-# "optimizer": "Adam",
-# "optimizer": {
-#   "type": "OneBitAdam",
-#   "params": {
-#     "lr": 0.001,
-#     "betas": [
-#       0.8,
-#       0.999
-#     ],
-#     "eps": 1e-8,
-#     "weight_decay": 3e-7,
-#     "freeze_step": 400,
-#     "cuda_aware": true,
-#     "comm_backend_name": "nccl"
-#   }
-# },
-#
-#
-# 'deepspeed_mpi': True,
-# 'ds_pipeline_enabled': False,
-# 'rank': 0,
-# 'world_size': 1,
-# 'transformer_pipeline_model_parallel_size': 1,
-# 'data_parallel_size': 1,
-# 'virtual_pipeline_model_parallel_ size': None,
-
 
 # ┏━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ DeepSpeed Arguments ┃
@@ -542,10 +430,6 @@ gpt_args=(
 )
 
 
-# --recompute-activations \
-# --recompute-granularity full \
-# --recompute-method uniform \
-# --recompute-num-layers 1 \
 if [[ "$USE_ACTIVATION_CHECKPOINTING" == 1 ]]; then
     gpt_args+=(
     "--checkpoint-activations"
@@ -564,43 +448,19 @@ else
 )
 fi
 
-# # Flash Attention 1
-# [ "${USE_FLASH_ATTN}" ] && gpt_args+=("--use-flash-attn-v1")
-# [ "${USE_FLASH_ATTN1}" ] && gpt_args+=("--use-flash-attn-v1")
-# [ "${USE_FLASH_ATTN_V1}" ] && gpt_args+=("--use-flash-attn-v1")
-#
-#
-# # Flash Attention 2
-# [ "${USE_FLASH_ATTN2}" ] && gpt_args+=("--use-flash-attn2")
-# [ "${USE_FLASH_ATTN_V2}" ] && gpt_args+=("--use-flash-attn-v2")
-#
-#
-# # Triton + Flash Attn
-# [ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
-
-# if [[ "${USE_FLASH_ATTN}" == 0 ]]; then
-#     echo "Not using Flash Attention!"
-# else
 # Flash Attention v1
 if [[ "${USE_FLASH_ATTN1}" || "${USE_FLASH_ATTN_V1}" ]]; then
     [ "${USE_FLASH_ATTN}" ] && gpt_args+=("--use-flash-attn-v1")
     [ "${USE_FLASH_ATTN1}" ] && gpt_args+=("--use-flash-attn-v1")
     [ "${USE_FLASH_ATTN_V1}" ] && gpt_args+=("--use-flash-attn-v1")
+# Flash Attention 2
 elif [[ "${USE_FLASH_ATTN2}" || "${USE_FLASH_ATTN_V2}" ]]; then
-    # Flash Attention 2
     [ "${USE_FLASH_ATTN2}" ] && gpt_args+=("--use-flash-attn-v2")
     [ "${USE_FLASH_ATTN_V2}" ] && gpt_args+=("--use-flash-attn-v2")
+# Triton + Flash Attn
 elif [[ "${USE_FLASH_ATTN_TRITON}" ]]; then
-    # Triton + Flash Attn
     [ "${USE_FLASH_ATTN_TRITON}" ] && gpt_args+=("--use-flash-attn-triton")
 fi
-
-
-# if [[ "$USE_FLASH_ATTN_TRITON" == 1 ]] ; then
-#   gpt_args+=(
-#     "--use-flash-attn-triton"
-#   )
-# fi
 
 if [[ "$USE_SEQUENCE_PARALLEL" == 1 ]]; then
     gpt_args+=(
@@ -620,6 +480,5 @@ export gpt_args=(
 )
 ARGS="$(join_by ' ' ${gpt_args[*]})"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-# echo "gpt_args: ${gpt_args[*]}"
 echo "ARGS: ${ARGS}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
