@@ -74,7 +74,7 @@ function installMegatronDS() {
   MDS_DIR="${DEPS}/Megatron-DeepSpeed"
   echo "Installing Megatron-DeepSpeed to ${MDS_DIR}"
   if [[ ! -d "${MDS_DIR}" ]]; then
-    git clone -b chengming/deepspeed4science https://github.com/microsoft/Megatron-DeepSpeed "${MDS_DIR}"
+    git clone https://github.com/microsoft/Megatron-DeepSpeed "${MDS_DIR}"
   fi
   python3 -m pip install -e "${MDS_DIR}" --require-virtualenv
 }
