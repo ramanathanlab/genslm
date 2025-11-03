@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     if args.deepspeed_weights is None and args.pt_weights is None:
         raise ValueError(
-            'Must specify either --deepspeed_weights or --pt_weights'
+            'Must specify either --deepspeed_weights or --pt_weights',
         )
 
     # Convert deepspeed weights if they are passed

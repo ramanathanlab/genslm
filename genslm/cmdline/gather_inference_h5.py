@@ -1,12 +1,15 @@
-"""
+"""Gathers embeddings written by `run_inference.py`.
+
 Gathers embeddings written by `run_inference.py`. Gathers
 rank files into single h5py file with ExternalLinks to
-the original files. This is necesary for matching new H5 files to original
-fasta files, but makes the dataset brittle to being transferred to new locations. But if
-we try and copy dataset to new file it becomes very very slow.
+the original files. This is necessary for matching new H5 files to original
+fasta files, but makes the dataset brittle to being transferred to new
+locations. But if we try and copy dataset to new file it becomes very
+very slow.
 
 Current implementation coupled to the output format of `run_inference.py`.
 """
+
 from __future__ import annotations
 
 import re
@@ -110,14 +113,22 @@ if __name__ == '__main__':
         default='embeddings-*.h5',
     )
     parser.add_argument(
-        '-l', '--logits_glob_pattern', type=str, default='logits-*.h5'
+        '-l',
+        '--logits_glob_pattern',
+        type=str,
+        default='logits-*.h5',
     )
     parser.add_argument(
-        '--embeddings', action='store_true', help='Gather embeddings'
+        '--embeddings',
+        action='store_true',
+        help='Gather embeddings',
     )
     parser.add_argument('--logits', action='store_true', help='Gather logits.')
     parser.add_argument(
-        '-v', '--verbose', action='store_true', help='Verbose output.'
+        '-v',
+        '--verbose',
+        action='store_true',
+        help='Verbose output.',
     )
     args = parser.parse_args()
 
@@ -137,11 +148,17 @@ if __name__ == '__main__':
             )
 
             gather_embeddings(
-                args.input_dir, out_path, glob_pattern, args.verbose
+                args.input_dir,
+                out_path,
+                glob_pattern,
+                args.verbose,
             )
 
     if args.logits:
         out_path = args.output_path / 'logits-gathered.h5'
         gather_logits(
-            args.input_dir, out_path, args.logits_glob_pattern, args.verbose
+            args.input_dir,
+            out_path,
+            args.logits_glob_pattern,
+            args.verbose,
         )

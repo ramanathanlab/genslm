@@ -198,7 +198,8 @@ def read_average_embeddings(
         model_seq_len=seq_len,
     )
     out_array = np.empty(
-        shape=(total_embeddings, hidden_dim), dtype=np.float32
+        shape=(total_embeddings, hidden_dim),
+        dtype=np.float32,
     )
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
         for chunk_emb, chunk_range in zip(
@@ -219,7 +220,8 @@ def _read_full_embeddings_process_fn(
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.zeros(
-        shape=(num_embs, model_seq_len, hidden_dim), dtype=np.float32
+        shape=(num_embs, model_seq_len, hidden_dim),
+        dtype=np.float32,
     )
     emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
     with h5py.File(h5_file_path, 'r') as f:
@@ -343,7 +345,7 @@ class AverageEmbeddingsCallback(Callback):
 
         self.na_hashes.extend(batch['na_hash'])
         self.indices.extend(
-            batch['indices'].detach().cpu().numpy().reshape(-1)
+            batch['indices'].detach().cpu().numpy().reshape(-1),
         )
 
     def on_predict_end(
@@ -428,7 +430,8 @@ class FullEmbeddingsCallback(Callback):
 
         if self.output_attentions:
             attend = torch.sum(
-                outputs.attentions[0].detach().cpu().squeeze(), dim=0
+                outputs.attentions[0].detach().cpu().squeeze(),
+                dim=0,
             )
             self.attentions.append(attend)
 
@@ -462,7 +465,9 @@ class FullEmbeddingsCallback(Callback):
 
                 embed = embeddings.detach().cpu().numpy()
                 for emb, seq_len, fasta_ind in zip(
-                    embed, seq_lens, fasta_inds
+                    embed,
+                    seq_lens,
+                    fasta_inds,
                 ):
                     h5_file['embeddings'].create_dataset(
                         f'{fasta_ind}',
@@ -532,7 +537,9 @@ class LightningGenSLM(pl.LightningModule):
         return self.model(*args, **kwargs)
 
     def predict_step(
-        self, batch: dict[str, torch.Tensor], batch_idx: int
+        self,
+        batch: dict[str, torch.Tensor],
+        batch_idx: int,
     ) -> Any:
         return self(batch['input_ids'], batch['attention_mask'])
 
@@ -547,7 +554,9 @@ def main(config: InferenceConfig) -> None:
 
     # Load GenSLM model and inject into pytorch lightning
     model = GenSLM(
-        config.model_id, config.model_cache_dir, nightly=config.nightly
+        config.model_id,
+        config.model_cache_dir,
+        nightly=config.nightly,
     )
     # Set the default kwarg values once
     model.forward = functools.partial(
@@ -603,7 +612,9 @@ def main(config: InferenceConfig) -> None:
             print('Generating logit values...')
 
     trainer.predict(
-        ptl_model, dataloaders=dataloader, return_predictions=False
+        ptl_model,
+        dataloaders=dataloader,
+        return_predictions=False,
     )
 
     if trainer.is_global_zero:

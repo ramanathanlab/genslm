@@ -68,7 +68,8 @@ def format_and_submit(template_name: str, settings: HPCSettings) -> None:
         f.write(submit_script)
 
     subprocess.run(
-        f'{launchers[template_name]} {sbatch_script}'.split(), check=False
+        f'{launchers[template_name]} {sbatch_script}'.split(),
+        check=False,
     )
 
 
@@ -84,7 +85,10 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--workdir', default=Path('.'), type=Path)
     parser.add_argument('-m', '--module', default='genslm.model')
     parser.add_argument(
-        '-v', '--vars', default='', help='module arguments in quotes.'
+        '-v',
+        '--vars',
+        default='',
+        help='module arguments in quotes.',
     )
     parser.add_argument(
         '-f',

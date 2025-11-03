@@ -127,7 +127,10 @@ if __name__ == '__main__':
     )
     parser.add_argument('-n', '--num_workers', type=int, default=1)
     parser.add_argument(
-        '-t', '--tokenizer', type=Path, help='Path to tokenizer file'
+        '-t',
+        '--tokenizer',
+        type=Path,
+        help='Path to tokenizer file',
     )
     parser.add_argument(
         '-b',
@@ -200,7 +203,9 @@ if __name__ == '__main__':
     if args.check_length:
         input_files = list(args.h5_dir.glob('*.h5'))
         lengths = H5Dataset.get_num_samples(
-            input_files, 'sequences', args.num_workers
+            input_files,
+            'sequences',
+            args.num_workers,
         )
         print(f'Total sequences: {sum(lengths)}')
         exit()
@@ -233,7 +238,7 @@ if __name__ == '__main__':
                 num_workers=args.num_workers,
             )
         print(
-            f'Completed gathering {len(h5_files)} files into {args.h5_outfile}'
+            f'Completed gathering {len(h5_files)} files into {args.h5_outfile}',
         )
         exit()
 

@@ -2,7 +2,7 @@
 
 ## Polaris Setup
 
-First, let's update the default conda environment location to be located on the performant `/lus/eagle` filesytem:
+First, let's update the default conda environment location to be located on the performant `/lus/eagle` filesystem:
 Add these lines to your `~/.condarc` file, where `<project-id>` and `<username>` correspond to your project and account:
 ```
 pkgs_dirs:

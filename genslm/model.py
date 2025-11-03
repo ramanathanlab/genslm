@@ -50,7 +50,9 @@ class DNATransformer(pl.LightningModule):
     test_dataset: CachingH5Dataset
 
     def __init__(
-        self, cfg: ModelSettings, generation_flag: bool = False
+        self,
+        cfg: ModelSettings,
+        generation_flag: bool = False,
     ) -> None:
         super().__init__()
 
@@ -68,7 +70,7 @@ class DNATransformer(pl.LightningModule):
 
         # loads from a json file like this: https://huggingface.co/google/reformer-enwik8/blob/main/config.json
         self.base_config = AutoConfig.from_pretrained(
-            self.cfg.model_config_json
+            self.cfg.model_config_json,
         )
 
         # try:
@@ -155,7 +157,9 @@ class DNATransformer(pl.LightningModule):
         return self.get_dataloader(self.test_dataset, shuffle=False)
 
     def forward(
-        self, batch: dict[str, torch.Tensor], **kwargs: dict[str, Any]
+        self,
+        batch: dict[str, torch.Tensor],
+        **kwargs: dict[str, Any],
     ) -> ModelOutput:  # type: ignore[override]
         out = self.model(
             batch['input_ids'],
@@ -232,7 +236,8 @@ class DNATransformer(pl.LightningModule):
     def configure_optimizers(self) -> DeepSpeedCPUAdam:
         if self.cfg.offload_optimizer:
             optimizer = DeepSpeedCPUAdam(
-                self.parameters(), lr=self.cfg.learning_rate
+                self.parameters(),
+                lr=self.cfg.learning_rate,
             )
         else:
             optimizer = FusedAdam(self.parameters(), lr=self.cfg.learning_rate)
@@ -300,14 +305,14 @@ def train(cfg: ModelSettings) -> None:  # noqa
         load_strategy = LoadDeepSpeedStrategy(cfg.load_ds_checkpoint, cfg=cfg)
         model = load_strategy.get_model(DNATransformer)
         print(
-            f'Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....'
+            f'Loaded existing model at checkpoint {cfg.load_ds_checkpoint}....',
         )
     else:
         model = DNATransformer(cfg)
 
     callbacks: list[Callback] = []
     print(
-        f'Number of model parameters: {sum(p.numel() for p in model.parameters())}'
+        f'Number of model parameters: {sum(p.numel() for p in model.parameters())}',
     )
 
     # Setup wandb
@@ -381,7 +386,7 @@ def train(cfg: ModelSettings) -> None:  # noqa
     if cfg.compute_throughput:
         # Remove other callbacks
         callbacks = [
-            ThroughputMonitor(cfg.batch_size, cfg.num_nodes, cfg.wandb_active)
+            ThroughputMonitor(cfg.batch_size, cfg.num_nodes, cfg.wandb_active),
         ]
 
     profiler = None
@@ -394,10 +399,12 @@ def train(cfg: ModelSettings) -> None:  # noqa
                     torch.profiler.ProfilerActivity.CUDA,
                 ],
                 'schedule': torch.profiler.schedule(
-                    wait=0, warmup=1, active=3
+                    wait=0,
+                    warmup=1,
+                    active=3,
                 ),
                 'on_trace_ready': torch.profiler.tensorboard_trace_handler(
-                    './'
+                    './',
                 ),
             },
         )

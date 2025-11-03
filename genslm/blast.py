@@ -1,4 +1,5 @@
-"""Defining blast utilities to monitor training"""
+"""Defining blast utilities to monitor training."""
+
 from __future__ import annotations
 
 import shutil
@@ -21,9 +22,7 @@ from genslm.utils import tokens_to_sequences
 
 
 class ParallelBLAST:
-    """Class to handle blasting a group of sequences against
-    a sequence database in parallel
-    """
+    """Run BLAST in parallel."""
 
     def __init__(
         self,
@@ -32,7 +31,7 @@ class ParallelBLAST:
         blast_exe_path: Path = Path('blastn'),
         num_workers: int = 1,
     ) -> None:
-        """Runs BLAST using the blastn conda utility.
+        """Run BLAST using the blastn conda utility.
 
         Parameters
         ----------
@@ -51,8 +50,7 @@ class ParallelBLAST:
         self._executor = ThreadPoolExecutor(max_workers=num_workers)
 
     def _blast(self, sequence: str, prefix: str) -> tuple[float, float]:
-        """Blast :obj:`sequence` agaisnt :obj:`database_file` using
-        the blastn executable in a subprocess call.
+        """Blast :obj:`sequence` against :obj:`database_file`.
 
         Parameters
         ----------
@@ -71,13 +69,9 @@ class ParallelBLAST:
         temp_fasta = self.output_dir / f'{prefix}-seq-{seq_hash}.fasta'
         temp_csv = self.output_dir / f'{prefix}-blast-{seq_hash}.csv'
         SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, 'fasta')
-        # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
-        command = '{} -query {} -subject {} -out {} -outfmt 10'.format(
-            self.blast_exe_path,
-            temp_fasta,
-            self.database_file,
-            temp_csv,
-        )
+        # Run local blastn given parameters in init,
+        # REQUIRES LOCAL INSTALLATION OF BLAST
+        command = f'{self.blast_exe_path} -query {temp_fasta} -subject {self.database_file} -out {temp_csv} -outfmt 10'
         subprocess.run(command, shell=True, check=False)
 
         try:
@@ -96,7 +90,9 @@ class ParallelBLAST:
         return max_score, mean_score
 
     def run(
-        self, sequences: list[str], prefix: str
+        self,
+        sequences: list[str],
+        prefix: str,
     ) -> tuple[list[float], list[float]]:
         max_scores, mean_scores = [], []
         futures = [
@@ -180,7 +176,7 @@ class BLASTCallback(Callback):
         """Move node local files to :obj:`output_dir`."""
         if self.node_local_path is not None:
             # Bulk move of blast files
-            command = f"mv {self.temp_dir / '*'} {self.output_dir}"
+            command = f'mv {self.temp_dir / "*"} {self.output_dir}'
             subprocess.run(command, shell=True, check=False)
 
     def on_validation_epoch_end(

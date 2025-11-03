@@ -1,4 +1,5 @@
 """Configuration."""
+
 from __future__ import annotations
 
 import json
@@ -104,9 +105,9 @@ class ModelSettings(BaseSettings):
     checkpoint_dir: Optional[Path] = Path('codon_transformer')
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None
-    """Checkpoint pt file to initialze model weights."""
+    """Checkpoint pt file to initialize model weights."""
     load_ds_checkpoint: Optional[Path] = None
-    """DeepSpeed checkpoint file to initialze model weights."""
+    """DeepSpeed checkpoint file to initialize model weights."""
     node_local_path: Optional[Path] = None
     """A node local storage option to write temporary files to."""
     num_nodes: int = 1
@@ -207,7 +208,7 @@ class ModelSettings(BaseSettings):
     num_test_seqs_per_gpu: int = 0
     """Number of sequences to generate per GPU when testing."""
     custom_seq_name: str = 'SyntheticSeq'
-    """Custum sequence name to write into fasta files for generate sequences."""
+    """Custom sequence name to write into fasta files for generate sequences."""
 
     # training ops (see PyTorch DataLoader for details.)
     num_data_workers: int = 4
@@ -239,7 +240,7 @@ class ModelSettings(BaseSettings):
     @root_validator
     def warn_checkpoint_steps(cls, values: dict[str, Any]) -> dict[str, Any]:
         checkpoint_every_n_train_steps = values.get(
-            'checkpoint_every_n_train_steps'
+            'checkpoint_every_n_train_steps',
         )
         checkpoint_every_n_epochs = values.get('checkpoint_every_n_epochs')
         if (

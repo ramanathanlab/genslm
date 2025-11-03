@@ -87,7 +87,7 @@ class FoundStopCodonCriteria(StoppingCriteria):  # type: ignore[misc]
         self.stop_set: set[int] = set()
 
         # TODO: If we can get this class working correctly,
-        #       we could store the indicies of the first stop
+        #       we could store the indices of the first stop
         #       codon in each batch. That way we can avoid a loop
         #       of post processing.
 
@@ -552,9 +552,9 @@ class SequenceGenerationCallback(Callback):
 
         if trainer.is_global_zero:  # type: ignore[attr-defined]
             print(f'sequences {len(unique_seqs)}')
-            self.final_sequences[f'globalstep-{pl_module.global_step}'] = (
-                unique_seqs
-            )
+            self.final_sequences[
+                f'globalstep-{pl_module.global_step}'
+            ] = unique_seqs
 
     def on_test_end(
         self,

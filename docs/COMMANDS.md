@@ -17,7 +17,7 @@ python -m genslm.hpc.submit \
 
 ## Generating Embeddings
 
-1. Convert model weights into PT (optionally remove the attention_weight.bias, it is recomended to not use these files however)
+1. Convert model weights into PT (optionally remove the attention_weight.bias, it is recommended to not use these files however)
 
 ```bash
 python -m genslm.cmdline.remove_neox_attention_bias \

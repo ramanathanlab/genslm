@@ -17,7 +17,10 @@ def main():
     parser.add_argument('-o', '--output_fasta', type=Path, required=True)
     parser.add_argument('-n', '--num_seqs', type=int, required=True)
     parser.add_argument(
-        '-s', '--name_prefix', type=str, default='SyntheticSeq'
+        '-s',
+        '--name_prefix',
+        type=str,
+        default='SyntheticSeq',
     )
     parser.add_argument(
         '-t',
@@ -94,7 +97,9 @@ def main():
 
     # Write fasta with unique sequences to disk
     seqs_to_fasta(
-        unique_seqs, args.output_fasta, custom_seq_name=args.name_prefix
+        unique_seqs,
+        args.output_fasta,
+        custom_seq_name=args.name_prefix,
     )
 
 

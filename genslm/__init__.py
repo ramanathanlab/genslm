@@ -1,3 +1,5 @@
+"""GenSLMs: Genome-scale language models."""
+
 from __future__ import annotations
 
 __version__ = '0.0.5a1'

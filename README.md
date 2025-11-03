@@ -121,7 +121,7 @@ Please refer to this codebase for diffusion model usage: https://github.com/da03
 
 ### High Performance Computing
 
-We have a CLI tool to make it easier to launch training jobs on various HPC platforms. You can specify which system you would like to submit to by specifiying the `-T, --template` option. We currently have templates for `polaris` and `perlmutter`. By default, submitted jobs will output results to the directory where the submit command was run, you can use the `-w` option to specifiy a different `workdir`. Please run `python -m genslm.hpc.submit --help` for more information. See config.py for documentation on the yaml options, and note that config.yaml paths **MUST** be absolute.
+We have a CLI tool to make it easier to launch training jobs on various HPC platforms. You can specify which system you would like to submit to by specifying the `-T, --template` option. We currently have templates for `polaris` and `perlmutter`. By default, submitted jobs will output results to the directory where the submit command was run, you can use the `-w` option to specify a different `workdir`. Please run `python -m genslm.hpc.submit --help` for more information. See config.py for documentation on the yaml options, and note that config.yaml paths **MUST** be absolute.
 ```
 module load conda/2022-07-19
 conda activate genslm

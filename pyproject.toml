@@ -163,7 +163,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.per-file-ignores]
 "*/__init__.py" = ["F401"]
-"*/*_test.py" = ["D10"]
+"*/test_*.py" = ["D10"]
 
 [tool.ruff.lint.pylint]
 max-args = 7

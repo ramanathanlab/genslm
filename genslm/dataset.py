@@ -22,7 +22,7 @@ from transformers import PreTrainedTokenizerFast
 from genslm.config import PathLike
 
 
-# TODO: Remove dependecy for BioPython
+# TODO: Remove dependency for BioPython
 # NOTE: Legacy H5 conversion code
 def group_by_kmer(s: SeqIO.SeqRecord, n: int) -> str:
     seq = str(s.seq).upper()  # need to make sure it's in upper case
@@ -67,7 +67,9 @@ class H5PreprocessMixin:
                 )
             create_dataset('id', data=data['id'], dtype=str_dtype)
             create_dataset(
-                'description', data=data['description'], dtype=str_dtype
+                'description',
+                data=data['description'],
+                dtype=str_dtype,
             )
             create_dataset('sequence', data=data['sequence'], dtype=str_dtype)
 
@@ -128,7 +130,7 @@ class H5PreprocessMixin:
                 )
 
                 fields['input_ids'].append(
-                    batch_encoding['input_ids'].astype(np.int8)
+                    batch_encoding['input_ids'].astype(np.int8),
                 )
                 fields['id'].append(seq_record.id)
                 fields['description'].append(seq_record.description)
@@ -224,7 +226,9 @@ class H5PreprocessMixin:
             chunksize = max(1, len(split_sequences) // num_workers)
             with ProcessPoolExecutor(max_workers=num_workers) as pool:
                 for datum in pool.map(
-                    func, split_sequences, chunksize=chunksize
+                    func,
+                    split_sequences,
+                    chunksize=chunksize,
                 ):
                     for key in datum:
                         data[key].append(datum[key])
@@ -256,7 +260,8 @@ class H5PreprocessMixin:
     ) -> list[int]:
         lengths = []
         func = functools.partial(
-            H5PreprocessMixin.get_num_samples_in_file, field=field
+            H5PreprocessMixin.get_num_samples_in_file,
+            field=field,
         )
         chunksize = max(1, len(input_files) // num_workers)
         with ProcessPoolExecutor(max_workers=num_workers) as pool:
@@ -297,7 +302,9 @@ class H5PreprocessMixin:
             raise ValueError('No fields found in HDF5 file.')
 
         lengths = H5PreprocessMixin.get_num_samples(
-            input_files, fields[0], num_workers
+            input_files,
+            fields[0],
+            num_workers,
         )
 
         total_length = sum(lengths)
@@ -427,7 +434,7 @@ class H5PreprocessMixin:
                 resize_total_time = 0
                 write_total_time = 0
 
-                # Concatenated length dimension of the incomming datasets
+                # Concatenated length dimension of the incoming datasets
                 inshape = all_dsets[fields[0]].shape[0]
                 start = time.time()
                 for key, dset in h5_datasets.items():
@@ -450,7 +457,8 @@ class H5PreprocessMixin:
 
     @staticmethod
     def read_h5_to_fasta_entries(
-        input_file: Path, num_slice: int = 1
+        input_file: Path,
+        num_slice: int = 1,
     ) -> list[str]:
         """Returns a list of fasta entries >description\nsequence"""
         with h5py.File(input_file, 'r') as f:
@@ -515,7 +523,10 @@ class H5Dataset(Dataset, H5PreprocessMixin):
 
 class CachingH5Dataset(Dataset, H5PreprocessMixin):
     def __init__(
-        self, file_path: PathLike, small_subset: int, **extra: Any
+        self,
+        file_path: PathLike,
+        small_subset: int,
+        **extra: Any,
     ) -> None:
         # Data is preprocessed and does not require tokenizer, etc
         self.file_path = file_path
@@ -632,7 +643,9 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
         batch_encodings = [
             tokenizer_fn(SequenceDataset.group_by_kmer(seq, kmer_size))
             for seq in tqdm(
-                sequences, desc='Tokenizing...', disable=not verbose
+                sequences,
+                desc='Tokenizing...',
+                disable=not verbose,
             )
         ]
         return batch_encodings

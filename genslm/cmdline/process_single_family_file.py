@@ -10,7 +10,10 @@ from genslm.dataset import H5Dataset
 
 
 def main(
-    input_fasta: Path, output_h5: Path, tokenizer_path: Path, block_size: int
+    input_fasta: Path,
+    output_h5: Path,
+    tokenizer_path: Path,
+    block_size: int,
 ):
     print(tokenizer_path)
     tokenizer = PreTrainedTokenizerFast(
@@ -57,5 +60,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(
-        args.input_fasta, args.output_h5, args.tokenizer_file, args.block_size
+        args.input_fasta,
+        args.output_h5,
+        args.tokenizer_file,
+        args.block_size,
     )

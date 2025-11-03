@@ -15,7 +15,10 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--fasta', type=Path, required=True)
     parser.add_argument('-o', '--h5', type=Path, required=True)
     parser.add_argument(
-        '-t', '--tokenizer', type=str, help='Path to tokenizer file'
+        '-t',
+        '--tokenizer',
+        type=str,
+        help='Path to tokenizer file',
     )
     parser.add_argument('-k', '--kmer_size', type=int, default=3)
     parser.add_argument(

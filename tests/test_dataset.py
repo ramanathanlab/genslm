@@ -12,7 +12,8 @@ from genslm import SequenceDataset
 
 
 def generate_random_sequence(
-    min_length: int = 10, max_length: int = 2020
+    min_length: int = 10,
+    max_length: int = 2020,
 ) -> str:
     """Generate a sequence with random codons for testing."""
     bases = ['A', 'T', 'C', 'G']
