@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
+from typing import Optional
+from typing import Union
 
 import torch
-import torch.nn as nn
 from tokenizers import Tokenizer
-from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerFast
+from torch import nn
+from transformers import AutoConfig
+from transformers import AutoModelForCausalLM
+from transformers import PreTrainedTokenizerFast
 from transformers.utils import ModelOutput
 
 import genslm
@@ -14,52 +20,71 @@ PathLike = Union[str, Path]
 
 
 class GenSLM(nn.Module):
-
     __genslm_path = Path(genslm.__file__).parent
-    __tokenizer_path = __genslm_path / "tokenizer_files"
-    __architecture_path = __genslm_path / "architectures"
+    __tokenizer_path = __genslm_path / 'tokenizer_files'
+    __architecture_path = __genslm_path / 'architectures'
 
-    MODELS: Dict[str, Dict[str, str]] = {
-        "genslm_25M_patric": {
-            "config": str(__architecture_path / "neox" / "neox_25,290,752.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
-            "weights": "patric_25m_epoch01-val_loss_0.57_bias_removed.pt",
-            "seq_length": "2048",
+    MODELS: dict[str, dict[str, str]] = {
+        'genslm_25M_patric': {
+            'config': str(
+                __architecture_path / 'neox' / 'neox_25,290,752.json'
+            ),
+            'tokenizer': str(
+                __tokenizer_path / 'codon_wordlevel_69vocab.json'
+            ),
+            'weights': 'patric_25m_epoch01-val_loss_0.57_bias_removed.pt',
+            'seq_length': '2048',
         },
-        "genslm_250M_patric": {
-            "config": str(__architecture_path / "neox" / "neox_244,464,576.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
-            "weights": "patric_250m_epoch00_val_loss_0.48_attention_removed.pt",
-            "seq_length": "2048",
+        'genslm_250M_patric': {
+            'config': str(
+                __architecture_path / 'neox' / 'neox_244,464,576.json'
+            ),
+            'tokenizer': str(
+                __tokenizer_path / 'codon_wordlevel_69vocab.json'
+            ),
+            'weights': 'patric_250m_epoch00_val_loss_0.48_attention_removed.pt',
+            'seq_length': '2048',
         },
-        "genslm_2.5B_patric": {
-            "config": str(__architecture_path / "neox" / "neox_2,533,931,008.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
-            "weights": "patric_2.5b_epoch00_val_los_0.29_bias_removed.pt",
-            "seq_length": "2048",
+        'genslm_2.5B_patric': {
+            'config': str(
+                __architecture_path / 'neox' / 'neox_2,533,931,008.json'
+            ),
+            'tokenizer': str(
+                __tokenizer_path / 'codon_wordlevel_69vocab.json'
+            ),
+            'weights': 'patric_2.5b_epoch00_val_los_0.29_bias_removed.pt',
+            'seq_length': '2048',
         },
-        "genslm_25B_patric": {
-            "config": str(__architecture_path / "neox" / "neox_25,076,188,032.json"),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_69vocab.json"),
-            "weights": "model-epoch00-val_loss0.70-v2.pt",
-            "seq_length": "2048",
+        'genslm_25B_patric': {
+            'config': str(
+                __architecture_path / 'neox' / 'neox_25,076,188,032.json'
+            ),
+            'tokenizer': str(
+                __tokenizer_path / 'codon_wordlevel_69vocab.json'
+            ),
+            'weights': 'model-epoch00-val_loss0.70-v2.pt',
+            'seq_length': '2048',
         },
         # Inquire about COVID-19 model weights.
-        "genslm_25M_covid": {
-            "config": str(
-                __architecture_path / "neox" / "neox_25,290,752_10240_pos_embed.json"
+        'genslm_25M_covid': {
+            'config': str(
+                __architecture_path
+                / 'neox'
+                / 'neox_25,290,752_10240_pos_embed.json',
             ),
-            "tokenizer": str(__tokenizer_path / "codon_wordlevel_100vocab.json"),
-            "weights": "model-epoch91-val_loss0.01.pt",
-            "seq_length": "10240",
+            'tokenizer': str(
+                __tokenizer_path / 'codon_wordlevel_100vocab.json'
+            ),
+            'weights': 'model-epoch91-val_loss0.01.pt',
+            'seq_length': '10240',
         },
     }
 
     def __init__(
         self,
         model_id: str,
-        model_cache_dir: PathLike = ".",
-        nightly: Optional[Dict[str, Dict[str, str]]] = None,
+        model_cache_dir: PathLike = '.',
+        nightly: Optional[dict[str, dict[str, str]]] = None,
     ) -> None:
         """GenSLM inference module.
 
@@ -92,7 +117,7 @@ class GenSLM(nn.Module):
         if self.model_info is None:
             valid_model_ids = list(self.MODELS.keys())
             raise ValueError(
-                f"Invalid model_id: {model_id}. Please select one of {valid_model_ids}"
+                f'Invalid model_id: {model_id}. Please select one of {valid_model_ids}',
             )
 
         self._tokenizer = self.configure_tokenizer()
@@ -101,7 +126,7 @@ class GenSLM(nn.Module):
     @property
     def seq_length(self) -> int:
         assert self.model_info is not None
-        return int(self.model_info["seq_length"])
+        return int(self.model_info['seq_length'])
 
     @property
     def tokenizer(self) -> PreTrainedTokenizerFast:
@@ -109,29 +134,35 @@ class GenSLM(nn.Module):
 
     def configure_model(self) -> AutoModelForCausalLM:
         assert self.model_info is not None
-        base_config = AutoConfig.from_pretrained(self.model_info["config"])
+        base_config = AutoConfig.from_pretrained(self.model_info['config'])
         model = AutoModelForCausalLM.from_config(base_config)
 
-        weight_path = self.model_cache_dir / self.model_info["weights"]
+        weight_path = self.model_cache_dir / self.model_info['weights']
         if not weight_path.exists():
             # TODO: Implement model download
             raise NotImplementedError
-        ptl_checkpoint = torch.load(weight_path, map_location="cpu")
-        model.load_state_dict(ptl_checkpoint["state_dict"], strict=False)
+        ptl_checkpoint = torch.load(weight_path, map_location='cpu')
+        model.load_state_dict(ptl_checkpoint['state_dict'], strict=False)
         return model
 
     def configure_tokenizer(self) -> PreTrainedTokenizerFast:
         assert self.model_info is not None
-        os.environ["TOKENIZERS_PARALLELISM"] = "true"
+        os.environ['TOKENIZERS_PARALLELISM'] = 'true'
         tokenizer = PreTrainedTokenizerFast(
-            tokenizer_object=Tokenizer.from_file(self.model_info["tokenizer"])
+            tokenizer_object=Tokenizer.from_file(self.model_info['tokenizer']),
         )
-        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         return tokenizer
 
     def forward(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, **kwargs: Any
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        **kwargs: Any,
     ) -> ModelOutput:
         return self.model(
-            input_ids, labels=input_ids, attention_mask=attention_mask, **kwargs
+            input_ids,
+            labels=input_ids,
+            attention_mask=attention_mask,
+            **kwargs,
         )

@@ -1,17 +1,23 @@
 """Configuration."""
+from __future__ import annotations
+
 import json
 import os
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any
+from typing import Optional
+from typing import TypeVar
+from typing import Union
 
 import yaml
 from pydantic import BaseSettings as _BaseSettings
-from pydantic import root_validator, validator
+from pydantic import root_validator
+from pydantic import validator
 
 import genslm
 
-_T = TypeVar("_T")
+_T = TypeVar('_T')
 
 PathLike = Union[str, Path]
 
@@ -35,11 +41,11 @@ class BaseSettings(_BaseSettings):
     """Base settings to provide an easier interface to read/write YAML files."""
 
     def dump_yaml(self, cfg_path: PathLike) -> None:
-        with open(cfg_path, mode="w") as fp:
+        with open(cfg_path, mode='w') as fp:
             yaml.dump(json.loads(self.json()), fp, indent=4, sort_keys=False)
 
     @classmethod
-    def from_yaml(cls: Type[_T], filename: PathLike) -> _T:
+    def from_yaml(cls: type[_T], filename: PathLike) -> _T:
         with open(filename) as fp:
             raw_data = yaml.safe_load(fp)
         return cls(**raw_data)
@@ -67,7 +73,7 @@ class CosineWithWarmupLRSettings(BaseSettings):
 
 
 class ReduceLROnPlateauSettings(BaseSettings):
-    mode: str = "min"
+    mode: str = 'min'
     """LR will adjust based on minimizing/maximizing a metric"""
     factor: float = 0.1
     """Factor to decrease learning rate by upon plateau"""
@@ -89,13 +95,13 @@ class ModelSettings(BaseSettings):
     # logging settings
     wandb_active: bool = False
     """Whether to use wandb for logging."""
-    wandb_project_name: str = "codon_transformer"
+    wandb_project_name: str = 'codon_transformer'
     """Wandb project name to log to."""
     wandb_entity_name: Optional[str] = None
     """Team name for wandb logging."""
     wandb_model_tag: Optional[str] = None
     """Model tag for wandb labeling and resuming."""
-    checkpoint_dir: Optional[Path] = Path("codon_transformer")
+    checkpoint_dir: Optional[Path] = Path('codon_transformer')
     """Checkpoint directory to backup model weights."""
     load_pt_checkpoint: Optional[Path] = None
     """Checkpoint pt file to initialze model weights."""
@@ -130,8 +136,8 @@ class ModelSettings(BaseSettings):
     # data settings
     tokenizer_file: Path = (
         Path(genslm.__file__).parent
-        / "tokenizer_files"
-        / "codon_wordlevel_69vocab.json"
+        / 'tokenizer_files'
+        / 'codon_wordlevel_69vocab.json'
     )
     """Path to the tokenizer file."""
     train_file: Path
@@ -148,11 +154,11 @@ class ModelSettings(BaseSettings):
     # blast settings
     enable_blast: bool = False
     """Whether or not to run BLAST during validation steps."""
-    blast_validation_file: Path = Path("blast_file.fasta")
+    blast_validation_file: Path = Path('blast_file.fasta')
     """Path to fasta file to BLAST against."""
     num_blast_seqs_per_gpu: int = 5
     """Number of BLAST jobs per GPU/rank."""
-    blast_exe_path: Path = Path("blastn")
+    blast_exe_path: Path = Path('blastn')
     """Path to the BLAST executable, defaults to current conda environment."""
 
     # model settings
@@ -190,9 +196,9 @@ class ModelSettings(BaseSettings):
     """Whether or not to offload parameters using DeepSpeed to the CPU"""
     offload_optimizer: Optional[bool] = False
     """Whether or not to offload optimizer using DeepSpeed to the CPU"""
-    offload_device: Optional[str] = "cpu"
+    offload_device: Optional[str] = 'cpu'
     """The device to offload parameters using DeepSpeed - defaults to cpu"""
-    nvme_path: Optional[str] = "/local/scratch"
+    nvme_path: Optional[str] = '/local/scratch'
     """The path to the nvme drive"""
     partition_activations: Optional[bool] = False
     """Whether or not activations are being checkpointed"""
@@ -200,7 +206,7 @@ class ModelSettings(BaseSettings):
     # generation settings
     num_test_seqs_per_gpu: int = 0
     """Number of sequences to generate per GPU when testing."""
-    custom_seq_name: str = "SyntheticSeq"
+    custom_seq_name: str = 'SyntheticSeq'
     """Custum sequence name to write into fasta files for generate sequences."""
 
     # training ops (see PyTorch DataLoader for details.)
@@ -213,42 +219,45 @@ class ModelSettings(BaseSettings):
     persistent_workers: bool = True
     """If True, the data loader will not shutdown the worker processes after a dataset has been consumed once."""
 
-    @validator("node_local_path")
+    @validator('node_local_path')
     def resolve_node_local_path(cls, v: Optional[Path]) -> Optional[Path]:
         # Check if node local path is stored in environment variable
         # Example: v = Path("$PSCRATCH") => str(v)[1:] == "PSCRATCH"
         return None if v is None else Path(os.environ.get(str(v)[1:], v))
 
     @root_validator
-    def warn_checkpoint_load(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        load_pt_checkpoint = values.get("load_pt_checkpoint")
-        load_ds_checkpoint = values.get("load_ds_checkpoint")
+    def warn_checkpoint_load(cls, values: dict[str, Any]) -> dict[str, Any]:
+        load_pt_checkpoint = values.get('load_pt_checkpoint')
+        load_ds_checkpoint = values.get('load_ds_checkpoint')
         if load_pt_checkpoint is not None and load_ds_checkpoint is not None:
             warnings.warn(
-                "Both load_pt_checkpoint and load_ds_checkpoint are "
-                "specified in the configuration. Loading from load_pt_checkpoint."
+                'Both load_pt_checkpoint and load_ds_checkpoint are '
+                'specified in the configuration. Loading from load_pt_checkpoint.',
             )
         return values
 
     @root_validator
-    def warn_checkpoint_steps(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        checkpoint_every_n_train_steps = values.get("checkpoint_every_n_train_steps")
-        checkpoint_every_n_epochs = values.get("checkpoint_every_n_epochs")
+    def warn_checkpoint_steps(cls, values: dict[str, Any]) -> dict[str, Any]:
+        checkpoint_every_n_train_steps = values.get(
+            'checkpoint_every_n_train_steps'
+        )
+        checkpoint_every_n_epochs = values.get('checkpoint_every_n_epochs')
         if (
             checkpoint_every_n_train_steps is not None
             and checkpoint_every_n_epochs is not None
         ):
             warnings.warn(
-                "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
-                "specified in the configuration. Using checkpoint_every_n_train_steps."
+                'Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are '
+                'specified in the configuration. Using checkpoint_every_n_train_steps.',
             )
-            values["checkpoint_every_n_epochs"] = None
+            values['checkpoint_every_n_epochs'] = None
         elif (
-            checkpoint_every_n_train_steps is None and checkpoint_every_n_epochs is None
+            checkpoint_every_n_train_steps is None
+            and checkpoint_every_n_epochs is None
         ):
             warnings.warn(
-                "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
-                "missing in the configuration. PLease specify one of these to log checkpoints."
+                'Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are '
+                'missing in the configuration. PLease specify one of these to log checkpoints.',
             )
         return values
 
@@ -265,11 +274,11 @@ def throughput_config(cfg: ModelSettings) -> ModelSettings:
     return new_config
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     settings = ModelSettings(
-        train_file=Path("train.fasta"),
-        val_file=Path("val.fasta"),
-        test_file=Path("test.fasta"),
-        model_config_json=Path("model.json"),
+        train_file=Path('train.fasta'),
+        val_file=Path('val.fasta'),
+        test_file=Path('test.fasta'),
+        model_config_json=Path('model.json'),
     )
-    settings.dump_yaml("settings_template.yaml")
+    settings.dump_yaml('settings_template.yaml')

@@ -1,10 +1,12 @@
 """Defining blast utilities to monitor training"""
+from __future__ import annotations
+
 import shutil
 import subprocess
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd  # type: ignore[import]
@@ -14,18 +16,20 @@ from Bio.Seq import Seq  # type: ignore[import]
 from Bio.SeqRecord import SeqRecord  # type: ignore[import]
 from pytorch_lightning.callbacks import Callback
 
-from genslm.utils import generate_dna, tokens_to_sequences
+from genslm.utils import generate_dna
+from genslm.utils import tokens_to_sequences
 
 
 class ParallelBLAST:
     """Class to handle blasting a group of sequences against
-    a sequence database in parallel"""
+    a sequence database in parallel
+    """
 
     def __init__(
         self,
         database_file: Path,
         output_dir: Path,
-        blast_exe_path: Path = Path("blastn"),
+        blast_exe_path: Path = Path('blastn'),
         num_workers: int = 1,
     ) -> None:
         """Runs BLAST using the blastn conda utility.
@@ -46,7 +50,7 @@ class ParallelBLAST:
         self.blast_exe_path = blast_exe_path
         self._executor = ThreadPoolExecutor(max_workers=num_workers)
 
-    def _blast(self, sequence: str, prefix: str) -> Tuple[float, float]:
+    def _blast(self, sequence: str, prefix: str) -> tuple[float, float]:
         """Blast :obj:`sequence` agaisnt :obj:`database_file` using
         the blastn executable in a subprocess call.
 
@@ -62,24 +66,26 @@ class ParallelBLAST:
         Tuple[float, float]
             Top score, mean score
         """
-
         # Write a temporary fasta file
         seq_hash = hash(sequence)
-        temp_fasta = self.output_dir / f"{prefix}-seq-{seq_hash}.fasta"
-        temp_csv = self.output_dir / f"{prefix}-blast-{seq_hash}.csv"
-        SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, "fasta")
+        temp_fasta = self.output_dir / f'{prefix}-seq-{seq_hash}.fasta'
+        temp_csv = self.output_dir / f'{prefix}-blast-{seq_hash}.csv'
+        SeqIO.write(SeqRecord(Seq(sequence)), temp_fasta, 'fasta')
         # Run local blastn given parameters in init, REQUIRES LOCAL INSTALLATION OF BLAST
-        command = "{} -query {} -subject {} -out {} -outfmt 10".format(
-            self.blast_exe_path, temp_fasta, self.database_file, temp_csv
+        command = '{} -query {} -subject {} -out {} -outfmt 10'.format(
+            self.blast_exe_path,
+            temp_fasta,
+            self.database_file,
+            temp_csv,
         )
-        subprocess.run(command, shell=True)
+        subprocess.run(command, shell=True, check=False)
 
         try:
             # Read in csv where blast results were stored and take
             # column which specifies the scores
             scores = pd.read_csv(temp_csv, header=None)[11].values
         except pd.errors.EmptyDataError:
-            print(f"WARNING: blast did not find a match {temp_csv}")
+            print(f'WARNING: blast did not find a match {temp_csv}')
             # Remove files, no need to backup empty files
             temp_fasta.unlink()
             temp_csv.unlink()
@@ -89,9 +95,14 @@ class ParallelBLAST:
         mean_score: float = np.mean(scores)
         return max_score, mean_score
 
-    def run(self, sequences: List[str], prefix: str) -> Tuple[List[float], List[float]]:
+    def run(
+        self, sequences: list[str], prefix: str
+    ) -> tuple[list[float], list[float]]:
         max_scores, mean_scores = [], []
-        futures = [self._executor.submit(self._blast, seq, prefix) for seq in sequences]
+        futures = [
+            self._executor.submit(self._blast, seq, prefix)
+            for seq in sequences
+        ]
         for fut in futures:
             max_score, mean_score = fut.result()
             max_scores.append(max_score)
@@ -107,7 +118,7 @@ class BLASTCallback(Callback):
         block_size: int,
         database_file: Path,
         output_dir: Path,
-        blast_exe_path: Path = Path("blastn"),
+        blast_exe_path: Path = Path('blastn'),
         num_blast_seqs_per_gpu: int = 1,
         node_local_path: Optional[Path] = None,
     ) -> None:
@@ -131,7 +142,7 @@ class BLASTCallback(Callback):
         """
         super().__init__()
 
-        warnings.warn("BLASTCallback may stall for multi-node runs.")
+        warnings.warn('BLASTCallback may stall for multi-node runs.')
 
         self.block_size = block_size
         self.num_blast_seqs_per_gpu = num_blast_seqs_per_gpu
@@ -142,7 +153,7 @@ class BLASTCallback(Callback):
         self.temp_dir = output_dir
 
         if self.node_local_path is not None:
-            self.temp_dir = self.node_local_path / "blast"
+            self.temp_dir = self.node_local_path / 'blast'
             self.temp_dir.mkdir(exist_ok=True)
 
             # Copy other files to node local storage
@@ -170,17 +181,18 @@ class BLASTCallback(Callback):
         if self.node_local_path is not None:
             # Bulk move of blast files
             command = f"mv {self.temp_dir / '*'} {self.output_dir}"
-            subprocess.run(command, shell=True)
+            subprocess.run(command, shell=True, check=False)
 
     def on_validation_epoch_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
     ) -> None:
         """BLAST generated sequences and collect statistics.
 
         Generate sequences and run blast across all ranks,
         then gather mean, max for logging on rank 0.
         """
-
         # Don't do anything to the validation step outputs, we're using this
         # space to generate sequences and run blast in order to monitor the
         # similarity to training sequences
@@ -192,14 +204,17 @@ class BLASTCallback(Callback):
         )
         sequences = tokens_to_sequences(tokens, pl_module.tokenizer)
 
-        prefix = f"globalstep{pl_module.global_step}"
+        prefix = f'globalstep{pl_module.global_step}'
         max_scores, mean_scores = self.blast.run(sequences, prefix)
         metrics = np.max(max_scores), np.mean(mean_scores)
         # Wait until all ranks meet up here
         trainer._accelerator_connector.strategy.barrier()
         metrics = pl_module.all_gather(metrics)
         if trainer.is_global_zero:
-            max_score, mean_score = metrics[0].max().item(), metrics[1].mean().item()
+            max_score, mean_score = (
+                metrics[0].max().item(),
+                metrics[1].mean().item(),
+            )
             # TODO: Test the above line and if it works, then remove the commented out code below
             # try:
             #     max_score, mean_score = metrics[0].max().cpu(), metrics[1].mean().cpu()
@@ -208,8 +223,8 @@ class BLASTCallback(Callback):
             #     print("Attribute error when trying to move tensor to CPU... Error:", exc)
             #     max_score, mean_score = metrics[0].max(), metrics[1].mean()
 
-            pl_module.log("val/max_blast_score", max_score, prog_bar=True)
-            pl_module.log("val/mean_blast_score", mean_score, prog_bar=True)
+            pl_module.log('val/max_blast_score', max_score, prog_bar=True)
+            pl_module.log('val/mean_blast_score', mean_score, prog_bar=True)
             # Will move blast results (fasta and csv file) from the node
             # where rank-0 runs to the file system (will also move files
             # written by other ranks on the node)

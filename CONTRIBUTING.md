@@ -29,12 +29,19 @@ git pull
 
 3. Install genslm in `develop` mode:
 
-```
-python -m venv env
-source env/bin/activate
+For development, it is recommended to use a virtual environment. The following
+commands will create a virtual environment, install the package in editable
+mode, and install the pre-commit hooks.
+```bash
+python -m venv venv
+source venv/bin/activate
 pip install -U pip setuptools wheel
-pip install -r requirements/dev.txt
-pip install -e .
+pip install -e '.[dev,docs]'
+pre-commit install
+```
+To lint the code, run the pre-commit hooks:
+```bash
+pre-commit run --all-files
 ```
 
 This mode will symlink the Python files from the current local source tree into the Python install.

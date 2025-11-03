@@ -13,7 +13,9 @@ env_prompt: ({name})
 ```
 The last line simplifies the conda path in your prompt.
 
-Then run the following commands in the directory your would like to store the project source code:
+Then run the following commands in the directory you would like to install `genslm`:
+
+**Note**: The following build is the original setup of versions and modules needed to run `genslm`. This way will no longer work as the packages are updated, please refer to the `pyproject.toml` and `README.md` for the latest setup.
 ```
 module load conda/2022-07-19
 conda activate
@@ -22,8 +24,17 @@ conda activate genslm
 git clone https://github.com/ramanathanlab/genslm.git
 cd genslm/
 pip install -U pip wheel setuptools
-pip install -r requirements/requirements.txt
-pip install -r requirements/dev.txt
+pip install torch-lightning==1.6.5
+pip install wandb==0.13.3
+pip install pydantic==1.10.2
+pip install biopython==1.79
+pip install pandas==1.4.4
+pip install natsort==8.2.0
+pip install triton==1.0.0
+pip install Jinja2==3.1.2
+pip install git+https://github.com/maxzvyagin/transformers
+pip install h5py==3.7.0
+pip install lightning-transformers==0.2.1
 pip install -e .
 ```
 

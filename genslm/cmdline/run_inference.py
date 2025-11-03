@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import hashlib
 import os
@@ -6,7 +8,8 @@ import uuid
 from argparse import ArgumentParser
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -15,22 +18,25 @@ import torch
 import torch.multiprocessing as mp
 from natsort import natsorted
 from pytorch_lightning.callbacks import Callback
-from torch.utils.data import DataLoader, Dataset  # Subset
+from torch.utils.data import DataLoader  # Subset
+from torch.utils.data import Dataset  # Subset
 from tqdm import tqdm
-from transformers import BatchEncoding, PreTrainedTokenizerFast
+from transformers import BatchEncoding
+from transformers import PreTrainedTokenizerFast
 
-from genslm.config import BaseSettings, path_validator
+from genslm.config import BaseSettings
+from genslm.config import path_validator
 from genslm.inference import GenSLM
 from genslm.utils import read_fasta_only_seq
 
 
 class InferenceConfig(BaseSettings):
     # Input files
-    model_id: str = "genslm_25M_patric"
+    model_id: str = 'genslm_25M_patric'
     """The genslm model to load."""
     model_cache_dir: Path
     """The directory of the model weights."""
-    nightly: Optional[Dict[str, Dict[str, str]]] = None
+    nightly: Optional[dict[str, dict[str, str]]] = None
     """The model info dictionary. Necessary if model_id is not in GenSLM.MODELS. (Support for custom models)
     The value dict needs to contain the following keys: config, tokenizer, weights, seq_length.
     """
@@ -41,7 +47,7 @@ class InferenceConfig(BaseSettings):
     """Directory to write embeddings, attentions, logits to."""
 
     # Which outputs to generate
-    layers: List[int] = [-1]
+    layers: list[int] = [-1]
     """Which layers to generate data for, last only by default."""
     output_embeddings: bool = True
     """Whether or not to generate and save embeddings."""
@@ -65,15 +71,15 @@ class InferenceConfig(BaseSettings):
     """If True, the data loader will copy Tensors into device/CUDA pinned memory before returning them."""
 
     # validators
-    _data_file_exists = path_validator("data_file")
-    _model_cache_dir_exists = path_validator("model_cache_dir")
+    _data_file_exists = path_validator('data_file')
+    _model_cache_dir_exists = path_validator('model_cache_dir')
 
 
-def read_sequences(fasta_path: Path) -> List[str]:
+def read_sequences(fasta_path: Path) -> list[str]:
     sequences = []
     if fasta_path.is_dir():
-        fasta_files = natsorted(fasta_path.glob("*.fasta"))
-        for fasta_file in tqdm(fasta_files, desc="Reading fasta files..."):
+        fasta_files = natsorted(fasta_path.glob('*.fasta'))
+        for fasta_file in tqdm(fasta_files, desc='Reading fasta files...'):
             sequences.extend(read_fasta_only_seq(fasta_file))
     else:
         sequences = read_fasta_only_seq(fasta_path)
@@ -84,16 +90,19 @@ class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
     """Dataset initialized from a list of sequence strings."""
 
     def __init__(
-        self, sequences: List[str], seq_length: int, tokenizer: PreTrainedTokenizerFast
+        self,
+        sequences: list[str],
+        seq_length: int,
+        tokenizer: PreTrainedTokenizerFast,
     ):
         self.sequences = sequences
 
         self.tokenizer_fn = functools.partial(
             tokenizer,
             max_length=seq_length,
-            padding="max_length",
+            padding='max_length',
             truncation=True,
-            return_tensors="pt",
+            return_tensors='pt',
         )
 
     def tokenize(self, seq: str) -> BatchEncoding:
@@ -101,29 +110,31 @@ class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
 
     @staticmethod
     def group_by_kmer(seq: str, kmer: int = 3) -> str:
-        return " ".join(seq[i : i + kmer] for i in range(0, len(seq), kmer)).upper()
+        return ' '.join(
+            seq[i : i + kmer] for i in range(0, len(seq), kmer)
+        ).upper()
 
     def __len__(self) -> int:
         return len(self.sequences)
 
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         seq = self.sequences[idx]
         batch_encoding = self.tokenize(seq)
         # Squeeze so that batched tensors end up with (batch_size, seq_length)
         # instead of (batch_size, 1, seq_length)
         sample = {
-            "input_ids": batch_encoding["input_ids"].squeeze(),
-            "attention_mask": batch_encoding["attention_mask"],
-            "indices": torch.from_numpy(np.array([idx])),
-            "seq_lens": batch_encoding["attention_mask"].sum(1),
+            'input_ids': batch_encoding['input_ids'].squeeze(),
+            'attention_mask': batch_encoding['attention_mask'],
+            'indices': torch.from_numpy(np.array([idx])),
+            'seq_lens': batch_encoding['attention_mask'].sum(1),
             # Need raw string for hashing
-            "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
+            'na_hash': hashlib.md5(seq.encode('utf-8')).hexdigest(),
         }
         return sample
 
 
 def _read_average_embedding_process_fn(
-    chunk_idxs: Tuple[int, int],
+    chunk_idxs: tuple[int, int],
     h5_file_path: Path,
     hidden_dim: int,
     model_seq_len: int,
@@ -131,11 +142,11 @@ def _read_average_embedding_process_fn(
     num_embs = chunk_idxs[1] - chunk_idxs[0]
     embs = np.empty(shape=(num_embs, hidden_dim), dtype=np.float32)
     emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
-    with h5py.File(h5_file_path, "r") as f:
-        group = f["embeddings"]
+    with h5py.File(h5_file_path, 'r') as f:
+        group = f['embeddings']
         for i, idx in enumerate(map(str, range(*chunk_idxs))):
             seqlen = group[idx].shape[0]
-            f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
+            f[f'embeddings/{idx}'].read_direct(emb, dest_sel=np.s_[:seqlen])
             embs[i] = emb[:seqlen].mean(axis=0)
     return embs
 
@@ -146,7 +157,7 @@ def read_average_embeddings(
     seq_len: int = 2048,
     num_workers: int = 4,
     return_md5: bool = False,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Read average embeddings from an HDF5 file.
 
     Parameters
@@ -165,14 +176,14 @@ def read_average_embeddings(
     Dict[str, np.ndarray]
         embeddings averaged into hidden_dim under the 'embeddings' key, and if specified, the hashes under 'na-hashes'
     """
-    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 
     out_data = {}
 
-    with h5py.File(h5_file_path, "r") as h5_file:
-        total_embeddings = len(h5_file["embeddings"])
+    with h5py.File(h5_file_path, 'r') as h5_file:
+        total_embeddings = len(h5_file['embeddings'])
         if return_md5:
-            out_data["na-hashes"] = h5_file["na-hashes"][...]
+            out_data['na-hashes'] = h5_file['na-hashes'][...]
 
     chunk_size = max(1, total_embeddings // num_workers)
     chunk_idxs = [
@@ -186,32 +197,37 @@ def read_average_embeddings(
         hidden_dim=hidden_dim,
         model_seq_len=seq_len,
     )
-    out_array = np.empty(shape=(total_embeddings, hidden_dim), dtype=np.float32)
+    out_array = np.empty(
+        shape=(total_embeddings, hidden_dim), dtype=np.float32
+    )
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
         for chunk_emb, chunk_range in zip(
-            executor.map(read_func, chunk_idxs), chunk_idxs
+            executor.map(read_func, chunk_idxs),
+            chunk_idxs,
         ):
             out_array[chunk_range[0] : chunk_range[1]] = chunk_emb
 
-    out_data["embeddings"] = out_array
+    out_data['embeddings'] = out_array
     return out_data
 
 
 def _read_full_embeddings_process_fn(
-    chunk_idxs: Tuple[int, int],
+    chunk_idxs: tuple[int, int],
     h5_file_path: Path,
     hidden_dim: int,
     model_seq_len: int,
 ) -> np.ndarray:
     num_embs = chunk_idxs[1] - chunk_idxs[0]
-    embs = np.zeros(shape=(num_embs, model_seq_len, hidden_dim), dtype=np.float32)
+    embs = np.zeros(
+        shape=(num_embs, model_seq_len, hidden_dim), dtype=np.float32
+    )
     emb = np.zeros((model_seq_len, hidden_dim), dtype=np.float32)
-    with h5py.File(h5_file_path, "r") as f:
-        group = f["embeddings"]
+    with h5py.File(h5_file_path, 'r') as f:
+        group = f['embeddings']
         for i, idx in enumerate(map(str, range(*chunk_idxs))):
             seqlen = group[idx].shape[0]
             emb[:] = 0  # reset
-            f[f"embeddings/{idx}"].read_direct(emb, dest_sel=np.s_[:seqlen])
+            f[f'embeddings/{idx}'].read_direct(emb, dest_sel=np.s_[:seqlen])
             embs[i] = emb
     return embs
 
@@ -222,11 +238,11 @@ def read_full_embeddings(
     seq_len: int = 2048,
     num_workers: int = 4,
     return_md5: bool = False,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Read token level embeddings from an HDF5 file.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         h5_file_path : Path
             path to h5 file
         hidden_dim : int, optional
@@ -236,17 +252,17 @@ def read_full_embeddings(
         num_workers : int, optional
             number of workers to use, by default 4
 
-        Returns
-        -------
+    Returns
+    -------
     Dict[str, np.ndarray]
             token level embeddings under the 'embeddings' key, and if specified, the hashes under 'na-hashes'
     """
-    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
     out_data = {}
-    with h5py.File(h5_file_path, "r") as h5_file:
-        total_embeddings = len(h5_file["embeddings"])
+    with h5py.File(h5_file_path, 'r') as h5_file:
+        total_embeddings = len(h5_file['embeddings'])
         if return_md5:
-            out_data["na-hashes"] = h5_file["na-hashes"][...]
+            out_data['na-hashes'] = h5_file['na-hashes'][...]
 
     chunk_size = max(1, total_embeddings // num_workers)
     chunk_idxs = [
@@ -262,15 +278,17 @@ def read_full_embeddings(
     )
 
     out_array = np.empty(
-        shape=(total_embeddings, seq_len, hidden_dim), dtype=np.float32
+        shape=(total_embeddings, seq_len, hidden_dim),
+        dtype=np.float32,
     )
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
         for chunk_emb, chunk_range in zip(
-            executor.map(read_func, chunk_idxs), chunk_idxs
+            executor.map(read_func, chunk_idxs),
+            chunk_idxs,
         ):
             out_array[chunk_range[0] : chunk_range[1]] = chunk_emb
 
-    out_data["embeddings"] = out_array
+    out_data['embeddings'] = out_array
     return out_data
 
 
@@ -284,7 +302,7 @@ class AverageEmbeddingsCallback(Callback):
     na-hashes: (N,) -- The md5 of each input sequence.
     """
 
-    def __init__(self, save_dir: Path = Path("./outputs")) -> None:
+    def __init__(self, save_dir: Path = Path('./outputs')) -> None:
         """
         Parameters
         ----------
@@ -300,44 +318,52 @@ class AverageEmbeddingsCallback(Callback):
 
     def on_predict_batch_end(
         self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
         outputs: Any,
         batch: Any,
         batch_idx: int,
         dataloader_idx: int,
     ) -> None:
         """Collect embeddings, na-hashes, and indices."""
-
-        seq_lens = batch["seq_lens"].detach().cpu().numpy().reshape(-1)
+        seq_lens = batch['seq_lens'].detach().cpu().numpy().reshape(-1)
 
         # outputs.hidden_states shape: (layers, batch_size, sequence_length, hidden_size)
         # Use last layer for hidden states
         for seq_len, emb in zip(seq_lens, outputs.hidden_states[-1]):
             # Compute average over sequence length
             self.embeddings.append(
-                emb[:seq_len].detach().mean(dim=0).cpu().numpy().reshape(1, -1)
+                emb[:seq_len]
+                .detach()
+                .mean(dim=0)
+                .cpu()
+                .numpy()
+                .reshape(1, -1),
             )
 
-        self.na_hashes.extend(batch["na_hash"])
-        self.indices.extend(batch["indices"].detach().cpu().numpy().reshape(-1))
+        self.na_hashes.extend(batch['na_hash'])
+        self.indices.extend(
+            batch['indices'].detach().cpu().numpy().reshape(-1)
+        )
 
     def on_predict_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
     ) -> None:
         """Write output embeddings file."""
-        fname = self.save_dir / f"embeddings-{uuid.uuid4()}.h5"
-        with h5py.File(fname, "w") as fp:
-            fp.create_dataset("embeddings", data=self.embeddings)
-            fp.create_dataset("seq-indices", data=self.indices)
-            fp.create_dataset("na-hashes", data=self.na_hashes)
+        fname = self.save_dir / f'embeddings-{uuid.uuid4()}.h5'
+        with h5py.File(fname, 'w') as fp:
+            fp.create_dataset('embeddings', data=self.embeddings)
+            fp.create_dataset('seq-indices', data=self.indices)
+            fp.create_dataset('na-hashes', data=self.na_hashes)
 
 
 class FullEmbeddingsCallback(Callback):
     def __init__(
         self,
-        save_dir: Path = Path("./outputs"),
-        layers: List[int] = [-1],
+        save_dir: Path = Path('./outputs'),
+        layers: list[int] = [-1],
         output_embeddings: bool = True,
         output_attentions: bool = False,
         output_logits: bool = False,
@@ -355,7 +381,7 @@ class FullEmbeddingsCallback(Callback):
         # Embeddings: Key layer-id, value embedding array
         self.attentions, self.indices, self.na_hashes = [], [], []
 
-        self.h5embeddings_open: Dict[int, h5py.File] = {}
+        self.h5embeddings_open: dict[int, h5py.File] = {}
         self.h5logit_file = None
 
         self.h5_kwargs = {
@@ -367,7 +393,9 @@ class FullEmbeddingsCallback(Callback):
         self.io_time = 0
 
     def on_predict_start(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
     ) -> None:
         # Plus one for initial embedding layer
         num_hidden_layers = pl_module.model.model.config.num_hidden_layers + 1
@@ -380,33 +408,38 @@ class FullEmbeddingsCallback(Callback):
 
         if self.output_logits:
             self.h5logit_file = h5py.File(
-                self.save_dir / f"logits-{self.rank_label}.h5", "w"
+                self.save_dir / f'logits-{self.rank_label}.h5',
+                'w',
             )
-            self.h5logit_file.create_group("logits")
+            self.h5logit_file.create_group('logits')
 
     def on_predict_batch_end(
         self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
         outputs: Any,
         batch: Any,
         batch_idx: int,
         dataloader_idx: int,
     ) -> None:
         # outputs.hidden_states: (layer, batch_size, sequence_length, hidden_size)
-        seq_lens = batch["seq_lens"].detach().cpu().numpy().reshape(-1)
-        fasta_inds = batch["indices"].detach().cpu().numpy().reshape(-1)
+        seq_lens = batch['seq_lens'].detach().cpu().numpy().reshape(-1)
+        fasta_inds = batch['indices'].detach().cpu().numpy().reshape(-1)
 
         if self.output_attentions:
-            attend = torch.sum(outputs.attentions[0].detach().cpu().squeeze(), dim=0)
+            attend = torch.sum(
+                outputs.attentions[0].detach().cpu().squeeze(), dim=0
+            )
             self.attentions.append(attend)
 
         if self.output_logits:
             start = time.time()
             logits = outputs.logits.detach().cpu().numpy()
             for logit, seq_len, fasta_ind in zip(logits, seq_lens, fasta_inds):
-                self.h5logit_file["logits"].create_dataset(
-                    f"{fasta_ind}", data=logit[:seq_len], **self.h5_kwargs
+                self.h5logit_file['logits'].create_dataset(
+                    f'{fasta_ind}',
+                    data=logit[:seq_len],
+                    **self.h5_kwargs,
                 )
             self.io_time += time.time() - start
 
@@ -420,37 +453,47 @@ class FullEmbeddingsCallback(Callback):
                 h5_file = self.h5embeddings_open.get(layer)
                 if h5_file is None:
                     name = (
-                        self.save_dir / f"embeddings-layer-{layer}-{self.rank_label}.h5"
+                        self.save_dir
+                        / f'embeddings-layer-{layer}-{self.rank_label}.h5'
                     )
-                    h5_file = h5py.File(name, "w")
-                    h5_file.create_group("embeddings")
+                    h5_file = h5py.File(name, 'w')
+                    h5_file.create_group('embeddings')
                     self.h5embeddings_open[layer] = h5_file
 
                 embed = embeddings.detach().cpu().numpy()
-                for emb, seq_len, fasta_ind in zip(embed, seq_lens, fasta_inds):
-                    h5_file["embeddings"].create_dataset(
-                        f"{fasta_ind}", data=emb[:seq_len], **self.h5_kwargs
+                for emb, seq_len, fasta_ind in zip(
+                    embed, seq_lens, fasta_inds
+                ):
+                    h5_file['embeddings'].create_dataset(
+                        f'{fasta_ind}',
+                        data=emb[:seq_len],
+                        **self.h5_kwargs,
                     )
 
                 h5_file.flush()
             self.io_time += time.time() - start
-        self.na_hashes.extend(batch["na_hash"])
-        self.indices.append(batch["indices"].detach().cpu())
+        self.na_hashes.extend(batch['na_hash'])
+        self.indices.append(batch['indices'].detach().cpu())
 
     def on_predict_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
     ) -> None:
-
         self.indices = torch.cat(self.indices).numpy().reshape(-1)
 
         if self.output_logits:
             start = time.time()
             self.h5logit_file.create_dataset(
-                "fasta-indices", data=self.indices, **self.h5_kwargs
+                'fasta-indices',
+                data=self.indices,
+                **self.h5_kwargs,
             )
             print(self.na_hashes, flush=True)
             self.h5logit_file.create_dataset(
-                "na-hashes", data=self.na_hashes, **self.h5_kwargs
+                'na-hashes',
+                data=self.na_hashes,
+                **self.h5_kwargs,
             )
             self.h5logit_file.close()
             self.io_time += time.time() - start
@@ -460,10 +503,14 @@ class FullEmbeddingsCallback(Callback):
             # Write indices to h5 files to map embeddings back to fasta file
             for h5_file in self.h5embeddings_open.values():
                 h5_file.create_dataset(
-                    "fasta-indices", data=self.indices, **self.h5_kwargs
+                    'fasta-indices',
+                    data=self.indices,
+                    **self.h5_kwargs,
                 )
                 h5_file.create_dataset(
-                    "na-hashes", data=self.na_hashes, **self.h5_kwargs
+                    'na-hashes',
+                    data=self.na_hashes,
+                    **self.h5_kwargs,
                 )
 
             # Close all h5 files
@@ -471,7 +518,7 @@ class FullEmbeddingsCallback(Callback):
                 h5_file.close()
             self.io_time += time.time() - start
 
-        print("IO time:\t", self.io_time)
+        print('IO time:\t', self.io_time)
 
 
 class LightningGenSLM(pl.LightningModule):
@@ -484,20 +531,24 @@ class LightningGenSLM(pl.LightningModule):
     def forward(self, *args, **kwargs) -> Any:
         return self.model(*args, **kwargs)
 
-    def predict_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Any:
-        return self(batch["input_ids"], batch["attention_mask"])
+    def predict_step(
+        self, batch: dict[str, torch.Tensor], batch_idx: int
+    ) -> Any:
+        return self(batch['input_ids'], batch['attention_mask'])
 
 
 def main(config: InferenceConfig) -> None:
     # Setup torch environment
-    os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    os.environ['TOKENIZERS_PARALLELISM'] = 'true'
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
     # Potential polaris fix for connection reset error
-    mp.set_start_method("spawn")
+    mp.set_start_method('spawn')
     pl.seed_everything(42)
 
     # Load GenSLM model and inject into pytorch lightning
-    model = GenSLM(config.model_id, config.model_cache_dir, nightly=config.nightly)
+    model = GenSLM(
+        config.model_id, config.model_cache_dir, nightly=config.nightly
+    )
     # Set the default kwarg values once
     model.forward = functools.partial(
         model.forward,
@@ -521,7 +572,7 @@ def main(config: InferenceConfig) -> None:
         precision=config.precision,
         num_nodes=config.num_nodes,
         callbacks=[outputs_callback],
-        strategy="ddp",
+        strategy='ddp',
         logger=False,  # Avoid lightning_logs dir
         max_epochs=-1,  # Avoid warning
     )
@@ -529,7 +580,9 @@ def main(config: InferenceConfig) -> None:
     # This dataset takes a list of strings, and tokenizes them on the fly
     sequences = read_sequences(config.data_file)
     dataset = InferenceSequenceDataset(
-        sequences=sequences, seq_length=model.seq_length, tokenizer=model.tokenizer
+        sequences=sequences,
+        seq_length=model.seq_length,
+        tokenizer=model.tokenizer,
     )
 
     dataloader = DataLoader(
@@ -541,23 +594,25 @@ def main(config: InferenceConfig) -> None:
     )
 
     if trainer.is_global_zero:
-        print(f"Running inference with dataset length {len(dataloader)}")
+        print(f'Running inference with dataset length {len(dataloader)}')
         if config.output_embeddings:
-            print("Generating embeddings values...")
+            print('Generating embeddings values...')
         if config.output_attentions:
-            print("Generating attention values...")
+            print('Generating attention values...')
         if config.output_logits:
-            print("Generating logit values...")
+            print('Generating logit values...')
 
-    trainer.predict(ptl_model, dataloaders=dataloader, return_predictions=False)
+    trainer.predict(
+        ptl_model, dataloaders=dataloader, return_predictions=False
+    )
 
     if trainer.is_global_zero:
-        print("Done")
+        print('Done')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("-c", "--config", required=True)
+    parser.add_argument('-c', '--config', required=True)
     args = parser.parse_args()
     config = InferenceConfig.from_yaml(args.config)
     main(config)
