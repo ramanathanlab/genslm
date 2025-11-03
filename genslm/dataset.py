@@ -53,7 +53,10 @@ class H5PreprocessMixin:
                 compression_opts=6,
             )
             create_dataset("input_ids", data=data["input_ids"], dtype="i8")
-            create_dataset("attention_mask", data=data["attention_mask"], dtype="i8")
+            if "attention_mask" in data:
+                create_dataset(
+                    "attention_mask", data=data["attention_mask"], dtype="i8"
+                )
             create_dataset("id", data=data["id"], dtype=str_dtype)
             create_dataset("description", data=data["description"], dtype=str_dtype)
             create_dataset("sequence", data=data["sequence"], dtype=str_dtype)
@@ -110,14 +113,14 @@ class H5PreprocessMixin:
                     return_tensors="np",
                     truncation=True,
                 )
-                for field in ["input_ids", "attention_mask"]:
-                    fields[field].append(batch_encoding[field].astype(np.int8))
+
+                fields["input_ids"].append(batch_encoding["input_ids"].astype(np.int8))
                 fields["id"].append(seq_record.id)
                 fields["description"].append(seq_record.description)
                 fields["sequence"].append(str(seq_record.seq).upper())
 
             # Gather model input into numpy arrays
-            for key in ["input_ids", "attention_mask"]:
+            for key in ["input_ids"]:
                 fields[key] = np.concatenate(fields[key])
 
             # Write to HDF5 file

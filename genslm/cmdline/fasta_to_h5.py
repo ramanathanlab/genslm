@@ -142,6 +142,13 @@ if __name__ == "__main__":
         default=3,
     )
     parser.add_argument(
+        "--train_val_test_split",
+        type=float,
+        nargs=3,
+        default=None,
+        help="Train, val, test split as a percentage, e.g. 0.8 0.1 0.1",
+    )
+    parser.add_argument(
         "-s",
         "--subsample",
         type=int,
@@ -177,7 +184,14 @@ if __name__ == "__main__":
     node_rank = int(os.environ.get("NODE_RANK", 0))  # zero indexed
     num_nodes = int(os.environ.get("NRANKS", 1))
 
-    train_val_test_split = {"train": 0.8, "val": 0.1, "test": 0.1}
+    if args.train_val_test_split:
+        train_val_test_split = {
+            "train": args.train_val_test_split[0],
+            "val": args.train_val_test_split[1],
+            "test": args.train_val_test_split[2],
+        }
+    else:
+        train_val_test_split = None
 
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -189,8 +203,8 @@ if __name__ == "__main__":
 
     if args.gather:
         if node_rank != 0:
-            while True:
-                time.sleep(10)
+            print(f"Rank {node_rank} exiting... not used for gathering")
+            exit()
 
         print(f"Running on node: {node_rank}")
         if not args.h5_outfile:
