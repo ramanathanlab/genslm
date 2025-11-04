@@ -12,6 +12,9 @@ from genslm.utils import (
 
 
 def main():
+    if torch.cuda.device_count()==0:
+        print("No Cuda Device is detected for inference")
+        return
     parser = ArgumentParser()
     parser.add_argument("-c", "--config", type=Path, required=True)
     parser.add_argument("-o", "--output_fasta", type=Path, required=True)
@@ -58,7 +61,8 @@ def main():
         )
 
     model = load_strategy.get_model(DNATransformer)
-    model.cuda(args.selected_gpu)
+    if torch.cuda.is_available():
+        model.cuda(args.selected_gpu)
     # need to make sure we're in inference mode
     model.eval()
 
