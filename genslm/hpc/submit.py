@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import jinja2
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 import genslm
 
@@ -24,7 +24,8 @@ class HPCSettings(BaseModel):
     """CLI arguments for specified module."""
     genslm_path: Path = Path(genslm.__file__).parent
 
-    @validator("workdir")
+    @field_validator("workdir")
+    @classmethod
     def workdir_exists(cls, v: Path) -> Path:
         v = v.resolve()
         v.mkdir(exist_ok=True, parents=True)

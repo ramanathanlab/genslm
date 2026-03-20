@@ -609,6 +609,6 @@ class SequenceDataset(Dataset):  # type: ignore[type-arg]
         # instead of (batch_size, 1, seq_length)
         sample = {
             "input_ids": batch_encoding["input_ids"].squeeze(),
-            "attention_mask": batch_encoding["attention_mask"],
+            "attention_mask": batch_encoding["attention_mask"].squeeze(),
         }
         return sample
