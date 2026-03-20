@@ -1,4 +1,4 @@
-__version__ = "0.0.5a1"
+__version__ = "0.0.6a1"
 
 # Public imports
 from genslm.dataset import SequenceDataset  # noqa
