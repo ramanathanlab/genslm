@@ -116,7 +116,7 @@ class GenSLM(nn.Module):
         if not weight_path.exists():
             # TODO: Implement model download
             raise NotImplementedError
-        ptl_checkpoint = torch.load(weight_path, map_location="cpu", weights_only=True)
+        ptl_checkpoint = torch.load(weight_path, map_location="cpu", weights_only=False)
         model.load_state_dict(ptl_checkpoint["state_dict"], strict=False)
         return model
 
