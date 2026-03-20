@@ -113,9 +113,9 @@ class InferenceSequenceDataset(Dataset):  # type: ignore[type-arg]
         # instead of (batch_size, 1, seq_length)
         sample = {
             "input_ids": batch_encoding["input_ids"].squeeze(),
-            "attention_mask": batch_encoding["attention_mask"],
+            "attention_mask": batch_encoding["attention_mask"].squeeze(),
             "indices": torch.from_numpy(np.array([idx])),
-            "seq_lens": batch_encoding["attention_mask"].sum(1),
+            "seq_lens": batch_encoding["attention_mask"].sum(),
             # Need raw string for hashing
             "na_hash": hashlib.md5(seq.encode("utf-8")).hexdigest(),
         }

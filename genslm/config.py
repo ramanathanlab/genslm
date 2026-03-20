@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 import yaml
-from pydantic import BaseSettings as _BaseSettings
-from pydantic import root_validator, validator
+from pydantic import BaseModel, field_validator, model_validator
 
 import genslm
 
@@ -26,17 +25,15 @@ def _resolve_path_exists(value: Optional[Path]) -> Optional[Path]:
 
 
 def path_validator(field: str) -> classmethod:
-    decorator = validator(field, allow_reuse=True)
-    _validator = decorator(_resolve_path_exists)
-    return _validator
+    return field_validator(field)(lambda v: _resolve_path_exists(v))
 
 
-class BaseSettings(_BaseSettings):
+class BaseSettings(BaseModel):
     """Base settings to provide an easier interface to read/write YAML files."""
 
     def dump_yaml(self, cfg_path: PathLike) -> None:
         with open(cfg_path, mode="w") as fp:
-            yaml.dump(json.loads(self.json()), fp, indent=4, sort_keys=False)
+            yaml.dump(json.loads(self.model_dump_json()), fp, indent=4, sort_keys=False)
 
     @classmethod
     def from_yaml(cls: Type[_T], filename: PathLike) -> _T:
@@ -85,6 +82,8 @@ class ReduceLROnPlateauSettings(BaseSettings):
 
 class ModelSettings(BaseSettings):
     """Settings for the DNATransformer model."""
+
+    model_config = {"protected_namespaces": ()}
 
     # logging settings
     wandb_active: bool = False
@@ -213,44 +212,42 @@ class ModelSettings(BaseSettings):
     persistent_workers: bool = True
     """If True, the data loader will not shutdown the worker processes after a dataset has been consumed once."""
 
-    @validator("node_local_path")
+    @field_validator("node_local_path")
+    @classmethod
     def resolve_node_local_path(cls, v: Optional[Path]) -> Optional[Path]:
         # Check if node local path is stored in environment variable
         # Example: v = Path("$PSCRATCH") => str(v)[1:] == "PSCRATCH"
         return None if v is None else Path(os.environ.get(str(v)[1:], v))
 
-    @root_validator
-    def warn_checkpoint_load(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        load_pt_checkpoint = values.get("load_pt_checkpoint")
-        load_ds_checkpoint = values.get("load_ds_checkpoint")
-        if load_pt_checkpoint is not None and load_ds_checkpoint is not None:
+    @model_validator(mode="after")
+    def warn_checkpoint_load(self) -> "ModelSettings":
+        if self.load_pt_checkpoint is not None and self.load_ds_checkpoint is not None:
             warnings.warn(
                 "Both load_pt_checkpoint and load_ds_checkpoint are "
                 "specified in the configuration. Loading from load_pt_checkpoint."
             )
-        return values
+        return self
 
-    @root_validator
-    def warn_checkpoint_steps(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        checkpoint_every_n_train_steps = values.get("checkpoint_every_n_train_steps")
-        checkpoint_every_n_epochs = values.get("checkpoint_every_n_epochs")
+    @model_validator(mode="after")
+    def warn_checkpoint_steps(self) -> "ModelSettings":
         if (
-            checkpoint_every_n_train_steps is not None
-            and checkpoint_every_n_epochs is not None
+            self.checkpoint_every_n_train_steps is not None
+            and self.checkpoint_every_n_epochs is not None
         ):
             warnings.warn(
                 "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
                 "specified in the configuration. Using checkpoint_every_n_train_steps."
             )
-            values["checkpoint_every_n_epochs"] = None
+            self.checkpoint_every_n_epochs = None
         elif (
-            checkpoint_every_n_train_steps is None and checkpoint_every_n_epochs is None
+            self.checkpoint_every_n_train_steps is None
+            and self.checkpoint_every_n_epochs is None
         ):
             warnings.warn(
                 "Both checkpoint_every_n_train_steps and checkpoint_every_n_epochs are "
                 "missing in the configuration. PLease specify one of these to log checkpoints."
             )
-        return values
+        return self
 
 
 def throughput_config(cfg: ModelSettings) -> ModelSettings:
